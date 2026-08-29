@@ -47,3 +47,11 @@ Metrics/ParameterLists:
 
 Metrics/MethodLength:
   Max: 15
+
+# Value objects run long by construction: every field costs a keyword argument,
+# a reader, a validation, a #to_h key and a line of documentation. Splitting one
+# record's rules across two classes to satisfy a line count would make them
+# harder to find, not easier. The parsing vocabulary that genuinely is a second
+# job already lives in its own class (PartialDate::Parser).
+Metrics/ClassLength:
+  Max: 140
