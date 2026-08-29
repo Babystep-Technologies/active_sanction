@@ -38,3 +38,12 @@ RSpec/ExampleLength:
 RSpec/DescribeClass:
   Exclude:
     - "spec/network_isolation_spec.rb"
+
+# The canonical model is value objects: one keyword argument and one hash key
+# per field. Splitting `initialize` or `to_h` to satisfy a count would make
+# them harder to read, not easier.
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+
+Metrics/MethodLength:
+  Max: 15
