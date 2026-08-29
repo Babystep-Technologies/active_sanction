@@ -10,6 +10,9 @@ require "active_sanction/partial_date"
 require "active_sanction/entity"
 require "active_sanction/snapshot"
 require "active_sanction/http_client"
+require "active_sanction/validators"
+require "active_sanction/validator_store"
+require "active_sanction/fetcher"
 
 module ActiveSanction
   class << self

@@ -18,6 +18,88 @@ RSpec.describe ActiveSanction::Configuration do
       expect(config).to have_attributes(open_timeout: 10, read_timeout: 60, max_redirects: 5,
                                         max_retries: 2, retry_backoff: 1.0)
     end
+
+    # The launch lists change daily at most.
+    it "considers a source due for another look after a day" do
+      expect(described_class.new.stale_after).to eq(86_400)
+    end
+
+    it "logs nothing until an application hands it a logger" do
+      expect(described_class.new.logger).to be_nil
+    end
+  end
+
+  describe "#cache_dir" do
+    it "defaults under the XDG cache directory" do
+      expect(described_class.new.cache_dir).to eq(File.join(Dir.home, ".cache", "active_sanction"))
+    end
+
+    it "honours XDG_CACHE_HOME" do
+      allow(ENV).to receive(:fetch).with("XDG_CACHE_HOME", nil).and_return("/var/cache")
+
+      expect(described_class.new.cache_dir).to eq("/var/cache/active_sanction")
+    end
+
+    it "expands a relative path, so the directory does not follow the working directory" do
+      config = described_class.new
+      config.cache_dir = "tmp/lists"
+
+      expect(config.cache_dir).to eq(File.expand_path("tmp/lists"))
+    end
+
+    it "rejects a blank directory" do
+      expect { described_class.new.cache_dir = "  " }
+        .to raise_error(ActiveSanction::ConfigurationError, /cache_dir cannot be blank/)
+    end
+  end
+
+  describe "#stale_after" do
+    it "accepts a caller's own window" do
+      config = described_class.new
+      config.stale_after = 3600
+
+      expect(config.stale_after).to eq(3600)
+    end
+
+    # Then only the publisher's own 304 decides whether a sync did any work.
+    it "accepts nil, which disables the clock" do
+      config = described_class.new
+      config.stale_after = nil
+
+      expect(config.stale_after).to be_nil
+    end
+
+    it "rejects a window that is not a duration" do
+      expect { described_class.new.stale_after = "daily" }
+        .to raise_error(ActiveSanction::ConfigurationError, /stale_after/)
+    end
+
+    it "rejects a negative window" do
+      expect { described_class.new.stale_after = -1 }
+        .to raise_error(ActiveSanction::ConfigurationError, /greater than zero/)
+    end
+  end
+
+  describe "#logger" do
+    it "accepts anything Logger-shaped" do
+      logger = Object.new.tap { |object| def object.info(message) = message }
+      config = described_class.new
+      config.logger = logger
+
+      expect(config.logger).to be(logger)
+    end
+
+    it "accepts nil, which turns logging off again" do
+      config = described_class.new
+      config.logger = nil
+
+      expect(config.logger).to be_nil
+    end
+
+    it "rejects something that cannot log" do
+      expect { described_class.new.logger = "stdout" }
+        .to raise_error(ActiveSanction::ConfigurationError, /logger must respond to #info/)
+    end
   end
 
   describe "#user_agent=" do
