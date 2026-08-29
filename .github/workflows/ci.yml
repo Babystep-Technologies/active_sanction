@@ -1,0 +1,43 @@
+name: CI
+
+# Push builds cover the trunk; pull_request covers everything on the way in.
+# Limiting push to `main` keeps same-repo PRs from building twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Ruby ${{ matrix.ruby }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["3.1", "3.2", "3.3"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # `ruby-version` here wins over the checked-in `.ruby-version`, so the
+      # matrix drives the build. `bundler-cache: true` installs the bundle and
+      # caches it; `Gemfile.lock` is gitignored, so each Ruby resolves its own.
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      # `spec_helper.rb` excludes `:live` by default, so this is the hermetic
+      # suite: committed fixtures with WebMock blocking outbound connections.
+      # Specs that hit real government endpoints stay opt-in behind
+      # `bundle exec rspec --tag live` and are deliberately never run in CI --
+      # a red build should mean our code broke, not that a source went down.
+      - name: Run specs
+        run: bundle exec rspec
+
+      - name: Run RuboCop
+        run: bundle exec rubocop
