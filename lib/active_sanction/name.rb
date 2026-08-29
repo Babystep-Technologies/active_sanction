@@ -30,11 +30,27 @@ module ActiveSanction
     # publishes no grade at all, which is `nil`: unstated, not good.
     QUALITIES = %i[good low].freeze
 
+    # The writing system `value` is published in, which is what tells the
+    # normalizer (#26) which transliteration path to take -- a Cyrillic name
+    # folded by the Latin rules comes out as noise. Adapters map their source's
+    # own vocabulary onto these: OFAC labels some names by language rather than
+    # script, so "Farsi" arrives here as :arabic.
+    #
+    # Closed, so a typo is caught at the boundary instead of quietly minting a
+    # script nothing downstream handles. It is sized to what the lists actually
+    # publish rather than to all ~200 of ISO 15924; a source shipping one we
+    # have not seen is a one-line addition here, which the raised message asks
+    # for by name.
+    SCRIPTS = %i[
+      latin cyrillic arabic hebrew greek han kana hangul
+      thai devanagari bengali tamil myanmar khmer armenian georgian ethiopic syriac
+    ].freeze
+
+    ENUMS = { kind: KINDS, quality: QUALITIES, script: SCRIPTS }.freeze
+
     # Canonical member order. Snapshot (#8) checksums the serialized form, so
     # #to_h must lay its keys out the same way every time.
     MEMBERS = %i[value kind quality script].freeze
-
-    ENUMS = { kind: KINDS, quality: QUALITIES }.freeze
 
     attr_reader(*MEMBERS)
 
@@ -56,9 +72,7 @@ module ActiveSanction
       @value = value!(value)
       @kind = enum!(:kind, kind)
       @quality = quality.nil? ? nil : enum!(:quality, quality)
-      # Not validated against an enum: ISO 15924 defines roughly 200 scripts,
-      # and a source shipping Cyrillic or Arabic should record that, not raise.
-      @script = script.nil? ? nil : script.to_s.downcase.to_sym
+      @script = script.nil? ? nil : enum!(:script, script)
       freeze
     end
 
@@ -106,8 +120,8 @@ module ActiveSanction
     end
 
     # Case is folded before the lookup: the UN writes its grades as Good and
-    # Low, OFAC writes its alias types lowercase, and neither adapter should
-    # have to remember which. A wrong value still raises.
+    # Low, OFAC writes its alias types lowercase and its scripts capitalized,
+    # and no adapter should have to remember which. A wrong value still raises.
     def enum!(member, value)
       raise ArgumentError, "#{member} is required" if value.to_s.empty?
 

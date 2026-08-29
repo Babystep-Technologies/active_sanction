@@ -94,10 +94,24 @@ RSpec.describe ActiveSanction::Name do
       expect(described_class.new(value: "ACME").script).to be_nil
     end
 
-    # ISO 15924 defines roughly 200 scripts; a source shipping one we have not
-    # seen should record it, not raise.
-    it "accepts any script, symbolized and case-folded" do
+    it "accepts every member of the enum" do
+      scripts = described_class::SCRIPTS.map { |script| described_class.new(value: "ACME", script: script).script }
+
+      expect(scripts).to eq(described_class::SCRIPTS)
+    end
+
+    # OFAC capitalizes its script labels.
+    it "accepts a capitalized string" do
       expect(described_class.new(value: "الظواهري", script: "Arabic").script).to eq(:arabic)
+    end
+
+    it "raises on a script outside the enum, naming what it will accept" do
+      expect { described_class.new(value: "ACME", script: :lartin) }
+        .to raise_error(ArgumentError, /unknown script :lartin, expected one of latin, cyrillic, arabic/)
+    end
+
+    it "covers the writing systems the lists publish" do
+      expect(described_class::SCRIPTS).to include(:latin, :cyrillic, :arabic, :han, :hangul, :kana)
     end
   end
 
