@@ -1,0 +1,40 @@
+plugins:
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "bin/**/*"
+    - "vendor/**/*"
+    - "tmp/**/*"
+
+# The codebase uses double quotes throughout, as the bundler gem template does.
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+# The gemspec is generated boilerplate with long metadata strings.
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - "active_sanction.gemspec"
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*_spec.rb"
+    - "active_sanction.gemspec"
+
+Style/Documentation:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Max: 10
+
+# spec/network_isolation_spec.rb covers the test harness itself, not a class.
+RSpec/DescribeClass:
+  Exclude:
+    - "spec/network_isolation_spec.rb"
