@@ -27,6 +27,12 @@ RSpec.describe ActiveSanction::Configuration do
     it "logs nothing until an application hands it a logger" do
       expect(described_class.new.logger).to be_nil
     end
+
+    # Enough to diff a suspicious list against the two before it, and small
+    # enough that a cache directory does not grow by 126 MB a day.
+    it "keeps three raw payloads per source" do
+      expect(described_class.new.retain_payloads).to eq(3)
+    end
   end
 
   describe "#cache_dir" do
@@ -50,6 +56,32 @@ RSpec.describe ActiveSanction::Configuration do
     it "rejects a blank directory" do
       expect { described_class.new.cache_dir = "  " }
         .to raise_error(ActiveSanction::ConfigurationError, /cache_dir cannot be blank/)
+    end
+  end
+
+  describe "#retain_payloads" do
+    it "takes a count" do
+      config = described_class.new
+      config.retain_payloads = 10
+
+      expect(config.retain_payloads).to eq(10)
+    end
+
+    # A cache that keeps nothing still writes every payload to disk before
+    # deleting it; an installation that wants none should not build one.
+    it "refuses a retention that keeps nothing" do
+      expect { described_class.new.retain_payloads = 0 }
+        .to raise_error(ActiveSanction::ConfigurationError, /at least 1/)
+    end
+
+    it "refuses a negative retention" do
+      expect { described_class.new.retain_payloads = -1 }
+        .to raise_error(ActiveSanction::ConfigurationError, /at least 1/)
+    end
+
+    it "refuses something that is not a count" do
+      expect { described_class.new.retain_payloads = "a few" }
+        .to raise_error(ActiveSanction::ConfigurationError, /whole number of payloads/)
     end
   end
 

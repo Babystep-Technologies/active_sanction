@@ -13,6 +13,7 @@ require "active_sanction/http_client"
 require "active_sanction/validators"
 require "active_sanction/validator_store"
 require "active_sanction/fetcher"
+require "active_sanction/payload_cache"
 
 module ActiveSanction
   class << self

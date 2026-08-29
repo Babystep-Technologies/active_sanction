@@ -49,12 +49,21 @@ module ActiveSanction
     DEFAULT_MAX_RETRIES = 2
     DEFAULT_RETRY_BACKOFF = 1.0
 
-    # Cache validators, and later raw payloads (#11), live under here. The XDG
-    # base directory is the right default for data a user can delete without
-    # losing anything: nothing in this directory is a record of what a list
-    # contained, only an optimization for not fetching it again.
+    # Cache validators and raw payloads live under here. The XDG base directory
+    # is the right default for data a user is entitled to delete: everything
+    # here is recoverable by fetching again, with one honest caveat -- once a
+    # publisher overwrites its file the previous payload is gone, whether or
+    # not this directory still holds a copy. PayloadCache is a bounded aid to
+    # re-parsing and auditing, not the system of record; storage (#24) is.
     XDG_CACHE_HOME = "XDG_CACHE_HOME"
     DEFAULT_CACHE_DIRNAME = "active_sanction"
+
+    # How many raw payloads PayloadCache keeps per source. Three is enough to
+    # diff a suspicious list against the two that came before it, and small
+    # enough that a cache directory does not quietly grow by 126 MB a day. An
+    # installation that must keep every version it ever screened against wants
+    # its own retention storage, not a bigger number here.
+    DEFAULT_RETAIN_PAYLOADS = 3
 
     # The launch lists change roughly daily at most, so a source last confirmed
     # within a day is not worth asking about again when a caller is only trying
@@ -64,7 +73,7 @@ module ActiveSanction
     DEFAULT_STALE_AFTER = 86_400
 
     attr_reader :user_agent, :open_timeout, :read_timeout, :max_redirects, :max_retries, :retry_backoff,
-                :cache_dir, :stale_after, :logger
+                :cache_dir, :retain_payloads, :stale_after, :logger
 
     def initialize
       @user_agent = DEFAULT_USER_AGENT
@@ -74,6 +83,7 @@ module ActiveSanction
       @max_retries = DEFAULT_MAX_RETRIES
       @retry_backoff = DEFAULT_RETRY_BACKOFF
       @cache_dir = self.class.default_cache_dir
+      @retain_payloads = DEFAULT_RETAIN_PAYLOADS
       @stale_after = DEFAULT_STALE_AFTER
       @logger = nil
     end
@@ -109,6 +119,10 @@ module ActiveSanction
       @cache_dir = -File.expand_path(path)
     end
 
+    def retain_payloads=(value)
+      @retain_payloads = self.class.retain_payloads!(value)
+    end
+
     # `nil` disables the staleness clock entirely: a source with stored
     # validators is then never stale, and the publisher's 304 is the only thing
     # that decides whether a sync did any work.
@@ -132,6 +146,21 @@ module ActiveSanction
       home = ENV.fetch(XDG_CACHE_HOME, nil)
       home = File.join(Dir.home, ".cache") if home.nil? || home.strip.empty?
       -File.expand_path(File.join(home, DEFAULT_CACHE_DIRNAME))
+    end
+
+    # Shared by PayloadCache, so a cache built with an explicit `retain:` fails
+    # the same way as a misconfigured global. Zero is not allowed: a cache that
+    # keeps nothing still writes every payload to disk before deleting it, and
+    # an installation that wants no payload cache should not build one.
+    def self.retain_payloads!(value)
+      integer = begin
+        Integer(value)
+      rescue TypeError, ArgumentError
+        raise ConfigurationError, "retain_payloads must be a whole number of payloads, got #{value.inspect}"
+      end
+      raise ConfigurationError, "retain_payloads must be at least 1, got #{integer}" unless integer.positive?
+
+      integer
     end
 
     # Shared by HttpClient, so a client built with an explicit `user_agent:`
