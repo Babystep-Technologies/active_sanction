@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["shen.marshall@gmail.com"]
 
   spec.summary       = %q{A Ruby toolkit that manages sanction lists around the world.}
-  spec.description   = %q{ActiveSanction fetches government sanctions lists, normalizes them into a single record model, persists them locally, and screens names against them with explainable fuzzy match scores. Every match carries structured reasons and stamps the snapshot checksum, matcher version, and thresholds so a screening decision can be re-derived during an audit. New sources register through public extension points without forking the gem.}
+  spec.description   = %q{ActiveSanction fetches government sanctions lists, normalizes them into a single record model, persists them in preferred storage, and screens names against them with explainable fuzzy match scores. Every match carries structured reasons and stamps the snapshot checksum, matcher version, and thresholds so a screening decision can be re-derived during an audit. New sources register through public extension points without forking the gem.}
   spec.homepage      = "https://github.com/Babystep-Technologies/active_sanction"
   spec.license       = "MIT"
   spec.required_ruby_version = ">= 3.1"
