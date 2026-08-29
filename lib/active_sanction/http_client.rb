@@ -135,10 +135,16 @@ module ActiveSanction
     # Only a successful body is streamed. An error page is small and the caller
     # will want to read it, and writing one into the sink would hand the
     # payload cache a 404 notice to checksum as though it were a list.
+    #
+    # A 304 is the one status with nothing to read either way: it is defined to
+    # carry no body, and handing back the empty string `read_body` produces
+    # would give conditional GET (#10) something a caller could try to parse.
     def receive(raw, uri, sink, redirects)
       status = raw.code.to_i
       body = nil
-      if sink && status.between?(200, 299)
+      if status == 304
+        nil
+      elsif sink && status.between?(200, 299)
         rewind(sink)
         raw.read_body { |chunk| sink.write(chunk) }
       else

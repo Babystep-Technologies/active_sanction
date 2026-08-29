@@ -44,6 +44,14 @@ RSpec.describe ActiveSanction::HttpClient do
       expect(client.get(url, headers: { "If-None-Match" => '"0953154d"' })).to be_not_modified
     end
 
+    # A 304 carries no body by definition, and handing back the empty string
+    # `read_body` produces would give a caller something to try to parse.
+    it "leaves the body nil for a 304 rather than empty" do
+      stub_request(:get, url).to_return(status: 304)
+
+      expect(client.get(url).body).to be_nil
+    end
+
     it "leaves the body encoding alone, since OFAC and the UN disagree about it" do
       stub_request(:get, url).to_return(status: 200, body: "Ali\xC3\xA9".dup.force_encoding(Encoding::BINARY))
 

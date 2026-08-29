@@ -49,7 +49,22 @@ module ActiveSanction
     DEFAULT_MAX_RETRIES = 2
     DEFAULT_RETRY_BACKOFF = 1.0
 
-    attr_reader :user_agent, :open_timeout, :read_timeout, :max_redirects, :max_retries, :retry_backoff
+    # Cache validators, and later raw payloads (#11), live under here. The XDG
+    # base directory is the right default for data a user can delete without
+    # losing anything: nothing in this directory is a record of what a list
+    # contained, only an optimization for not fetching it again.
+    XDG_CACHE_HOME = "XDG_CACHE_HOME"
+    DEFAULT_CACHE_DIRNAME = "active_sanction"
+
+    # The launch lists change roughly daily at most, so a source last confirmed
+    # within a day is not worth asking about again when a caller is only trying
+    # to decide whether a sync is due. This is what #stale? measures against;
+    # it does not cap how long a cached copy may be used, which is the calling
+    # application's policy to set.
+    DEFAULT_STALE_AFTER = 86_400
+
+    attr_reader :user_agent, :open_timeout, :read_timeout, :max_redirects, :max_retries, :retry_backoff,
+                :cache_dir, :stale_after, :logger
 
     def initialize
       @user_agent = DEFAULT_USER_AGENT
@@ -58,6 +73,9 @@ module ActiveSanction
       @max_redirects = DEFAULT_MAX_REDIRECTS
       @max_retries = DEFAULT_MAX_RETRIES
       @retry_backoff = DEFAULT_RETRY_BACKOFF
+      @cache_dir = self.class.default_cache_dir
+      @stale_after = DEFAULT_STALE_AFTER
+      @logger = nil
     end
 
     def user_agent=(value)
@@ -82,6 +100,38 @@ module ActiveSanction
 
     def retry_backoff=(value)
       @retry_backoff = positive_number!(:retry_backoff, value)
+    end
+
+    def cache_dir=(value)
+      path = value.to_s.strip
+      raise ConfigurationError, "cache_dir cannot be blank" if path.empty?
+
+      @cache_dir = -File.expand_path(path)
+    end
+
+    # `nil` disables the staleness clock entirely: a source with stored
+    # validators is then never stale, and the publisher's 304 is the only thing
+    # that decides whether a sync did any work.
+    def stale_after=(value)
+      @stale_after = value.nil? ? nil : positive_number!(:stale_after, value)
+    end
+
+    # Anything Logger-shaped. The fetch layer says what it did at `info` --
+    # which list was downloaded, which came back 304 -- because a sync that
+    # transfers nothing looks identical to a sync that did not run, and an
+    # operator needs to tell those apart.
+    def logger=(value)
+      unless value.nil? || value.respond_to?(:info)
+        raise ConfigurationError, "logger must respond to #info, got #{value.class}"
+      end
+
+      @logger = value
+    end
+
+    def self.default_cache_dir
+      home = ENV.fetch(XDG_CACHE_HOME, nil)
+      home = File.join(Dir.home, ".cache") if home.nil? || home.strip.empty?
+      -File.expand_path(File.join(home, DEFAULT_CACHE_DIRNAME))
     end
 
     # Shared by HttpClient, so a client built with an explicit `user_agent:`
