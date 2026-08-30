@@ -72,6 +72,17 @@ module ActiveSanction
     # application's policy to set.
     DEFAULT_STALE_AFTER = 86_400
 
+    # Which XML library the XML toolkit parses with. REXML is stdlib, needs no
+    # build step, and -- the part that decides it -- gives every installation
+    # the same answer. Snapshot checksums a list's parsed content and a
+    # screening decision has to be re-derivable months later, so the parser
+    # must not be chosen by whether the host app happened to load Nokogiri.
+    #
+    #   c.xml_backend = :nokogiri   # libxml2, for a host parsing OFAC's 126 MB XML
+    #
+    # See Parsers::XmlRecords::Backends for the contract a backend implements.
+    DEFAULT_XML_BACKEND = :rexml
+
     # Which lists a sync runs, by key. nil means every registered source,
     # which is what an application that has not thought about it should get:
     # requiring an explicit list would mean a gem adding a jurisdiction had no
@@ -79,7 +90,7 @@ module ActiveSanction
     DEFAULT_SOURCES = nil
 
     attr_reader :user_agent, :open_timeout, :read_timeout, :max_redirects, :max_retries, :retry_backoff,
-                :cache_dir, :retain_payloads, :stale_after, :sources, :logger
+                :cache_dir, :retain_payloads, :stale_after, :sources, :xml_backend, :logger
 
     def initialize
       @user_agent = DEFAULT_USER_AGENT
@@ -92,6 +103,7 @@ module ActiveSanction
       @retain_payloads = DEFAULT_RETAIN_PAYLOADS
       @stale_after = DEFAULT_STALE_AFTER
       @sources = DEFAULT_SOURCES
+      @xml_backend = DEFAULT_XML_BACKEND
       @logger = nil
     end
 
@@ -149,6 +161,18 @@ module ActiveSanction
     # rather than about load order.
     def sources=(value)
       @sources = value.nil? ? nil : source_keys!(value)
+    end
+
+    # Not resolved here, for the reason `sources=` is not: an initializer runs
+    # before a gem that registers a backend may have been required, and load
+    # order should not decide whether a configuration is valid. XmlRecords
+    # resolves the name when it parses, where an unknown one is an error about
+    # a typo and lists what is registered.
+    def xml_backend=(value)
+      name = value.to_s.strip
+      raise ConfigurationError, "xml_backend cannot be blank" if name.empty?
+
+      @xml_backend = name.to_sym
     end
 
     # Anything Logger-shaped. The fetch layer says what it did at `info` --

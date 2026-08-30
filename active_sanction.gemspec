@@ -21,12 +21,17 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"]   = "https://github.com/Babystep-Technologies/active_sanction/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  # `csv` is stdlib, not a third party: it shipped inside Ruby until 3.4 moved
-  # it to a bundled gem, which means it now has to be named to be requirable.
-  # Declaring it keeps the gem loadable on 3.4+ without changing what it costs
-  # a user -- there is still nothing here to compile and nothing to vendor.
-  # The XML toolkit (#15) will need `rexml` on the same terms.
+  # `csv` and `rexml` are stdlib, not third parties: both shipped inside Ruby
+  # and have since been moved to bundled gems, which means they now have to be
+  # named to be requirable. Declaring them keeps the gem loadable without
+  # changing what it costs a user -- there is still nothing here to compile and
+  # nothing to vendor.
+  #
+  # Nokogiri is deliberately *not* declared. The XML toolkit can drive libxml2
+  # and will if an application asks it to, but a compliance library should not
+  # be the reason a deployment starts building native extensions.
   spec.add_dependency "csv", "~> 3.3"
+  spec.add_dependency "rexml", "~> 3.3"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
