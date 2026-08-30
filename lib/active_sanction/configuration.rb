@@ -17,11 +17,11 @@ module ActiveSanction
   #     c.user_agent = "my-app/1.0 (compliance@example.com)"
   #   end
   #
-  # Only the fetch layer's settings live here so far; storage, sources and
-  # matcher thresholds join them as those milestones land. Every value has a
-  # working default, so an application that configures nothing still runs --
-  # the point of `configure` is that a caller *can* identify itself, not that
-  # it must recite the whole schema.
+  # The fetch layer's settings live here, plus which sources a sync runs;
+  # storage and matcher thresholds join them as those milestones land. Every
+  # value has a working default, so an application that configures nothing
+  # still runs -- the point of `configure` is that a caller *can* identify
+  # itself, not that it must recite the whole schema.
   class Configuration
     # OFAC returns 403 to a request with no User-Agent, so this cannot be nil.
     # The default identifies the library and points at its source, which is
@@ -72,8 +72,14 @@ module ActiveSanction
     # application's policy to set.
     DEFAULT_STALE_AFTER = 86_400
 
+    # Which lists a sync runs, by key. nil means every registered source,
+    # which is what an application that has not thought about it should get:
+    # requiring an explicit list would mean a gem adding a jurisdiction had no
+    # way to take effect without an edit to the host app's initializer.
+    DEFAULT_SOURCES = nil
+
     attr_reader :user_agent, :open_timeout, :read_timeout, :max_redirects, :max_retries, :retry_backoff,
-                :cache_dir, :retain_payloads, :stale_after, :logger
+                :cache_dir, :retain_payloads, :stale_after, :sources, :logger
 
     def initialize
       @user_agent = DEFAULT_USER_AGENT
@@ -85,6 +91,7 @@ module ActiveSanction
       @cache_dir = self.class.default_cache_dir
       @retain_payloads = DEFAULT_RETAIN_PAYLOADS
       @stale_after = DEFAULT_STALE_AFTER
+      @sources = DEFAULT_SOURCES
       @logger = nil
     end
 
@@ -128,6 +135,20 @@ module ActiveSanction
     # that decides whether a sync did any work.
     def stale_after=(value)
       @stale_after = value.nil? ? nil : positive_number!(:stale_after, value)
+    end
+
+    # The lists to sync, named by the keys their adapters declare:
+    #
+    #   c.sources = %i[ofac_sdn my_internal_watchlist]
+    #
+    # Keys are not resolved here. An initializer runs before a gem that
+    # registers a source may have been required, and rejecting a key at
+    # assignment would make the order of an application's requires decide
+    # whether its configuration is valid. Sources.enabled resolves them at the
+    # start of a run instead, where an unknown key is an error about a typo
+    # rather than about load order.
+    def sources=(value)
+      @sources = value.nil? ? nil : source_keys!(value)
     end
 
     # Anything Logger-shaped. The fetch layer says what it did at `info` --
@@ -179,6 +200,14 @@ module ActiveSanction
     end
 
     private
+
+    def source_keys!(value)
+      keys = Array(value).map { |key| key.to_s.strip }
+      raise ConfigurationError, "sources cannot be empty -- use nil to mean every registered source" if keys.empty?
+      raise ConfigurationError, "sources cannot contain a blank key, got #{value.inspect}" if keys.any?(&:empty?)
+
+      keys.map(&:to_sym).uniq
+    end
 
     def positive_number!(name, value)
       number = begin

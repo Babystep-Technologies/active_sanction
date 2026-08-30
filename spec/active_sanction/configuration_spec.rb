@@ -223,6 +223,63 @@ RSpec.describe ActiveSanction::Configuration do
     end
   end
 
+  describe "#sources" do
+    # nil rather than a list of the built-ins: an application that has not
+    # thought about it should get every registered source, so a gem adding a
+    # jurisdiction takes effect without an edit to the host app's initializer.
+    it "defaults to every registered source" do
+      expect(described_class.new.sources).to be_nil
+    end
+
+    it "takes the keys an application names" do
+      config = described_class.new
+      config.sources = %i[ofac_sdn my_internal_watchlist]
+
+      expect(config.sources).to eq(%i[ofac_sdn my_internal_watchlist])
+    end
+
+    it "accepts strings, since a CLI argument is one" do
+      config = described_class.new
+      config.sources = ["ofac_sdn"]
+
+      expect(config.sources).to eq([:ofac_sdn])
+    end
+
+    it "keeps the order it was given, and drops a repeat" do
+      config = described_class.new
+      config.sources = %i[un_consolidated ofac_sdn un_consolidated]
+
+      expect(config.sources).to eq(%i[un_consolidated ofac_sdn])
+    end
+
+    it "goes back to every source when set to nil" do
+      config = described_class.new
+      config.sources = %i[ofac_sdn]
+      config.sources = nil
+
+      expect(config.sources).to be_nil
+    end
+
+    # An empty list would silently sync nothing, which is the one outcome a
+    # compliance job must never reach quietly.
+    it "refuses an empty list" do
+      expect { described_class.new.sources = [] }
+        .to raise_error(ActiveSanction::ConfigurationError, /cannot be empty/)
+    end
+
+    it "refuses a blank key" do
+      expect { described_class.new.sources = ["ofac_sdn", " "] }
+        .to raise_error(ActiveSanction::ConfigurationError, /blank key/)
+    end
+
+    # Resolving here would make the order of an application's requires decide
+    # whether its configuration is valid; Sources.enabled resolves at the start
+    # of a run instead.
+    it "does not resolve the keys, so an initializer may name a source not yet required" do
+      expect { described_class.new.sources = %i[not_registered_yet] }.not_to raise_error
+    end
+  end
+
   describe "ActiveSanction.configure" do
     it "yields the global configuration" do
       ActiveSanction.configure { |c| c.user_agent = "my-app/1.0 (compliance@example.com)" }

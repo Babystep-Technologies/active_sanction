@@ -14,6 +14,7 @@ require "active_sanction/validators"
 require "active_sanction/validator_store"
 require "active_sanction/fetcher"
 require "active_sanction/payload_cache"
+require "active_sanction/sources"
 
 module ActiveSanction
   class << self
