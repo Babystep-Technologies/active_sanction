@@ -1,0 +1,202 @@
+# frozen_string_literal: true
+
+require "time"
+require "active_sanction/error"
+require "active_sanction/entity"
+require "active_sanction/snapshot"
+require "active_sanction/fetcher"
+require "active_sanction/payload_cache"
+require "active_sanction/sources"
+require "active_sanction/sources/definition"
+
+module ActiveSanction
+  module Sources
+    # The contract every sanctions list adapter implements: declare what the
+    # list is and where it lives, then turn its bytes into Entities.
+    #
+    #   class UnConsolidated < ActiveSanction::Sources::Base
+    #     key          :un_consolidated
+    #     jurisdiction :un
+    #     authority    "United Nations Security Council"
+    #     format       :xml
+    #     url          :main, "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
+    #
+    #     def parse(raw)
+    #       ...   # => [Entity, ...]
+    #     end
+    #   end
+    #
+    #   ActiveSanction::Sources.register(UnConsolidated)
+    #
+    # #parse is the whole of what an adapter must write. Everything above it is
+    # declaration (Definition), and everything below it -- conditional GET,
+    # payload caching, checksumming the result into a Snapshot -- is here, the
+    # same for every list, so that adding a jurisdiction is a parsing problem
+    # and not a plumbing one.
+    #
+    #   snapshot = ActiveSanction::Sources[:un_consolidated].new.sync
+    #   snapshot                      # => Snapshot, or nil if nothing changed
+    #
+    # ### What #parse is handed
+    #
+    # A source declaring one URL gets the bytes. One declaring several gets a
+    # Hash keyed by the names it declared, because OFAC's three files only mean
+    # anything joined:
+    #
+    #   def parse(raw)
+    #     join(raw[:sdn], raw[:alt], raw[:add])
+    #   end
+    #
+    # Which of the two it is follows from the declaration, not from what a
+    # caller happened to pass, so an adapter's signature does not change under
+    # it when a fixture is handed to #snapshot directly.
+    #
+    # The bytes arrive as a String. A list too large to hold in memory wants
+    # #15's streaming parse rather than this path; the cached Entry, which
+    # knows how to hand out a verified file handle, is where that will start.
+    #
+    # ### What sync does not do
+    #
+    # It does not store the snapshot, and it does not rescue anything. One
+    # source's failure being isolated from the others, and the previous good
+    # snapshot being kept when a list fails, are decisions about a *run* rather
+    # than about a list -- they belong to sync orchestration (#34), which needs
+    # an exception here to notice.
+    class Base
+      extend Definition
+
+      attr_reader :fetcher, :cache, :logger
+
+      # `cache: nil` turns off payload caching, which costs one thing worth
+      # knowing: a multi-file source can no longer answer a sync where some of
+      # its files changed and others came back 304, so the unchanged ones are
+      # downloaded again in full.
+      def initialize(fetcher: Fetcher.new, cache: PayloadCache.new, logger: ActiveSanction.config.logger)
+        @fetcher = fetcher
+        @cache = cache
+        @logger = logger
+        @results = {}
+      end
+
+      def key = self.class.key
+      def jurisdiction = self.class.jurisdiction
+      def authority = self.class.authority
+      def format = self.class.format
+      def urls = self.class.urls
+      def url(name = nil) = name.nil? ? self.class.url : self.class.url(name)
+      def file_key(name) = self.class.file_key(name)
+
+      # The one method an adapter must write: bytes in, canonical records out.
+      def parse(_raw)
+        raise NotImplementedError,
+              "#{self.class} must implement #parse(raw) and return an Array of ActiveSanction::Entity"
+      end
+
+      # Fetches, parses, and checksums -- or returns nil when the publisher
+      # says nothing has changed, which is the outcome to expect on most runs
+      # and the reason conditional GET exists.
+      def sync(force: false)
+        payloads = retrieve(force: force)
+        return nil if payloads.nil?
+
+        snapshot(payloads)
+      end
+
+      # Parses payloads already in hand into a Snapshot. What #sync calls, and
+      # what an adapter's own spec calls with a fixture and no network:
+      #
+      #   source.snapshot(main: File.read("spec/fixtures/un_consolidated.xml"))
+      #
+      # The files may be named as keywords, as above, or passed as one Hash --
+      # or, for a source that declares a single file, as the bytes themselves.
+      def snapshot(payloads = nil, **files)
+        Snapshot.new(source: key, entities: parse(parse_argument(payloads || files)),
+                     fetched_at: Time.now.utc, source_version: source_version)
+      end
+
+      # Every declared file, conditionally: a Hash of name => bytes, or nil
+      # when the publisher answered 304 for all of them.
+      #
+      # A file that came back unchanged is served from the payload cache, so a
+      # sync in which one of OFAC's three files moved downloads one file and
+      # not three. If the cache has nothing to serve -- a first run against a
+      # store that already has validators, a cache directory a user deleted --
+      # that file alone is re-fetched in full.
+      def retrieve(force: false)
+        raise DeclarationError, "#{self.class} declares no URL to retrieve" if urls.empty?
+
+        @results = urls.to_h { |name, address| [name, fetch_file(name, address, force)] }
+        return nil if @results.each_value.all?(&:unchanged?)
+
+        @results.keys.to_h { |name| [name, payload(name)] }
+      end
+
+      # Whether any of this source's files is due a fetch, answered locally and
+      # without a request. See Fetcher#stale? for what that does and does not
+      # claim.
+      def stale? = urls.any? { |name, address| fetcher.stale?(file_key(name), url: address) }
+
+      def fresh? = !stale?
+
+      # The publisher's own marker for the version just fetched. Last-Modified
+      # is the only one every launch source serves; an adapter whose document
+      # carries a generation date inside it should override this and say so,
+      # because that is the string an examiner will recognise.
+      def source_version = @results.values.first&.last_modified
+
+      def inspect
+        name = self.class.declared?(:key) ? key : "(no key)"
+        "#<#{self.class} #{name} #{urls.size} url(s)>"
+      end
+
+      private
+
+      # One declared URL, one payload: #parse gets the bytes. Several, and it
+      # gets the Hash. Bytes handed straight to #snapshot are already the
+      # former, which is what reading a fixture off disk produces.
+      def parse_argument(payloads)
+        return payloads if payloads.is_a?(String)
+
+        self.class.multi_url? ? payloads.to_h : payloads.to_h.values.first
+      end
+
+      def fetch_file(name, address, force)
+        fetcher.fetch(address, key: file_key(name), force: force).success!
+      end
+
+      def payload(name)
+        result = @results[name]
+        return store(name, result) if result.changed?
+
+        cached(name) || store(name, refetch(name))
+      end
+
+      def store(name, result)
+        cache&.write(file_key(name), result.body, url: url(name), final_url: result.uri.to_s,
+                                                  etag: result.etag, last_modified: result.last_modified)
+        result.body
+      end
+
+      # A cached payload that no longer hashes to its sidecar is not used and
+      # not repaired -- but it is also not fatal here, because the bytes it
+      # failed to prove are a download away. The corrupt entry stays on disk
+      # for whoever investigates it.
+      def cached(name)
+        cache&.latest(file_key(name))&.read
+      rescue PayloadCache::CorruptEntry => e
+        logger&.info("[active_sanction] #{key} #{name} cached payload unusable (#{e.class}); fetching in full")
+        nil
+      end
+
+      def refetch(name)
+        logger&.info("[active_sanction] #{key} #{name} unchanged but not cached; fetching in full")
+        result = fetcher.fetch(url(name), key: file_key(name), force: true).success!
+        return result if result.changed?
+
+        raise MissingPayload,
+              "#{key} #{name} answered #{result.status} to an unconditional request, so the bytes " \
+              "for #{url(name)} could not be obtained"
+      end
+    end
+  end
+end
