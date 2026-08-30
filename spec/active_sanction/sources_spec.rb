@@ -147,14 +147,16 @@ RSpec.describe ActiveSanction::Sources do
       register(source(:zulu_list))
       register(source(:alpha_list))
 
-      expect(described_class.keys.first(2)).to eq(%i[alpha_list zulu_list])
+      # Intersection rather than #first, because the built-in adapters are
+      # registered on require and sort in among these.
+      expect(described_class.keys & %i[zulu_list alpha_list]).to eq(%i[alpha_list zulu_list])
     end
 
     it "orders classes the same way" do
       register(source(:zulu_list))
       alpha = register(source(:alpha_list))
 
-      expect(described_class.all.first).to be(alpha)
+      expect(described_class.all.grep(->(klass) { klass.key.end_with?("_list") }).first).to be(alpha)
     end
 
     it "counts what is registered" do

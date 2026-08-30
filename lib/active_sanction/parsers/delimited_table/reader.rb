@@ -1,0 +1,160 @@
+# frozen_string_literal: true
+
+require "csv"
+require "stringio"
+
+module ActiveSanction
+  module Parsers
+    class DelimitedTable
+      # One pass over one payload. Enumerable, and lazy: rows are yielded as
+      # they are read rather than collected, so a 5.6 MB list costs one row of
+      # memory plus whatever the caller keeps.
+      #
+      #   reader = table.read(bytes)
+      #   reader.each { |row| ... }
+      #   reader.warnings          # => rows that could not be read
+      #
+      # Re-enumerating rewinds and starts over, which also resets #warnings --
+      # so `reader.count` followed by `reader.warnings` reports the warnings
+      # from the counting pass, not from two passes appended together.
+      class Reader
+        include Enumerable
+
+        # A parser that raises on every row is not isolating failures, it is
+        # failing -- most often because the payload is not the format the table
+        # was told to expect (an HTML error page saved as .csv is the classic).
+        # Collecting 19,321 warnings to say so helps nobody.
+        MAX_CONSECUTIVE_FAILURES = 100
+
+        EOF = Object.new.freeze
+        private_constant :EOF
+
+        attr_reader :table, :warnings
+
+        def initialize(table:, payload:)
+          @table = table
+          @payload = payload
+          @warnings = []
+        end
+
+        def each
+          return enum_for(:each) unless block_given?
+
+          csv = start
+          columns = table.columns || header!(csv)
+          consecutive = 0
+          loop do
+            values = shift(csv)
+            break if values.equal?(EOF)
+
+            consecutive = advance(consecutive, values)
+            yield build(columns, values, csv.lineno) unless values.nil?
+          end
+          self
+        end
+
+        # Every row, in memory. The convenience the small files get to use;
+        # anything list-sized should stay with #each.
+        def to_a = each.to_a
+
+        private
+
+        # Counts consecutive unreadable rows, and stops the pass once there
+        # have been too many to be explained by anything but the wrong format.
+        def advance(consecutive, values)
+          return 0 unless values.nil?
+
+          count = consecutive + 1
+          give_up!(count) if count >= MAX_CONSECUTIVE_FAILURES
+          count
+        end
+
+        def start
+          @warnings = []
+          CSV.new(StringIO.new(decoded), **table.csv_options)
+        end
+
+        # Decoding happens once per pass rather than per row, and never raises:
+        # a byte that is not valid in the declared encoding becomes U+FFFD and
+        # is reported, because losing one character of one address is a far
+        # better outcome than refusing to load the list. OFAC serves Windows-1252
+        # and the UN serves UTF-8, and neither declares it in a header we can
+        # trust, which is why the encoding is something the adapter states.
+        def decoded
+          string = @payload.to_s.dup.force_encoding(table.encoding)
+          return trim(string) if string.valid_encoding? && table.encoding == Encoding::UTF_8
+
+          warn_invalid_bytes unless string.valid_encoding?
+          trim(string.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "�"))
+        end
+
+        # Strips the two markers that are file structure rather than data.
+        #
+        # A UTF-8 BOM left in place becomes part of the first column of the
+        # first row, which turns a header named "ent_num" into "﻿ent_num"
+        # and an id of 36 into something that is not an integer.
+        #
+        # SUB (0x1A) is CP/M's end-of-file character, and DOS-lineage export
+        # tooling still writes it: all three OFAC files end with `\r\n\x1A`.
+        # Left alone it parses as a final one-column row, so every sync reports
+        # a malformed row it can do nothing about -- and a warning that fires
+        # every single time is a warning nobody reads.
+        def trim(string) = string.delete_prefix("﻿").sub(/\r?\n?\x1A\s*\z/, "")
+
+        def warn_invalid_bytes
+          record(0, "payload contains bytes that are not valid #{table.encoding}; they were replaced with U+FFFD")
+        end
+
+        # Column names taken from the file's own first row, lowercased and
+        # snake_cased so that `City/State/Province/ZIP/Postal Code` and
+        # `city_state_province_zip_postal_code` are the same column to an
+        # adapter regardless of how the publisher capitalized it this quarter.
+        def header!(csv)
+          values = shift(csv)
+          raise ParseError, "expected a header row, got an empty payload" if values.nil? || values.equal?(EOF)
+
+          values.map { |value| normalize_header(value) }
+        end
+
+        def normalize_header(value)
+          value.to_s.strip.downcase.gsub(/[^a-z0-9]+/, "_").delete_prefix("_").delete_suffix("_").to_sym
+        end
+
+        # Returns the row's values, EOF at the end of the payload, or nil for a
+        # row that could not be parsed -- already recorded as a warning.
+        def shift(csv)
+          row = csv.shift
+          row.nil? ? EOF : row
+        rescue CSV::MalformedCSVError => e
+          record(csv.lineno, "malformed #{table.col_sep_name}: #{e.message}")
+          nil
+        end
+
+        def build(columns, values, line)
+          record_arity(columns, values, line) unless values.size == columns.size
+          Row.new(values: table.coerce(columns, values), line: line)
+        end
+
+        # A row of the wrong width is kept, not dropped. Short rows are padded
+        # with nil and long ones keep their extra values under no name, because
+        # a publisher appending a column mid-year should degrade the fields
+        # nobody has mapped yet rather than the whole list.
+        def record_arity(columns, values, line)
+          shape = values.size < columns.size ? "only #{values.size}" : values.size.to_s
+          record(line, "expected #{columns.size} columns, got #{shape}", values.join(table.col_sep))
+        end
+
+        def record(line, message, snippet = nil)
+          @warnings << Warning.new(line: line, message: message, snippet: snippet)
+        end
+
+        def give_up!(consecutive)
+          raise ParseError,
+                "#{consecutive} consecutive rows could not be parsed. This payload is almost certainly not the " \
+                "#{table.col_sep_name} it was read as -- check the URL, and whether the publisher served an " \
+                "error page. First complaint: #{warnings.first}"
+        end
+      end
+    end
+  end
+end
