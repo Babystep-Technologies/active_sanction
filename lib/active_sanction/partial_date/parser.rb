@@ -28,10 +28,19 @@ module ActiveSanction
       # looser would read the "-" in 1972-04 as a span from 1972 to April.
       YEAR_RANGE = /\A(\d{4})\s*[-–—]\s*(\d{4})\z/
 
+      # An XML Schema `xs:date` may carry a UTC offset, and the UN publishes
+      # nine of its listing dates that way: "2015-07-01-04:00". The offset
+      # records which midnight a clerk was working against, not which day the
+      # listing is, so it is trimmed rather than applied -- shifting a listing
+      # date across a day boundary to honour a timezone the publisher never
+      # meant would be a worse answer than ignoring it. Without this the whole
+      # date reads as nil and nine listings silently lose their date.
+      ZONE = /(?<=\d)(?:Z|[+-]\d{2}:\d{2})\z/
+
       module_function
 
       def call(text)
-        string = text.to_s.strip.squeeze(" ")
+        string = text.to_s.strip.squeeze(" ").sub(ZONE, "")
         return nil if string.empty?
 
         approximate = APPROXIMATE.match?(string)

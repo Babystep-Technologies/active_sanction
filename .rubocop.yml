@@ -45,6 +45,15 @@ RSpec/DescribeClass:
 Metrics/ParameterLists:
   CountKeywordArgs: false
 
+# The same rule, one level down. Entity's `initialize` and `to_h` grow by
+# exactly one assignment and one hash key for every field the canonical record
+# gains, so their ABC size measures how many fields a sanctions record has and
+# nothing else. Splitting either in half to satisfy the count would make them
+# harder to read, not easier.
+Metrics/AbcSize:
+  Exclude:
+    - "lib/active_sanction/entity.rb"
+
 Metrics/MethodLength:
   Max: 15
 

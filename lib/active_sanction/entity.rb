@@ -13,6 +13,7 @@ module ActiveSanction
   #     names:         [Name, ...],
   #     addresses:     [Address, ...],
   #     identifiers:   [Identifier, ...],
+  #     dates_of_birth: [PartialDate, ...],
   #     nationalities: ["EG"],
   #     programs:      ["SDGT"],
   #     listed_on:     PartialDate,
@@ -29,9 +30,20 @@ module ActiveSanction
     # Canonical member order. Snapshot (#8) checksums the serialized form, so
     # #to_h must lay its keys out the same way every time.
     MEMBERS = %i[
-      id source source_ref type names addresses identifiers
+      id source source_ref type names addresses identifiers dates_of_birth
       nationalities programs listed_on remarks
     ].freeze
+
+    # Plural, and it is not a hedge. The UN publishes more than one date of
+    # birth for 140 of its 736 individuals and as many as ten for one of them,
+    # because that is the honest state of the intelligence: several
+    # governments reported several dates and the Committee listed all of them.
+    # Collapsing that to one would mean choosing, on no evidence, which
+    # report to believe -- and a screening decision that clears someone whose
+    # DOB matched the discarded one is exactly the failure this library exists
+    # to prevent. The scorer (#32) reads them the way PartialDate#overlaps?
+    # already reads a single imprecise date: any of them matching is a match.
+    DATE_MEMBERS = %i[dates_of_birth].freeze
 
     # Nested members are duck-typed: any object answering #to_h serializes, and
     # the named class rebuilds it. Names are resolved lazily so Entity neither
@@ -39,7 +51,8 @@ module ActiveSanction
     COLLECTION_TYPES = {
       names: "ActiveSanction::Name",
       addresses: "ActiveSanction::Address",
-      identifiers: "ActiveSanction::Identifier"
+      identifiers: "ActiveSanction::Identifier",
+      dates_of_birth: "ActiveSanction::PartialDate"
     }.freeze
 
     SCALAR_TYPES = { listed_on: "ActiveSanction::PartialDate" }.freeze
@@ -75,7 +88,7 @@ module ActiveSanction
     private_class_method :build
 
     def initialize(source:, type:, id: nil, source_ref: nil, names: [], addresses: [], identifiers: [],
-                   nationalities: [], programs: [], listed_on: nil, remarks: nil)
+                   dates_of_birth: [], nationalities: [], programs: [], listed_on: nil, remarks: nil)
       @source = symbol!(:source, source)
       @type = type!(type)
       @source_ref = string_or_nil(source_ref)
@@ -83,12 +96,17 @@ module ActiveSanction
       @names = list!(:names, names)
       @addresses = list!(:addresses, addresses)
       @identifiers = list!(:identifiers, identifiers)
+      @dates_of_birth = list!(:dates_of_birth, dates_of_birth)
       @nationalities = strings!(:nationalities, nationalities)
       @programs = strings!(:programs, programs)
       @listed_on = listed_on
       @remarks = string_or_nil(remarks) # original free text, always retained verbatim
       freeze
     end
+
+    # True when the publisher gave no date at all, which is most of OFAC --
+    # its dates are prose in Remarks and stay there until #19 reads them.
+    def dates_of_birth? = dates_of_birth.any?
 
     # The name an adapter marked `:primary`, falling back to the first name for
     # sources such as Canada that publish no alias kinds at all.
@@ -105,6 +123,7 @@ module ActiveSanction
         names: names.map(&:to_h),
         addresses: addresses.map(&:to_h),
         identifiers: identifiers.map(&:to_h),
+        dates_of_birth: dates_of_birth.map(&:to_h),
         nationalities: nationalities,
         programs: programs,
         listed_on: listed_on&.to_h,

@@ -36,7 +36,10 @@ module ActiveSanction
     # the version they were written under so they can be migrated or discarded
     # rather than silently misread; it is folded into the checksum, so content
     # that means one thing under v1 and another under v2 cannot collide.
-    SCHEMA_VERSION = 1
+    #
+    # v2 added Entity#dates_of_birth, which the UN adapter (#21) needed and the
+    # canonical model had no slot for.
+    SCHEMA_VERSION = 2
 
     # Canonical member order, matching the layout #to_h must produce.
     MEMBERS = %i[source entities fetched_at checksum record_count schema_version source_version].freeze

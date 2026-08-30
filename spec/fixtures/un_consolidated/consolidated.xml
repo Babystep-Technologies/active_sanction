@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONSOLIDATED_LIST xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://www.un.org/sc/resources/sc-sanctions.xsd" dateGenerated="2026-08-29T23:00:02.417Z">
+  <INDIVIDUALS>
+    <INDIVIDUAL>
+      <DATAID>6907993</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>ERIC</FIRST_NAME>
+      <SECOND_NAME>BADEGE</SECOND_NAME>
+      <UN_LIST_TYPE>DRC</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>CDi.001</REFERENCE_NUMBER>
+      <LISTED_ON>2012-12-31</LISTED_ON>
+      <GENDER>Male</GENDER>
+      <COMMENTS1>He fled to Rwanda in March 2013 and is still living there as of early 2016. INTERPOL-UN Security Council Special Notice:https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Individuals</COMMENTS1>
+      <HAS_INTERPOL_LINK>YES</HAS_INTERPOL_LINK>
+      <INTERPOL_LINK>https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Individuals</INTERPOL_LINK>
+      <NATIONALITY>
+        <VALUE>Democratic Republic of the Congo</VALUE>
+      </NATIONALITY>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+      <LAST_DAY_UPDATED>
+        <VALUE>2016-10-13</VALUE>
+      </LAST_DAY_UPDATED>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY/>
+        <ALIAS_NAME/>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ADDRESS>
+        <COUNTRY>Rwanda</COUNTRY>
+        <NOTE>as of early 2016</NOTE>
+      </INDIVIDUAL_ADDRESS>
+      <INDIVIDUAL_DATE_OF_BIRTH>
+        <TYPE_OF_DATE>EXACT</TYPE_OF_DATE>
+        <YEAR>1971</YEAR>
+      </INDIVIDUAL_DATE_OF_BIRTH>
+      <INDIVIDUAL_PLACE_OF_BIRTH>
+        <COUNTRY/>
+      </INDIVIDUAL_PLACE_OF_BIRTH>
+      <INDIVIDUAL_DOCUMENT/>
+      <SORT_KEY/>
+      <SORT_KEY_LAST_MOD/>
+    </INDIVIDUAL>
+    <INDIVIDUAL>
+      <DATAID>6908049</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>QUSAY</FIRST_NAME>
+      <SECOND_NAME>SADDAM</SECOND_NAME>
+      <THIRD_NAME>HUSSEIN</THIRD_NAME>
+      <FOURTH_NAME>AL-TIKRITI</FOURTH_NAME>
+      <UN_LIST_TYPE>Iraq</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>IQi.002</REFERENCE_NUMBER>
+      <LISTED_ON>2003-06-27</LISTED_ON>
+      <NAME_ORIGINAL_SCRIPT>قصي صدام حسين التكريتي</NAME_ORIGINAL_SCRIPT>
+      <COMMENTS1/>
+      <HAS_INTERPOL_LINK>NO</HAS_INTERPOL_LINK>
+      <INTERPOL_LINK/>
+      <NATIONALITY>
+        <VALUE>Iraq</VALUE>
+      </NATIONALITY>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+      <LAST_DAY_UPDATED>
+        <VALUE/>
+      </LAST_DAY_UPDATED>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY/>
+        <ALIAS_NAME/>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ADDRESS>
+        <COUNTRY/>
+      </INDIVIDUAL_ADDRESS>
+      <INDIVIDUAL_DATE_OF_BIRTH>
+        <TYPE_OF_DATE>EXACT</TYPE_OF_DATE>
+        <YEAR>1965</YEAR>
+      </INDIVIDUAL_DATE_OF_BIRTH>
+      <INDIVIDUAL_DATE_OF_BIRTH>
+        <TYPE_OF_DATE>EXACT</TYPE_OF_DATE>
+        <YEAR>1966</YEAR>
+      </INDIVIDUAL_DATE_OF_BIRTH>
+      <INDIVIDUAL_PLACE_OF_BIRTH>
+        <CITY>Baghdad</CITY>
+        <COUNTRY>Iraq</COUNTRY>
+      </INDIVIDUAL_PLACE_OF_BIRTH>
+      <INDIVIDUAL_DOCUMENT/>
+      <SORT_KEY/>
+      <SORT_KEY_LAST_MOD/>
+    </INDIVIDUAL>
+    <INDIVIDUAL>
+      <DATAID>6908021</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>BOSCO</FIRST_NAME>
+      <SECOND_NAME>TAGANDA</SECOND_NAME>
+      <UN_LIST_TYPE>DRC</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>CDi.030</REFERENCE_NUMBER>
+      <LISTED_ON>2005-11-01</LISTED_ON>
+      <GENDER>Male</GENDER>
+      <COMMENTS1>Born in Rwanda, he moved to Nyamitaba, Masisi territory, North Kivu, when he was a child. Nominated FARDC Brigadier-General by Presidential Decree on 11 December 2004, following Ituri peace agreements. Formerly Chief of Staff in CNDP and became CNDP military commander since the arrest of Laurent Nkunda in January 2009. Since January 2009, de facto Deputy Commander of consecutive anti-FDLR operations ‘Umoja Wetu’, ‘Kimia II’, and ‘Amani Leo’ in North and South Kivu. Entered Rwanda in March 2013, and voluntarily surrender to ICC officials in Kigali on March 22. Transferred to the ICC in The Hague, Netherlands. On 9 June 2014, ICC confirmed 13 charges of war crimes and five charges of crimes against humanity against him; the trial started in September 2015. On 8 July 2019, the ICC found him guilty of 18 counts of war crimes and crimes against humanity, committed in Ituri in 2002-2003. On 7 November 2019, he was sentenced to a total of 30 years imprisonment.  He has appealed both his conviction and sentence. On 30 March 2021, the ICC Appeals Chamber confirmed his conviction and sentence. On 14 December 2022, he was transferred to the territory of Belgium for enforcement of sentence. INTERPOL-UN Security Council Special Notice:https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Individuals</COMMENTS1>
+      <HAS_INTERPOL_LINK>YES</HAS_INTERPOL_LINK>
+      <INTERPOL_LINK>https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Individuals</INTERPOL_LINK>
+      <NATIONALITY>
+        <VALUE>Democratic Republic of the Congo</VALUE>
+      </NATIONALITY>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+      <LAST_DAY_UPDATED>
+        <VALUE>2016-10-13</VALUE>
+        <VALUE>2020-08-19</VALUE>
+        <VALUE>2023-03-01</VALUE>
+      </LAST_DAY_UPDATED>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Bosco Ntaganda</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Bosco Ntagenda</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>General Taganda</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Low</QUALITY>
+        <ALIAS_NAME>Lydia</ALIAS_NAME>
+        <NOTE>When he was part of APR.</NOTE>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Low</QUALITY>
+        <ALIAS_NAME>Terminator</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Low</QUALITY>
+        <ALIAS_NAME>Tango Romeo</ALIAS_NAME>
+        <NOTE>Call sign</NOTE>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Low</QUALITY>
+        <ALIAS_NAME>Romeo</ALIAS_NAME>
+        <NOTE>Call sign</NOTE>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Low</QUALITY>
+        <ALIAS_NAME>Major</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ADDRESS>
+        <COUNTRY>Belgium</COUNTRY>
+        <NOTE>As of 14 December 2022</NOTE>
+      </INDIVIDUAL_ADDRESS>
+      <INDIVIDUAL_DATE_OF_BIRTH>
+        <TYPE_OF_DATE>BETWEEN</TYPE_OF_DATE>
+        <FROM_YEAR>1973</FROM_YEAR>
+        <TO_YEAR>1974</TO_YEAR>
+      </INDIVIDUAL_DATE_OF_BIRTH>
+      <INDIVIDUAL_PLACE_OF_BIRTH>
+        <CITY>Bigogwe</CITY>
+        <COUNTRY>Rwanda</COUNTRY>
+      </INDIVIDUAL_PLACE_OF_BIRTH>
+      <INDIVIDUAL_DOCUMENT/>
+      <SORT_KEY/>
+      <SORT_KEY_LAST_MOD/>
+    </INDIVIDUAL>
+    <INDIVIDUAL>
+      <DATAID>6908841</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>Amir</FIRST_NAME>
+      <SECOND_NAME>Muhammad Sa’id</SECOND_NAME>
+      <THIRD_NAME>Abdal-Rahman</THIRD_NAME>
+      <FOURTH_NAME>al-Salbi</FOURTH_NAME>
+      <UN_LIST_TYPE>Al-Qaida</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>QDi.426</REFERENCE_NUMBER>
+      <LISTED_ON>2020-05-21</LISTED_ON>
+      <NAME_ORIGINAL_SCRIPT>أمیر محمد سعید عبد
+                                                  الرحمن السلبي</NAME_ORIGINAL_SCRIPT>
+      <COMMENTS1>Leader of Islamic State in Iraq and the Levant, listed as Al-Qaida in Iraq (QDe.115). Mother’s name: Samira Shareef (سميرة شريف) or Sahra Sharif Abd al-Qader (سهرة شريف عبد القادر). Height 170 cm, right leg amputated. Photo available for inclusion in the INTERPOL-UN Security Council Special Notice. Arrest warrant issued by Iraq 2018. Reportedly deceased as of 3 February 2022 INTERPOL-UN Security Council Special Notice:https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Individuals</COMMENTS1>
+      <HAS_INTERPOL_LINK>YES</HAS_INTERPOL_LINK>
+      <INTERPOL_LINK>https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Individuals</INTERPOL_LINK>
+      <NATIONALITY>
+        <VALUE>Iraq</VALUE>
+      </NATIONALITY>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+      <LAST_DAY_UPDATED>
+        <VALUE>2022-05-27</VALUE>
+      </LAST_DAY_UPDATED>
+      <LAST_REVIEWED_ON>
+        <VALUE>2025-12-31</VALUE>
+      </LAST_REVIEWED_ON>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Abu Ibrahim al-Hashimi al-Qurashi</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Hajji Abdallah</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Abu ‘Umar al-Turkmani</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Abdullah Qardash</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Abu ‘Abdullah Qardash</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>al-Hajj Abdullah Qardash</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Hajji Abdullah Al-Afari</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>`Abdul Amir Muhammad Sa'id Salbi</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Muhammad Sa'id `Abd-al-Rahman al-Mawla</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Amir Muhammad Sa’id ‘Abd-al-Rahman Muhammad al-Mula</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Low</QUALITY>
+        <ALIAS_NAME>Al-Ustadh</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Low</QUALITY>
+        <ALIAS_NAME>Ustadh Ahmad</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Amir Muhammad Sa’id Abdal-Rahman al-Mawla</ALIAS_NAME>
+        <NOTE>previously listed as</NOTE>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ADDRESS>
+        <STREET>House 110, Street 704, District 704</STREET>
+        <CITY>Tall ‘Afar</CITY>
+        <COUNTRY>Iraq</COUNTRY>
+        <NOTE>previous address</NOTE>
+      </INDIVIDUAL_ADDRESS>
+      <INDIVIDUAL_ADDRESS>
+        <STREET>near Shahid Mazen Mosque and al-Khansa Hospital</STREET>
+        <CITY>Mosul</CITY>
+        <COUNTRY>Iraq</COUNTRY>
+        <NOTE>previous address</NOTE>
+      </INDIVIDUAL_ADDRESS>
+      <INDIVIDUAL_ADDRESS>
+        <CITY>Idlib</CITY>
+        <COUNTRY>Syrian Arab Republic</COUNTRY>
+      </INDIVIDUAL_ADDRESS>
+      <INDIVIDUAL_DATE_OF_BIRTH>
+        <TYPE_OF_DATE>EXACT</TYPE_OF_DATE>
+        <DATE>1976-10-05</DATE>
+      </INDIVIDUAL_DATE_OF_BIRTH>
+      <INDIVIDUAL_DATE_OF_BIRTH>
+        <TYPE_OF_DATE>EXACT</TYPE_OF_DATE>
+        <DATE>1976-10-01</DATE>
+      </INDIVIDUAL_DATE_OF_BIRTH>
+      <INDIVIDUAL_DATE_OF_BIRTH>
+        <TYPE_OF_DATE>EXACT</TYPE_OF_DATE>
+        <DATE>1976-01-06</DATE>
+      </INDIVIDUAL_DATE_OF_BIRTH>
+      <INDIVIDUAL_PLACE_OF_BIRTH>
+        <STATE_PROVINCE>Tall’Afar</STATE_PROVINCE>
+        <COUNTRY>Iraq</COUNTRY>
+      </INDIVIDUAL_PLACE_OF_BIRTH>
+      <INDIVIDUAL_PLACE_OF_BIRTH>
+        <STATE_PROVINCE>Mosul</STATE_PROVINCE>
+        <COUNTRY>Iraq</COUNTRY>
+      </INDIVIDUAL_PLACE_OF_BIRTH>
+      <INDIVIDUAL_DOCUMENT>
+        <TYPE_OF_DOCUMENT>National Identification
+                                                  Number</TYPE_OF_DOCUMENT>
+        <NUMBER>00278640</NUMBER>
+        <DATE_OF_ISSUE>2012-05-02</DATE_OF_ISSUE>
+      </INDIVIDUAL_DOCUMENT>
+      <SORT_KEY/>
+      <SORT_KEY_LAST_MOD/>
+    </INDIVIDUAL>
+    <INDIVIDUAL>
+      <DATAID>6909617</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>JOHN </FIRST_NAME>
+      <SECOND_NAME>IMANI </SECOND_NAME>
+      <THIRD_NAME>NZENZE </THIRD_NAME>
+      <UN_LIST_TYPE>DRC</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>CDi.049</REFERENCE_NUMBER>
+      <LISTED_ON>2026-07-14</LISTED_ON>
+      <GENDER>Male</GENDER>
+      <COMMENTS1>Gender: Male. As a leader of M23 (CDe.006), JOHN IMANI NZENZE is involved in planning, promulgating and supporting the armed group’s activities. INTERPOL-UN Security Council Special Notice:https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Individuals</COMMENTS1>
+      <HAS_INTERPOL_LINK>YES</HAS_INTERPOL_LINK>
+      <INTERPOL_LINK>https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Individuals</INTERPOL_LINK>
+      <DESIGNATION>
+        <VALUE>Colonel</VALUE>
+        <VALUE>M23 intelligence chief (CDe.006) </VALUE>
+      </DESIGNATION>
+      <NATIONALITY>
+        <VALUE>Democratic Republic of the Congo</VALUE>
+        <VALUE>Rwanda</VALUE>
+      </NATIONALITY>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+      <LAST_DAY_UPDATED>
+        <VALUE/>
+      </LAST_DAY_UPDATED>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY/>
+        <ALIAS_NAME/>
+      </INDIVIDUAL_ALIAS>
+      <INDIVIDUAL_ADDRESS>
+        <STATE_PROVINCE>North Kivu</STATE_PROVINCE>
+        <COUNTRY>Democratic Republic of the Congo</COUNTRY>
+      </INDIVIDUAL_ADDRESS>
+      <INDIVIDUAL_DATE_OF_BIRTH>
+        <TYPE_OF_DATE>EXACT</TYPE_OF_DATE>
+        <DATE>1978-08-06</DATE>
+      </INDIVIDUAL_DATE_OF_BIRTH>
+      <INDIVIDUAL_PLACE_OF_BIRTH>
+        <COUNTRY/>
+      </INDIVIDUAL_PLACE_OF_BIRTH>
+      <INDIVIDUAL_DOCUMENT>
+        <TYPE_OF_DOCUMENT>Passport</TYPE_OF_DOCUMENT>
+        <NUMBER>OP0204168</NUMBER>
+        <ISSUING_COUNTRY>Democratic Republic of the Congo</ISSUING_COUNTRY>
+        <DATE_OF_EXPIRY>2022-07-05</DATE_OF_EXPIRY>
+      </INDIVIDUAL_DOCUMENT>
+      <INDIVIDUAL_DOCUMENT>
+        <TYPE_OF_DOCUMENT>Passport</TYPE_OF_DOCUMENT>
+        <NUMBER> OB0072391</NUMBER>
+        <ISSUING_COUNTRY>Democratic Republic of the Congo</ISSUING_COUNTRY>
+        <DATE_OF_EXPIRY>2014-12-28</DATE_OF_EXPIRY>
+      </INDIVIDUAL_DOCUMENT>
+      <INDIVIDUAL_DOCUMENT>
+        <TYPE_OF_DOCUMENT>National Identification Number</TYPE_OF_DOCUMENT>
+        <NUMBER>1 1978 8 0137555 3 27 </NUMBER>
+        <ISSUING_COUNTRY>Rwanda</ISSUING_COUNTRY>
+      </INDIVIDUAL_DOCUMENT>
+      <SORT_KEY/>
+      <SORT_KEY_LAST_MOD/>
+    </INDIVIDUAL>
+  </INDIVIDUALS>
+  <ENTITIES>
+    <ENTITY>
+      <DATAID>6908402</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>ADF</FIRST_NAME>
+      <UN_LIST_TYPE>DRC</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>CDe.001</REFERENCE_NUMBER>
+      <LISTED_ON>2014-06-30</LISTED_ON>
+      <COMMENTS1>ADF founder and leader, Jamil Mukulu (CDi.015), was arrested in Dar es Salaam, Tanzania in April 2015. He was subsequently extradited to Kampala, Uganda in July 2015. As of June 2016, Mukulu is reportedly being held in a police detention cell awaiting his trial. Seka Baluku (CDi.036) succeeded Jamil Mukulu (CDi.015) as the overall leader of the ADF. As highlighted in several reports from the Group of Experts on the DRC (S/2015/19, S/2015/797, S/2016/1102, S/2017/672, S/2018/531, S/2019/469, S/2019/974, S/2020/482), the ADF, including under Seka Baluku’s leadership, continued to commit the repeated targeting, killing and maiming, rape and other sexual violence, abduction of civilians, including children, as well as attacks on villages and health facilities, in particular in Mamove, Beni territory, on 12 and 24 February 2019, and Mantumbi, Beni territory, on 5 December 2019 and 30 January 2020, as well as the continuous recruitment and use of children during attacks and for forced labour in Beni territory in the DRC since at least 2015. INTERPOL-UN Security Council Special Notice:https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Entities</COMMENTS1>
+      <HAS_INTERPOL_LINK>YES</HAS_INTERPOL_LINK>
+      <INTERPOL_LINK>https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Entities</INTERPOL_LINK>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+      <LAST_DAY_UPDATED>
+        <VALUE>2016-10-19</VALUE>
+        <VALUE>2020-08-19</VALUE>
+      </LAST_DAY_UPDATED>
+      <ENTITY_ALIAS>
+        <QUALITY>a.k.a.</QUALITY>
+        <ALIAS_NAME>Allied Democratic Forces</ALIAS_NAME>
+      </ENTITY_ALIAS>
+      <ENTITY_ALIAS>
+        <QUALITY>f.k.a.</QUALITY>
+        <ALIAS_NAME>Forces Démocratiques Alliées-Armée Nationale de Libération de l’Ouganda</ALIAS_NAME>
+      </ENTITY_ALIAS>
+      <ENTITY_ALIAS>
+        <QUALITY>f.k.a.</QUALITY>
+        <ALIAS_NAME>ADF/NALU</ALIAS_NAME>
+      </ENTITY_ALIAS>
+      <ENTITY_ALIAS>
+        <QUALITY>f.k.a.</QUALITY>
+        <ALIAS_NAME>NALU</ALIAS_NAME>
+      </ENTITY_ALIAS>
+      <ENTITY_ADDRESS>
+        <STATE_PROVINCE>North Kivu </STATE_PROVINCE>
+        <COUNTRY>Democratic Republic of the Congo</COUNTRY>
+      </ENTITY_ADDRESS>
+      <SORT_KEY/>
+      <SORT_KEY_LAST_MOD/>
+    </ENTITY>
+    <ENTITY>
+      <DATAID>6908024</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>BUTEMBO AIRLINES (BAL)</FIRST_NAME>
+      <UN_LIST_TYPE>DRC</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>CDe.002</REFERENCE_NUMBER>
+      <LISTED_ON>2007-03-29</LISTED_ON>
+      <COMMENTS1>Privately-owned airline, operates out of Butembo. Since December 2008, BAL no longer holds an aircraft operating license in the DRC. INTERPOL-UN Security Council Special Notice:https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Entities</COMMENTS1>
+      <HAS_INTERPOL_LINK>YES</HAS_INTERPOL_LINK>
+      <INTERPOL_LINK>https://www.interpol.int/en/How-we-work/Notices/View-UN-Notices-Entities</INTERPOL_LINK>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+      <ENTITY_ALIAS>
+        <QUALITY/>
+        <ALIAS_NAME/>
+      </ENTITY_ALIAS>
+      <ENTITY_ADDRESS>
+        <CITY>Butembo</CITY>
+        <COUNTRY>Democratic Republic of the Congo</COUNTRY>
+      </ENTITY_ADDRESS>
+      <SORT_KEY/>
+      <SORT_KEY_LAST_MOD/>
+    </ENTITY>
+  </ENTITIES>
+</CONSOLIDATED_LIST>

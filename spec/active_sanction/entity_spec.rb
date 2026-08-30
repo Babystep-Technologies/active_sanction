@@ -41,6 +41,7 @@ RSpec.describe ActiveSanction::Entity do
       names: [primary, alias_name],
       addresses: [value_class.new(city: "Cairo", country: "EG")],
       identifiers: [value_class.new(kind: :passport, value: "1084010")],
+      dates_of_birth: [value_class.new(year: 1951, precision: :day)],
       nationalities: ["EG"],
       programs: %w[SDGT SDT],
       listed_on: value_class.new(year: 2001, precision: :year),
@@ -117,6 +118,29 @@ RSpec.describe ActiveSanction::Entity do
     it "raises when neither an id nor a source_ref is given" do
       expect { described_class.new(source: :canada_sema, type: :individual) }
         .to raise_error(ArgumentError, /id is required/)
+    end
+  end
+
+  # Plural because the UN publishes more than one date for 140 of its 736
+  # individuals: several governments reported several dates and the Committee
+  # listed all of them. Collapsing that to one would mean choosing which report
+  # to believe, on no evidence.
+  describe "dates of birth" do
+    it "keeps every date a publisher listed" do
+      built = described_class.new(source: :un_consolidated, source_ref: "1", type: :individual,
+                                  dates_of_birth: [value_class.new(year: 1965), value_class.new(year: 1966)])
+
+      expect(built.dates_of_birth.map { |date| date.to_h[:year] }).to eq([1965, 1966])
+    end
+
+    it "defaults to none, which is the honest state for a source that gives none" do
+      built = described_class.new(source: :ofac_sdn, source_ref: "1", type: :individual)
+
+      expect([built.dates_of_birth, built.dates_of_birth?]).to eq([[], false])
+    end
+
+    it "serializes and rebuilds them like every other nested member" do
+      expect(described_class.from_h(entity.to_h)).to eq(entity)
     end
   end
 

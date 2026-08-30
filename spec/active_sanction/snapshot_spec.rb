@@ -76,7 +76,8 @@ RSpec.describe ActiveSanction::Snapshot do
     end
 
     it "distinguishes content serialized under a different schema_version" do
-      migrated = described_class.new(source: :ofac_sdn, entities: entities, schema_version: 2)
+      migrated = described_class.new(source: :ofac_sdn, entities: entities,
+                                     schema_version: described_class::SCHEMA_VERSION + 1)
 
       expect(migrated.checksum).not_to eq(snapshot.checksum)
     end

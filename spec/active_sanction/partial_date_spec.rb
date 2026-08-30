@@ -57,6 +57,14 @@ RSpec.describe ActiveSanction::PartialDate do
       expect(described_class.parse("1972-04").precision).to eq(:month)
     end
 
+    # The UN publishes nine of its listing dates as xs:date with a UTC offset.
+    # Without this the whole value reads as nil and nine listings lose a date.
+    it "reads an ISO date carrying a UTC offset" do
+      offsets = ["2015-07-01-04:00", "2015-07-01+05:30", "2015-07-01Z"].map { |raw| described_class.parse(raw).to_s }
+
+      expect(offsets).to eq(["2015-07-01"] * 3)
+    end
+
     it "renders in a form it reads back" do
       round_tripped = ["1971", "1972-04", "1965-04-29", "circa 1962", "1971 to 1973", "circa 1971 to 1973"]
                       .map { |raw| described_class.parse(described_class.parse(raw).to_s).to_s }
