@@ -5,6 +5,7 @@ require "active_sanction/name"
 require "active_sanction/address"
 require "active_sanction/identifier"
 require "active_sanction/partial_date"
+require "active_sanction/sources/remarks"
 
 module ActiveSanction
   module Sources
@@ -67,10 +68,6 @@ module ActiveSanction
 
         PLACE_OF_BIRTH_PARTS = %w[STREET CITY STATE_PROVINCE COUNTRY NOTE].freeze
 
-        # Separates the UN's own free text from the elements appended after it,
-        # so anything later parsing COMMENTS1 can take the text before it.
-        FIELD_MARKER = " [UN fields] "
-
         WHITESPACE = /\s+/
 
         attr_reader :node
@@ -119,12 +116,9 @@ module ActiveSanction
         def programs = node.values("UN_LIST_TYPE")
 
         # The UN's own comment verbatim, then the elements that have nowhere
-        # else to go, after a marker that makes them trivial to strip again.
+        # else to go, behind the marker that makes them trivial to strip again.
         def remarks
-          appended = extras
-          return node["COMMENTS1"] if appended.empty?
-
-          [node["COMMENTS1"], appended.join("; ")].compact.join(FIELD_MARKER)
+          Remarks.build(node["COMMENTS1"], extras)
         end
 
         private
@@ -221,18 +215,16 @@ module ActiveSanction
           nil
         end
 
+        # Label/value pairs for Remarks.build, which drops the ones the record
+        # left blank. A value may be several -- the UN files three designations
+        # under one element -- and arrives as the Array it published.
         def extras
-          named = EXTRA_FIELDS.filter_map do |path, label|
-            values = node.values(path)
-            "#{label}: #{values.join(", ")}" if values.any?
-          end
-          named + places_of_birth
+          EXTRA_FIELDS.map { |path, label| [label, node.values(path)] } + places_of_birth
         end
 
         def places_of_birth
-          each("PLACE_OF_BIRTH").filter_map do |place|
-            parts = PLACE_OF_BIRTH_PARTS.filter_map { |part| place[part] }
-            "Place of birth: #{parts.join(", ")}" if parts.any?
+          each("PLACE_OF_BIRTH").map do |place|
+            ["Place of birth", PLACE_OF_BIRTH_PARTS.filter_map { |part| place[part] }.join(", ")]
           end
         end
 

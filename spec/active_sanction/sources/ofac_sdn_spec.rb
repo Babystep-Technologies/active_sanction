@@ -121,7 +121,7 @@ RSpec.describe ActiveSanction::Sources::OfacSdn do
 
     it "keeps OFAC's own remark verbatim and first" do
       expect(entity("2674").remarks)
-        .to start_with("DOB 10 Dec 1948; POB Egypt; nationality Egypt; Passport 123456 (Egypt) [OFAC columns]")
+        .to start_with("DOB 10 Dec 1948; POB Egypt; nationality Egypt; Passport 123456 (Egypt) [source fields]")
     end
 
     it "appends a title, which OFAC publishes as a column rather than in the remark" do

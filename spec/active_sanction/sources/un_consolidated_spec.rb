@@ -190,7 +190,7 @@ RSpec.describe ActiveSanction::Sources::UnConsolidated do
     end
 
     it "appends the version the issue asks be retained" do
-      expect(entity("6907993").remarks).to include("[UN fields] Version: 1; Reference: CDi.001")
+      expect(entity("6907993").remarks).to include("[source fields] Version: 1; Reference: CDi.001")
     end
 
     it "keeps a place of birth rather than dropping it to keep the schema tidy" do

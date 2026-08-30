@@ -8,6 +8,7 @@ require "active_sanction/fetcher"
 require "active_sanction/payload_cache"
 require "active_sanction/sources"
 require "active_sanction/sources/definition"
+require "active_sanction/sources/remarks"
 
 module ActiveSanction
   module Sources
@@ -85,6 +86,12 @@ module ActiveSanction
       def urls = self.class.urls
       def url(name = nil) = name.nil? ? self.class.url : self.class.url(name)
       def file_key(name) = self.class.file_key(name)
+
+      # A remark with everything this adapter appended stripped back off --
+      # the publisher's own words and nothing else. Inherited, so it reads the
+      # same for every source and a caller does not have to know which list a
+      # remark came from before it can strip one. See Sources::Remarks.
+      def self.published_remarks(remarks) = Remarks.published(remarks)
 
       # The one method an adapter must write: bytes in, canonical records out.
       def parse(_raw)
