@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "uri"
 require "active_sanction/sources"
@@ -45,18 +48,30 @@ module ActiveSanction
     # would try to register under a name already taken -- which is the one
     # mistake the registry cannot let through.
     module Definition
-      UNSET = Object.new.freeze
+      extend T::Sig
+      extend T::Helpers
+
+      # Extended into a class, never included into an instance, so `self` in
+      # every method below is the adapter class itself -- something Sorbet has
+      # no way to know from the module alone. This says the one thing about it
+      # the checker cannot do without: whatever extends Definition answers to
+      # `raise`. (`Class` cannot be required the same way, so #lineage walks
+      # the superclass chain through an untyped local instead.)
+      requires_ancestor { Kernel }
+
+      UNSET = T.let(Object.new.freeze, Object)
       private_constant :UNSET
 
       # Keys are typed by people -- into an initializer, into a CLI argument --
       # stored in snapshots, and used as directory names by the payload cache.
       # Lowercase snake_case is the intersection of all of that.
-      KEY_PATTERN = /\A[a-z][a-z0-9_]*\z/
+      KEY_PATTERN = T.let(/\A[a-z][a-z0-9_]*\z/, Regexp)
 
-      URL_SCHEMES = %w[http https].freeze
+      URL_SCHEMES = T.let(%w[http https].freeze, T::Array[String])
 
       # Shared with the registry, so a source registered without going through
       # Base is held to the same rule as one that declared its key here.
+      sig { params(value: T.untyped).returns(Symbol) }
       def self.key!(value)
         key = value.to_s
         return key.to_sym if key.match?(KEY_PATTERN)
@@ -67,6 +82,7 @@ module ActiveSanction
       end
 
       # The name this list answers to everywhere. Required, and never inherited.
+      sig { params(value: T.untyped).returns(Symbol) }
       def key(value = UNSET)
         return own(:key) { "does not declare a key. Add `key :something` to its class body" } if unset?(value)
 
@@ -76,6 +92,7 @@ module ActiveSanction
       # Who publishes the list, as a symbol: :us, :un, :ca, :eu. Not validated
       # against a country list -- an internal watchlist's jurisdiction is
       # whatever its owner says it is.
+      sig { params(value: T.untyped).returns(Symbol) }
       def jurisdiction(value = UNSET)
         return required(:jurisdiction) { "does not declare a jurisdiction, e.g. `jurisdiction :un`" } if unset?(value)
 
@@ -85,6 +102,7 @@ module ActiveSanction
       # The body behind the list, spelled the way it spells itself. This is
       # what a compliance report prints beside a hit, so "United Nations
       # Security Council", not "UN".
+      sig { params(value: T.untyped).returns(String) }
       def authority(value = UNSET)
         return required(:authority) { "does not declare an authority, e.g. `authority \"...\"`" } if unset?(value)
 
@@ -97,6 +115,7 @@ module ActiveSanction
       # here, and a source arriving as :fixed_width or :xlsx should be able to
       # say so without waiting for a release of this gem. Optional: a source
       # that builds entities from a database has no format to name.
+      sig { params(value: T.untyped).returns(T.nilable(Symbol)) }
       def format(value = UNSET)
         return declared(:format) if unset?(value)
 
@@ -105,6 +124,7 @@ module ActiveSanction
 
       # Declares a file with two arguments, reads one back with one, and with
       # none returns the primary -- the first declared, conventionally :main.
+      sig { params(name: T.untyped, address: T.untyped).returns(String) }
       def url(name = UNSET, address = UNSET)
         return primary_url if unset?(name)
         return read_url(name) if unset?(address)
@@ -113,6 +133,7 @@ module ActiveSanction
       end
 
       # Every declared file, in declaration order, inherited ones first.
+      sig { returns(T::Hash[Symbol, String]) }
       def urls
         lineage.reverse.inject({}) { |all, klass| all.merge(klass.declared_urls) }.freeze
       end
@@ -123,14 +144,17 @@ module ActiveSanction
       # file is filed under the source key itself, which keeps the common case
       # legible on disk and in a validators.json somebody is reading to find
       # out why a sync downloaded more than it should have.
+      sig { params(name: T.untyped).returns(Symbol) }
       def file_key(name)
         multi_url? ? :"#{key}-#{name}" : key
       end
 
+      sig { returns(T::Boolean) }
       def multi_url? = urls.size > 1
 
       # Whether a declaration was made, without raising if it was not. What a
       # conformance spec (#16) asks before reporting which ones are missing.
+      sig { params(name: Symbol).returns(T::Boolean) }
       def declared?(name)
         name == :key ? !declarations[:key].nil? : !declared(name).nil?
       end
@@ -138,6 +162,7 @@ module ActiveSanction
       # A summary of the declarations, for a CLI listing or a bug report. Reads
       # what is there rather than insisting: an adapter missing a declaration
       # is exactly what somebody printing this is trying to find out.
+      sig { returns(T::Hash[Symbol, T.untyped]) }
       def to_h
         { key: declarations[:key], jurisdiction: declared(:jurisdiction), authority: declared(:authority),
           format: declared(:format), urls: urls }
@@ -146,16 +171,23 @@ module ActiveSanction
       # The declarations made on this exact class, ignoring anything inherited.
       # Public because resolving a reader means walking the superclass chain
       # asking each one what it declared.
-      def declarations = @declarations ||= {}
+      sig { returns(T::Hash[Symbol, T.untyped]) }
+      def declarations
+        @declarations ||= T.let({}, T.nilable(T::Hash[Symbol, T.untyped]))
+      end
 
-      def declared_urls = @declared_urls ||= {}
+      sig { returns(T::Hash[Symbol, String]) }
+      def declared_urls
+        @declared_urls ||= T.let({}, T.nilable(T::Hash[Symbol, String]))
+      end
 
       private
 
       # This class and its ancestors that declare, most derived first.
+      sig { returns(T::Array[T.untyped]) }
       def lineage
         chain = []
-        klass = self
+        klass = T.let(self, T.untyped)
         while klass.respond_to?(:declarations)
           chain << klass
           klass = klass.superclass
@@ -163,20 +195,25 @@ module ActiveSanction
         chain
       end
 
+      sig { params(name: Symbol).returns(T.untyped) }
       def declared(name) = lineage.filter_map { |klass| klass.declarations[name] }.first
 
+      sig { params(value: T.untyped).returns(T::Boolean) }
       def unset?(value) = value.equal?(UNSET)
 
-      def own(name)
-        declarations[name] || raise(DeclarationError, "#{self} #{yield}")
+      sig { params(name: Symbol, block: T.proc.returns(String)).returns(T.untyped) }
+      def own(name, &block)
+        declarations[name] || raise(DeclarationError, "#{self} #{block.call}")
       end
 
       # Not named `inherited`: that is Class's own subclassing hook, and a
       # module extended into a class must not take it over.
-      def required(name)
-        declared(name) || raise(DeclarationError, "#{self} #{yield}")
+      sig { params(name: Symbol, block: T.proc.returns(String)).returns(T.untyped) }
+      def required(name, &block)
+        declared(name) || raise(DeclarationError, "#{self} #{block.call}")
       end
 
+      sig { returns(String) }
       def primary_url
         urls.values.first ||
           raise(DeclarationError,
@@ -184,12 +221,14 @@ module ActiveSanction
                 "that is not fetched over HTTP")
       end
 
+      sig { params(name: T.untyped).returns(String) }
       def read_url(name)
         urls.fetch(name.to_sym) do
           raise DeclarationError, "#{self} declares no #{name.inspect} URL. Declared: #{urls.keys.join(", ")}"
         end
       end
 
+      sig { params(name: Symbol, value: T.untyped).returns(Symbol) }
       def symbol!(name, value)
         string = value.to_s.strip
         raise DeclarationError, "#{self} #{name} cannot be blank" if string.empty?
@@ -197,6 +236,7 @@ module ActiveSanction
         string.downcase.to_sym
       end
 
+      sig { params(name: Symbol, value: T.untyped).returns(String) }
       def string!(name, value)
         string = value.to_s.strip
         raise DeclarationError, "#{self} #{name} cannot be blank" if string.empty?
@@ -204,6 +244,7 @@ module ActiveSanction
         -string
       end
 
+      sig { params(name: T.untyped, value: T.untyped).returns(String) }
       def address!(name, value)
         uri = URI.parse(value.to_s.strip)
         raise URI::InvalidURIError unless URL_SCHEMES.include?(uri.scheme) && uri.host

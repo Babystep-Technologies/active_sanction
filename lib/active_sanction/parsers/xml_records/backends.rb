@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 module ActiveSanction
   module Parsers
@@ -38,13 +41,22 @@ module ActiveSanction
       # and the same answer everywhere -- and a host that wants libxml2's speed
       # says so out loud, in one line, where a reviewer can see it.
       module Backends
-        DEFAULT = :rexml
+        DEFAULT = T.let(:rexml, Symbol)
 
         class << self
+          extend T::Sig
+
+          # A backend is a class answering the four methods the comment above
+          # names, which is why these signatures say `T.untyped` where one
+          # goes: registering another is a public act, and an out-of-repo
+          # backend is not a subclass of anything here.
+
+          sig { params(name: T.untyped, backend: T.untyped).returns(T.untyped) }
           def register(name, backend)
             registry[name.to_sym] = backend
           end
 
+          sig { params(name: T.untyped).returns(T.untyped) }
           def resolve(name)
             backend = registry.fetch(name.to_sym) do
               raise ArgumentError,
@@ -56,15 +68,20 @@ module ActiveSanction
           end
 
           # Every registered backend that could actually run in this process.
+          sig { returns(T::Array[Symbol]) }
           def available = registry.select { |_, backend| backend.available? }.keys
 
-          def registry = @registry ||= {}
+          sig { returns(T::Hash[Symbol, T.untyped]) }
+          def registry
+            @registry ||= T.let({}, T.nilable(T::Hash[Symbol, T.untyped]))
+          end
 
           # An element name with any namespace prefix removed, so a list that
           # grows an `xmlns` next quarter does not stop parsing. The prefix is
           # discarded rather than resolved: none of these publishers uses two
           # namespaces in one document, and an adapter written against
           # `INDIVIDUAL` should not have to be rewritten as `un:INDIVIDUAL`.
+          sig { params(name: T.untyped).returns(String) }
           def local_name(name)
             string = name.to_s
             index = string.rindex(":")
@@ -73,6 +90,7 @@ module ActiveSanction
 
           # Attribute keys are stripped the same way, so `xsi:type` is read as
           # `type` and a default-namespaced document reads like a plain one.
+          sig { params(attributes: T.untyped).returns(T::Hash[String, String]) }
           def local_attributes(attributes)
             (attributes || {}).to_h { |key, value| [local_name(key), value.to_s] }
           end

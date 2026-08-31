@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/error"
 
@@ -31,21 +34,35 @@ module ActiveSanction
     # record -- and a warning that cannot point at a line still says what went
     # wrong rather than pointing at the wrong one.
     class Warning
-      attr_reader :line, :message, :snippet
+      extend T::Sig
 
+      # nil when the parser cannot say which line -- see above.
+      sig { returns(T.nilable(Integer)) }
+      attr_reader :line
+
+      sig { returns(String) }
+      attr_reader :message
+
+      sig { returns(T.nilable(String)) }
+      attr_reader :snippet
+
+      sig { params(line: T.nilable(Integer), message: String, snippet: T.untyped).void }
       def initialize(line:, message:, snippet: nil)
-        @line = line
-        @message = message
-        @snippet = snippet && truncate(snippet)
+        @line = T.let(line, T.nilable(Integer))
+        @message = T.let(message, String)
+        @snippet = T.let(snippet.nil? ? nil : truncate(snippet), T.nilable(String))
         freeze
       end
 
+      sig { returns(String) }
       def to_s
         "#{"line #{line}: " if line}#{message}#{" -- #{snippet.inspect}" if snippet}"
       end
 
+      sig { returns(T::Hash[Symbol, T.untyped]) }
       def to_h = { line: line, message: message, snippet: snippet }
 
+      sig { returns(String) }
       def inspect = "#<#{self.class} #{self}>"
 
       private
@@ -53,6 +70,7 @@ module ActiveSanction
       # A malformed row is frequently malformed because it is enormous -- an
       # unclosed quote swallows everything after it -- so the evidence is
       # trimmed before it is kept.
+      sig { params(text: T.untyped).returns(String) }
       def truncate(text)
         string = text.to_s
         -(string.length > 120 ? "#{string[0, 120]}..." : string)

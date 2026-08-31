@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "fileutils"
 require "json"
@@ -28,19 +31,27 @@ module ActiveSanction
     # one avoidable download, which is the right trade for not putting a lock
     # file in a user's cache directory.
     class FileSystem < ValidatorStore
-      DEFAULT_FILENAME = "validators.json"
+      extend T::Sig
 
+      DEFAULT_FILENAME = T.let("validators.json", String)
+
+      sig { returns(String) }
       attr_reader :path
 
+      sig { params(path: T.untyped).void }
       def initialize(path: nil)
-        @path = ::File.expand_path((path || ::File.join(ActiveSanction.config.cache_dir, DEFAULT_FILENAME)).to_s)
+        @path = T.let(
+          ::File.expand_path((path || ::File.join(ActiveSanction.config.cache_dir, DEFAULT_FILENAME)).to_s), String
+        )
         super()
       end
 
+      sig { override.returns(String) }
       def inspect = "#<#{self.class} #{path} #{size} entr#{size == 1 ? "y" : "ies"}>"
 
       private
 
+      sig { override.returns(T::Hash[String, Validators]) }
       def entries
         raw = read
         raw.to_h { |key, attributes| [key, Validators.from_h(attributes)] }
@@ -48,15 +59,20 @@ module ActiveSanction
         raise CorruptStore, "#{path} does not hold validators (#{e.message}). Delete it to re-download in full."
       end
 
-      def commit
+      sig do
+        override.params(block: T.proc.params(all: T::Hash[String, Validators]).returns(T.untyped))
+                .returns(T.untyped)
+      end
+      def commit(&block)
         all = entries
-        result = yield all
+        result = block.call(all)
         write(all)
         result
       end
 
       # A missing file is an empty store, not an error: it is what a first run
       # sees, and what deleting the file leaves behind.
+      sig { returns(T::Hash[String, T.untyped]) }
       def read
         return {} unless ::File.exist?(path)
 
@@ -72,11 +88,12 @@ module ActiveSanction
         raise CorruptStore, "#{path} is not valid JSON (#{e.message}). Delete it to re-download in full."
       end
 
+      sig { params(all: T::Hash[String, Validators]).void }
       def write(all)
         FileUtils.mkdir_p(::File.dirname(path))
-        temporary = "#{path}.#{Process.pid}.tmp"
-        ::File.write(temporary, "#{JSON.pretty_generate(all.transform_values(&:to_h))}\n")
-        ::File.rename(temporary, path)
+        temporary = T.let("#{path}.#{Process.pid}.tmp", T.nilable(String))
+        ::File.write(T.must(temporary), "#{JSON.pretty_generate(all.transform_values(&:to_h))}\n")
+        ::File.rename(T.must(temporary), path)
       ensure
         FileUtils.rm_f(temporary) if temporary
       end

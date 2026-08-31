@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/parsers/xml_records/record"
 
@@ -18,18 +21,23 @@ module ActiveSanction
       # stack only ever holds one record's depth, so a 126 MB file costs the
       # memory of its largest single record and not of itself.
       class Builder
+        extend T::Sig
+
         Frame = Struct.new(:name, :attributes, :text, :children, :line)
         private_constant :Frame
 
+        sig { params(table: XmlRecords).void }
         def initialize(table:)
-          @table = table
-          @stack = []
+          @table = T.let(table, XmlRecords)
+          @stack = T.let([], T::Array[T.untyped])
         end
 
         # Whether we are inside a record. A backend asks this to decide whether
         # an element is part of a record or is still the file's scaffolding.
+        sig { returns(T::Boolean) }
         def open? = !@stack.empty?
 
+        sig { params(name: T.untyped, attributes: T.untyped, line: T.nilable(Integer)).void }
         def enter(name, attributes = {}, line = nil)
           @stack << Frame.new(name, attributes, nil, [], line)
         end
@@ -37,6 +45,7 @@ module ActiveSanction
         # Appended rather than replaced: a parser is free to split one run of
         # text across several events, and libxml2 does exactly that around
         # entity references.
+        sig { params(string: String).void }
         def text(string)
           frame = @stack.last
           return if frame.nil?
@@ -46,6 +55,7 @@ module ActiveSanction
 
         # Closes the innermost element. Returns the finished Record when that
         # was the record element itself, and nil while still inside one.
+        sig { returns(T.nilable(Record)) }
         def leave
           frame = @stack.pop
           return nil if frame.nil?
@@ -59,6 +69,7 @@ module ActiveSanction
 
         # A void element -- `<QUALITY/>` -- which libxml2 reports as a start
         # with no matching end.
+        sig { params(name: T.untyped, attributes: T.untyped, line: T.nilable(Integer)).returns(T.nilable(Record)) }
         def void(name, attributes = {}, line = nil)
           enter(name, attributes, line)
           leave
@@ -66,6 +77,7 @@ module ActiveSanction
 
         private
 
+        sig { params(frame: T.untyped).returns(Record) }
         def build(frame)
           Record.new(table: @table, name: frame.name, attributes: frame.attributes,
                      text: frame.text, children: frame.children, line: frame.line)

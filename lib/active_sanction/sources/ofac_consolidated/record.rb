@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/sources/ofac"
 
@@ -16,10 +19,15 @@ module ActiveSanction
       # source fields because it is the first thing an examiner looking at a
       # hit needs to know.
       class Record < Ofac::Record
+        extend T::Sig
+
+        sig { returns(T::Array[Symbol]) }
         def lists = OfacConsolidated.lists(programs)
 
+        sig { returns(T::Array[String]) }
         def list_names = lists.map { |list| OfacConsolidated::NAMES.fetch(list) }
 
+        sig { override.returns(T::Array[T.untyped]) }
         def remark_fields = [["List", list_names]] + super
       end
     end

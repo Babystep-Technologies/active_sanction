@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_record"
 require "active_sanction/identifier"
@@ -59,6 +62,8 @@ module ActiveSanction
         end
 
         class Snapshot < Base
+          extend T::Sig
+
           self.table_name = "active_sanction_snapshots"
 
           has_many :entities, class_name: "ActiveSanction::Storage::ActiveRecord::Row::Entity",
@@ -71,6 +76,7 @@ module ActiveSanction
           #
           # Children first, parent last, so the sequence is one a host that has
           # added foreign keys of its own can also execute.
+          sig { void }
           def discard!
             [Name, Address, Identifier, Entity].each { |model| model.where(snapshot_id: id).delete_all }
             self.class.where(id: id).delete_all
@@ -135,7 +141,7 @@ module ActiveSanction
 
         # Parents before children: the order a write inserts in, and the
         # reverse of the order a delete removes in.
-        ALL = [Snapshot, Entity, Name, Address, Identifier].freeze
+        ALL = T.let([Snapshot, Entity, Name, Address, Identifier].freeze, T::Array[T.untyped])
       end
     end
   end

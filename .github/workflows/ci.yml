@@ -41,3 +41,11 @@ jobs:
 
       - name: Run RuboCop
         run: bundle exec rubocop
+
+      # `lib/` is `typed: strict` and the RBIs it is checked against are
+      # committed under `sorbet/`, so this needs nothing beyond the bundle --
+      # no code is loaded and nothing is generated. It runs on every Ruby in
+      # the matrix rather than once, because that is what makes a type error
+      # attributable to the build that found it rather than to a separate job.
+      - name: Typecheck with Sorbet
+        run: bundle exec srb tc

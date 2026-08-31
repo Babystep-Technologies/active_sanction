@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/error"
 require "active_sanction/version"
@@ -24,10 +27,13 @@ require "active_sanction/sources/canada_sema"
 
 module ActiveSanction
   class << self
+    extend T::Sig
+
     # Library-wide settings. Reading this before anything is configured builds
     # the defaults, so nothing has to remember to initialize it.
+    sig { returns(Configuration) }
     def config
-      @config ||= Configuration.new
+      @config ||= T.let(Configuration.new, T.nilable(Configuration))
     end
 
     # The one entry point an application is expected to call at boot:
@@ -35,15 +41,18 @@ module ActiveSanction
     #   ActiveSanction.configure do |c|
     #     c.user_agent = "my-app/1.0 (compliance@example.com)"
     #   end
-    def configure
-      yield config
+    sig { params(block: T.proc.params(config: Configuration).void).returns(Configuration) }
+    def configure(&block)
+      block.call(config)
       config
     end
 
     # Mostly for tests, which need each example to start from the defaults
     # rather than from whatever the last one set.
+    sig { returns(Configuration) }
     def reset_configuration!
-      @config = Configuration.new
+      @config = T.let(nil, T.nilable(Configuration))
+      config
     end
   end
 end

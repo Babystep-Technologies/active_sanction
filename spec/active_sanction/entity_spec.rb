@@ -3,34 +3,14 @@
 require "json"
 
 RSpec.describe ActiveSanction::Entity do
-  # #5, #6 and #7 supply the real Name, PartialDate, Address and Identifier.
-  # Entity only asks for the contract all four honour: #to_h to serialize and
-  # .from_h to rebuild. Standing in for them here keeps this spec honest about
-  # what Entity itself is responsible for.
-  let(:value_class) do
-    Class.new do
-      attr_reader :attributes
-
-      # Each real value object coerces its own enum fields back to symbols in
-      # .from_h, which is what makes a JSON round-trip land where it started.
-      def self.from_h(hash)
-        attributes = hash.transform_keys(&:to_sym)
-        %i[kind precision].each { |enum| attributes[enum] &&= attributes[enum].to_sym }
-        new(**attributes)
-      end
-
-      def initialize(**attributes)
-        @attributes = attributes
-      end
-
-      def kind = attributes[:kind]
-      def to_h = attributes
-      def ==(other) = other.is_a?(self.class) && other.attributes == attributes
-    end
-  end
-
-  let(:primary) { value_class.new(value: "AL ZAWAHIRI, Aiman", kind: :primary) }
-  let(:alias_name) { value_class.new(value: "ABU MUHAMMAD", kind: :aka) }
+  # Built from the real Name, Address, Identifier and PartialDate rather than
+  # from stand-ins answering #to_h. Entity declares those four types on the way
+  # in (#73), which is the contract every adapter is held to and the reason a
+  # date arriving as the string a publisher wrote is caught here rather than
+  # three layers downstream -- so a spec that passed doubles through would be
+  # testing something the library no longer allows.
+  let(:primary) { ActiveSanction::Name.new(value: "AL ZAWAHIRI, Aiman", kind: :primary) }
+  let(:alias_name) { ActiveSanction::Name.new(value: "ABU MUHAMMAD", kind: :aka) }
 
   let(:attributes) do
     {
@@ -39,24 +19,17 @@ RSpec.describe ActiveSanction::Entity do
       source_ref: "2674",
       type: :individual,
       names: [primary, alias_name],
-      addresses: [value_class.new(city: "Cairo", country: "EG")],
-      identifiers: [value_class.new(kind: :passport, value: "1084010")],
-      dates_of_birth: [value_class.new(year: 1951, precision: :day)],
+      addresses: [ActiveSanction::Address.new(city: "Cairo", country: "EG")],
+      identifiers: [ActiveSanction::Identifier.new(kind: :passport, value: "1084010")],
+      dates_of_birth: [ActiveSanction::PartialDate.new(year: 1951, month: 6, day: 19)],
       nationalities: ["EG"],
       programs: %w[SDGT SDT],
-      listed_on: value_class.new(year: 2001, precision: :year),
+      listed_on: ActiveSanction::PartialDate.new(year: 2001),
       remarks: "DOB 19 Jun 1951; Passport 1084010 (Egypt)"
     }
   end
 
   let(:entity) { described_class.new(**attributes) }
-
-  before do
-    stub_const("ActiveSanction::Name", value_class)
-    stub_const("ActiveSanction::Address", value_class)
-    stub_const("ActiveSanction::Identifier", value_class)
-    stub_const("ActiveSanction::PartialDate", value_class)
-  end
 
   describe "immutability" do
     it "freezes the entity" do
@@ -128,7 +101,8 @@ RSpec.describe ActiveSanction::Entity do
   describe "dates of birth" do
     it "keeps every date a publisher listed" do
       built = described_class.new(source: :un_consolidated, source_ref: "1", type: :individual,
-                                  dates_of_birth: [value_class.new(year: 1965), value_class.new(year: 1966)])
+                                  dates_of_birth: [ActiveSanction::PartialDate.new(year: 1965),
+                                                   ActiveSanction::PartialDate.new(year: 1966)])
 
       expect(built.dates_of_birth.map { |date| date.to_h[:year] }).to eq([1965, 1966])
     end
@@ -170,8 +144,9 @@ RSpec.describe ActiveSanction::Entity do
     it "serializes nested value objects" do
       expect(entity.to_h).to include(
         id: "ofac_sdn:2674", source: :ofac_sdn, source_ref: "2674", type: :individual,
-        names: [{ value: "AL ZAWAHIRI, Aiman", kind: :primary }, { value: "ABU MUHAMMAD", kind: :aka }],
-        listed_on: { year: 2001, precision: :year }
+        names: [{ value: "AL ZAWAHIRI, Aiman", kind: :primary, quality: nil, script: nil },
+                { value: "ABU MUHAMMAD", kind: :aka, quality: nil, script: nil }],
+        listed_on: { year: 2001, month: nil, day: nil, from: nil, to: nil, approximate: false }
       )
     end
 

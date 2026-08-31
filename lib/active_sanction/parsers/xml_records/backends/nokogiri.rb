@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/parsers/xml_records/backends"
 require "active_sanction/parsers/xml_records/builder"
@@ -38,26 +41,36 @@ module ActiveSanction
         # merely stops early -- the commoner accident -- streams and salvages
         # identically on both.
         class Nokogiri
+          extend T::Sig
+
           # Deliberately `defined?` rather than a require: see above.
+          sig { returns(T::Boolean) }
           def self.available? = defined?(::Nokogiri::XML::Reader) ? true : false
 
+          sig { returns(T.nilable(String)) }
           def self.unavailable_reason
             "nokogiri is not loaded. Add `gem \"nokogiri\"` to your Gemfile and require it, or leave " \
               "`xml_backend` at :rexml"
           end
 
+          # The document element's attributes, which is where these publishers
+          # put the version of the list.
+          sig { returns(T.nilable(T::Hash[String, String])) }
           attr_reader :root
 
+          sig { params(table: XmlRecords, xml: String).void }
           def initialize(table:, xml:)
-            @table = table
-            @xml = xml
-            @root = nil
-            @builder = Builder.new(table: table)
+            @table = T.let(table, XmlRecords)
+            @xml = T.let(xml, String)
+            @root = T.let(nil, T.nilable(T::Hash[String, String]))
+            @builder = T.let(Builder.new(table: table), Builder)
+            @text_types = T.let(nil, T.nilable(T::Array[T.untyped]))
           end
 
-          def each_record(&)
+          sig { params(block: T.proc.params(record: Record).void).void }
+          def each_record(&block)
             reader = ::Nokogiri::XML::Reader(@xml)
-            reader.each { |node| handle(node, &) }
+            reader.each { |node| handle(node, &block) }
             truncated! if @builder.open?
           rescue ::Nokogiri::XML::SyntaxError => e
             raise MalformedDocument.new(e.message.to_s.strip, line: e.line)
@@ -65,10 +78,11 @@ module ActiveSanction
 
           private
 
-          def handle(node, &)
+          sig { params(node: T.untyped, block: T.proc.params(record: Record).void).void }
+          def handle(node, &block)
             case node.node_type
-            when ::Nokogiri::XML::Reader::TYPE_ELEMENT then start(node, &)
-            when ::Nokogiri::XML::Reader::TYPE_END_ELEMENT then finish(&)
+            when ::Nokogiri::XML::Reader::TYPE_ELEMENT then start(node, &block)
+            when ::Nokogiri::XML::Reader::TYPE_END_ELEMENT then finish(&block)
             when *text_types then @builder.text(node.value.to_s) if @builder.open?
             end
           end
@@ -76,6 +90,7 @@ module ActiveSanction
           # Resolved on first use rather than into a constant: this file is
           # loaded whether or not the host has Nokogiri, and naming its
           # constants at load time would make merely requiring the gem fail.
+          sig { returns(T::Array[T.untyped]) }
           def text_types
             @text_types ||= [::Nokogiri::XML::Reader::TYPE_TEXT,
                              ::Nokogiri::XML::Reader::TYPE_CDATA,
@@ -87,23 +102,26 @@ module ActiveSanction
           # self-closing element is opened and closed here rather than waiting
           # for an end event that never arrives. The UN's placeholder aliases
           # are made entirely of these.
-          def start(node, &)
+          sig { params(node: T.untyped, block: T.proc.params(record: Record).void).void }
+          def start(node, &block)
             local = Backends.local_name(node.name)
             attrs = Backends.local_attributes(node.attributes)
             @root ||= attrs
             return unless @builder.open? || @table.record?(local)
 
             @builder.enter(local, attrs)
-            finish(&) if node.self_closing?
+            finish(&block) if node.self_closing?
           end
 
-          def finish
+          sig { params(block: T.proc.params(record: Record).void).void }
+          def finish(&block)
             return unless @builder.open?
 
             record = @builder.leave
-            yield record if record
+            block.call(record) if record
           end
 
+          sig { void }
           def truncated!
             raise MalformedDocument.new("the document ended inside an unclosed element", line: nil)
           end

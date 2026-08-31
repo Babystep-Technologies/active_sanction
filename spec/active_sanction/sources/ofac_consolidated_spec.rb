@@ -154,7 +154,7 @@ RSpec.describe ActiveSanction::Sources::OfacConsolidated do
   # through them rather than around them.
   describe "the machinery it shares with the SDN list" do
     it "reads the same twelve columns with the same reader" do
-      expect(described_class::PRIMARY).to equal(ActiveSanction::Sources::OfacSdn::PRIMARY)
+      expect(described_class::PRIMARY).to equal(ActiveSanction::Sources::Ofac::PRIMARY)
     end
 
     it "joins the aliases on ent_num" do

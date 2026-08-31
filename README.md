@@ -34,13 +34,80 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ### Tests and linting
 
-`bundle exec rake` runs the RSpec suite and then RuboCop; both must pass.
+`bundle exec rake` runs the RSpec suite, then RuboCop, then `srb tc`; all three must pass.
 
 The suite is hermetic. `spec_helper.rb` calls `WebMock.disable_net_connect!(allow_localhost: true)`, so an un-stubbed HTTP call raises `WebMock::NetConnectNotAllowedError` instead of quietly reaching the internet. Parser specs run against committed fixtures — a suite that can reach a government server stops proving anything about our parsing and starts proving that the server is up.
 
 Specs that genuinely need a real endpoint are tagged `:live`. They are excluded from the default run, and `WebMock` is re-enabled around each one:
 
     $ bundle exec rspec --tag live
+
+### Static typing
+
+Every file in `lib/` is `# typed: strict`, and new files are born that way: a
+signature written beside the code costs a line, and one retrofitted a milestone
+later costs an afternoon of reading the code back.
+
+    $ bundle exec srb tc      # or `bundle exec rake`, which runs it last
+
+`sorbet-runtime` is a dependency of the gem, because the signatures are inline
+`sig` blocks and inline `sig` blocks are ordinary method calls. It is pure Ruby
+and compiles nothing, so it clears the same bar the gemspec sets for Nokogiri.
+The static half -- `sorbet` and `tapioca` -- is in the Gemfile and never
+reaches an application.
+
+What that costs a host, and how to spend nothing at all:
+
+* Signatures on a path that runs per query, once the matcher lands (#32), are
+  declared `.checked(:tests)`: enforced by this suite and inert in production.
+  Nothing in the library runs per query today -- parsing runs once per sync --
+  so nothing carries it yet, and the rule is here because the scorers are the
+  next thing written.
+* A host that wants none of it can turn every check off before requiring the
+  gem, which is supported and tested:
+
+  ```ruby
+  T::Configuration.default_checked_level = :never
+  require "active_sanction"
+  ```
+
+**What the types are for, and where they deliberately stop.** The canonical
+model is declared: `Entity` states that `dates_of_birth` is an array of
+`PartialDate`, so an adapter handing over the string a publisher wrote is a
+type error rather than a bug found three layers downstream. The runtime half of
+a signature is shallow -- it sees the Array and not what is in it -- so the
+adapter conformance group goes on asserting the element types per fixture,
+which is what covers an adapter written outside this repository.
+Everything a publisher wrote is `T.untyped`
+on the way in, because the value objects already coerce it and raise
+`ArgumentError` with messages written for whoever has to fix the record, and a
+type error would say less. Three places are `T.untyped` on purpose and say why
+in a comment where they sit: the source registry (duck-typed on `.key` and
+`.new`, which is what makes a bank's internal watchlist a first-class source),
+`XmlRecords::Backends` (same, for a backend registered from outside), and
+`Snapshot#entities` (the storage conformance group builds a snapshot of
+half-deserialized hashes on purpose, to prove it catches a store that hands
+them back).
+
+**Consumers who typecheck their own code** need nothing from us but the gem:
+
+    $ bundle exec tapioca gem active_sanction
+
+reads the inline signatures through `sorbet-runtime` and writes an RBI that
+says what this version actually declares. No `rbi/active_sanction.rbi` is
+shipped, deliberately -- a hand-maintained copy of the signatures would be a
+second source of truth, and a signature that lies is worse than none.
+
+**The RBIs under `sorbet/`** are the checker's working files: generated
+definitions for the gems `lib/` reaches, plus one hand-written shim for the
+Rails generator surface (railties is not in this bundle and is not worth
+pulling a web stack in to describe four methods). They are excluded from the
+packaged gem. Regenerate one with `bin/tapioca gem <name>`; a gem that only
+ever runs the suite or the linter is excluded in `sorbet/tapioca/config.yml`,
+since `srb tc` reads `lib/` and not `spec/` -- RSpec defines its helpers with
+`def` inside blocks, which Sorbet reads as methods on `Object`, and one spec's
+`def initialize(root:)` is enough to make `Object.new` a type error in the
+library.
 
 ### The adapter contract
 

@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/parsers"
 require "active_sanction/sources"
@@ -67,6 +70,8 @@ module ActiveSanction
     # whose primary name is published anyway, and it is the cheaper of the two
     # mistakes.
     class CanadaSema < Base
+      extend T::Sig
+
       key :canada_sema
       jurisdiction :ca
       authority "Global Affairs Canada"
@@ -76,19 +81,23 @@ module ActiveSanction
           "https://www.international.gc.ca/world-monde/assets/office_docs/" \
           "international_relations-relations_internationales/sanctions/sema-lmes.xml"
 
-      RECORD = "record"
+      RECORD = T.let("record", String)
 
-      LIST = Parsers::XmlRecords.new(records: RECORD)
+      LIST = T.let(Parsers::XmlRecords.new(records: RECORD), Parsers::XmlRecords)
 
       # Records that could not be used, and fields that could not be read.
       # Read after #parse; sync orchestration (#34) reports them.
+      sig { returns(T::Array[Parsers::Warning]) }
       attr_reader :warnings
 
-      def initialize(...)
+      sig { params(args: T.untyped, options: T.untyped).void }
+      def initialize(*args, **options)
         super
-        @warnings = []
+        @warnings = T.let([], T::Array[Parsers::Warning])
+        @unmapped = T.let([], T::Array[Parsers::Warning])
       end
 
+      sig { override.params(raw: T.untyped).returns(T::Array[Entity]) }
       def parse(raw)
         reader = LIST.read(raw)
         entities = build(reader)
@@ -98,6 +107,7 @@ module ActiveSanction
 
       private
 
+      sig { params(reader: Parsers::XmlRecords::Reader).returns(T::Array[Entity]) }
       def build(reader)
         @unmapped = []
         reader.filter_map do |node|
@@ -111,6 +121,7 @@ module ActiveSanction
       # A record with no name in any of its three name elements cannot be
       # screened against. None of the 5,690 published today is nameless; the
       # warning exists so that the day one is, it is visible rather than absent.
+      sig { params(node: Parsers::XmlRecords::Record).returns(NilClass) }
       def note_nameless(node)
         @unmapped << Parsers::Warning.new(
           line: node.line,

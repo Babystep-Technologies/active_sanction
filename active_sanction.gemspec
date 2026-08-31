@@ -33,10 +33,28 @@ Gem::Specification.new do |spec|
   spec.add_dependency "csv", "~> 3.3"
   spec.add_dependency "rexml", "~> 3.3"
 
+  # Sorbet's runtime, and the only piece of the checker that ships. The `sig`
+  # blocks in `lib/` are ordinary method calls, so the library does not load
+  # without it. It is pure Ruby with nothing to compile, which is the rule the
+  # Nokogiri paragraph above is really about. The static half -- `sorbet` and
+  # `tapioca` -- stays in the Gemfile, where a host never sees it.
+  #
+  # It is not free at call time, so the rule is that a signature on a path
+  # which runs per query -- the scorers, when they land -- is declared
+  # `.checked(:tests)`: enforced by this gem's suite and inert in a host's
+  # process. Nothing in the library runs per query today, since parsing runs
+  # once per sync. A host that wants none of it at all can set
+  # `T::Configuration.default_checked_level = :never` before requiring the gem,
+  # which spec/sorbet_runtime_spec.rb holds us to.
+  spec.add_dependency "sorbet-runtime", "~> 0.6"
+
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
+  # `sorbet/` is the checker's working directory -- its config and the RBIs
+  # tapioca generates for our dependencies. It is needed to typecheck this
+  # repository and useless inside the packaged gem, so it is not shipped.
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
-    `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
+    `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features|sorbet)/}) }
   end
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }

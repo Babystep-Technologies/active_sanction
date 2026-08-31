@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/storage/base"
 
@@ -28,29 +31,36 @@ module ActiveSanction
     # reader's point of view -- a thread mid-screen holds the snapshot it
     # started with and finishes against a consistent list.
     class Memory < Base
+      extend T::Sig
+
+      sig { params(snapshots: T.untyped).void }
       def initialize(snapshots = [])
-        @snapshots = {}
-        @mutex = Mutex.new
+        @snapshots = T.let({}, T::Hash[Symbol, Snapshot])
+        @mutex = T.let(Mutex.new, Mutex)
         Array(snapshots).each { |snapshot| write_snapshot(snapshot) }
         super()
       end
 
+      sig { override.params(snapshot: T.untyped).returns(Snapshot) }
       def write_snapshot(snapshot)
         stored = snapshot!(snapshot)
         @mutex.synchronize { @snapshots[stored.source] = stored }
         stored
       end
 
+      sig { override.params(source: T.untyped).returns(T.nilable(Snapshot)) }
       def read_snapshot(source)
         key = source_key!(source)
         @mutex.synchronize { @snapshots[key] }
       end
 
+      sig { override.params(source: T.untyped).returns(T::Boolean) }
       def delete_snapshot(source)
         key = source_key!(source)
         @mutex.synchronize { !@snapshots.delete(key).nil? }
       end
 
+      sig { override.returns(T::Array[Symbol]) }
       def sources = @mutex.synchronize { @snapshots.keys.sort }
     end
   end

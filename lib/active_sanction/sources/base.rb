@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "time"
 require "active_sanction/error"
@@ -64,36 +67,64 @@ module ActiveSanction
     # than about a list -- they belong to sync orchestration (#34), which needs
     # an exception here to notice.
     class Base
+      extend T::Sig
       extend Definition
 
-      attr_reader :fetcher, :cache, :logger
+      sig { returns(Fetcher) }
+      attr_reader :fetcher
+
+      # nil turns payload caching off -- see #initialize.
+      sig { returns(T.nilable(PayloadCache)) }
+      attr_reader :cache
+
+      # Anything Logger-shaped, or nil, as Configuration#logger has it.
+      sig { returns(T.untyped) }
+      attr_reader :logger
 
       # `cache: nil` turns off payload caching, which costs one thing worth
       # knowing: a multi-file source can no longer answer a sync where some of
       # its files changed and others came back 304, so the unchanged ones are
       # downloaded again in full.
+      sig do
+        params(fetcher: Fetcher, cache: T.nilable(PayloadCache), logger: T.untyped).void
+      end
       def initialize(fetcher: Fetcher.new, cache: PayloadCache.new, logger: ActiveSanction.config.logger)
-        @fetcher = fetcher
-        @cache = cache
-        @logger = logger
-        @results = {}
+        @fetcher = T.let(fetcher, Fetcher)
+        @cache = T.let(cache, T.nilable(PayloadCache))
+        @logger = T.let(logger, T.untyped)
+        @results = T.let({}, T::Hash[Symbol, Fetcher::Result])
       end
 
+      sig { returns(Symbol) }
       def key = self.class.key
+
+      sig { returns(Symbol) }
       def jurisdiction = self.class.jurisdiction
+
+      sig { returns(String) }
       def authority = self.class.authority
+
+      sig { returns(T.nilable(Symbol)) }
       def format = self.class.format
+
+      sig { returns(T::Hash[Symbol, String]) }
       def urls = self.class.urls
+
+      sig { params(name: T.untyped).returns(String) }
       def url(name = nil) = name.nil? ? self.class.url : self.class.url(name)
+
+      sig { params(name: T.untyped).returns(Symbol) }
       def file_key(name) = self.class.file_key(name)
 
       # A remark with everything this adapter appended stripped back off --
       # the publisher's own words and nothing else. Inherited, so it reads the
       # same for every source and a caller does not have to know which list a
       # remark came from before it can strip one. See Sources::Remarks.
+      sig { params(remarks: T.untyped).returns(T.nilable(String)) }
       def self.published_remarks(remarks) = Remarks.published(remarks)
 
       # The one method an adapter must write: bytes in, canonical records out.
+      sig { params(_raw: T.untyped).returns(T::Array[Entity]) }
       def parse(_raw)
         raise NotImplementedError,
               "#{self.class} must implement #parse(raw) and return an Array of ActiveSanction::Entity"
@@ -102,6 +133,7 @@ module ActiveSanction
       # Fetches, parses, and checksums -- or returns nil when the publisher
       # says nothing has changed, which is the outcome to expect on most runs
       # and the reason conditional GET exists.
+      sig { params(force: T::Boolean).returns(T.nilable(Snapshot)) }
       def sync(force: false)
         payloads = retrieve(force: force)
         return nil if payloads.nil?
@@ -116,6 +148,7 @@ module ActiveSanction
       #
       # The files may be named as keywords, as above, or passed as one Hash --
       # or, for a source that declares a single file, as the bytes themselves.
+      sig { params(payloads: T.untyped, files: T.untyped).returns(Snapshot) }
       def snapshot(payloads = nil, **files)
         Snapshot.new(source: key, entities: parse(parse_argument(payloads || files)),
                      fetched_at: Time.now.utc, source_version: source_version)
@@ -129,6 +162,7 @@ module ActiveSanction
       # not three. If the cache has nothing to serve -- a first run against a
       # store that already has validators, a cache directory a user deleted --
       # that file alone is re-fetched in full.
+      sig { params(force: T::Boolean).returns(T.nilable(T::Hash[Symbol, T.untyped])) }
       def retrieve(force: false)
         raise DeclarationError, "#{self.class} declares no URL to retrieve" if urls.empty?
 
@@ -141,16 +175,20 @@ module ActiveSanction
       # Whether any of this source's files is due a fetch, answered locally and
       # without a request. See Fetcher#stale? for what that does and does not
       # claim.
+      sig { returns(T::Boolean) }
       def stale? = urls.any? { |name, address| fetcher.stale?(file_key(name), url: address) }
 
+      sig { returns(T::Boolean) }
       def fresh? = !stale?
 
       # The publisher's own marker for the version just fetched. Last-Modified
       # is the only one every launch source serves; an adapter whose document
       # carries a generation date inside it should override this and say so,
       # because that is the string an examiner will recognise.
+      sig { returns(T.nilable(String)) }
       def source_version = @results.values.first&.last_modified
 
+      sig { returns(String) }
       def inspect
         name = self.class.declared?(:key) ? key : "(no key)"
         "#<#{self.class} #{name} #{urls.size} url(s)>"
@@ -161,23 +199,27 @@ module ActiveSanction
       # One declared URL, one payload: #parse gets the bytes. Several, and it
       # gets the Hash. Bytes handed straight to #snapshot are already the
       # former, which is what reading a fixture off disk produces.
+      sig { params(payloads: T.untyped).returns(T.untyped) }
       def parse_argument(payloads)
         return payloads if payloads.is_a?(String)
 
         self.class.multi_url? ? payloads.to_h : payloads.to_h.values.first
       end
 
+      sig { params(name: Symbol, address: String, force: T::Boolean).returns(Fetcher::Result) }
       def fetch_file(name, address, force)
         fetcher.fetch(address, key: file_key(name), force: force).success!
       end
 
+      sig { params(name: Symbol).returns(T.untyped) }
       def payload(name)
-        result = @results[name]
+        result = @results.fetch(name)
         return store(name, result) if result.changed?
 
         cached(name) || store(name, refetch(name))
       end
 
+      sig { params(name: Symbol, result: Fetcher::Result).returns(T.nilable(String)) }
       def store(name, result)
         cache&.write(file_key(name), result.body, url: url(name), final_url: result.uri.to_s,
                                                   etag: result.etag, last_modified: result.last_modified)
@@ -188,6 +230,7 @@ module ActiveSanction
       # not repaired -- but it is also not fatal here, because the bytes it
       # failed to prove are a download away. The corrupt entry stays on disk
       # for whoever investigates it.
+      sig { params(name: Symbol).returns(T.nilable(String)) }
       def cached(name)
         cache&.latest(file_key(name))&.read
       rescue PayloadCache::CorruptEntry => e
@@ -195,6 +238,7 @@ module ActiveSanction
         nil
       end
 
+      sig { params(name: Symbol).returns(Fetcher::Result) }
       def refetch(name)
         logger&.info("[active_sanction] #{key} #{name} unchanged but not cached; fetching in full")
         result = fetcher.fetch(url(name), key: file_key(name), force: true).success!

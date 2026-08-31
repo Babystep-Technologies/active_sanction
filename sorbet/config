@@ -1,0 +1,21 @@
+# What the checker reads. `lib/` is the code that ships and the only code this
+# repository holds to `typed: strict`; `sorbet/rbi/` is the generated
+# definitions for the gems it reaches, plus the hand-written shims.
+#
+# `spec/` is deliberately out of scope. RSpec defines its helpers with `def`
+# inside blocks, which Sorbet reads as methods on `Object` -- one spec's
+# `def initialize(root:)` is enough to make `Object.new` a type error in
+# `lib/`. Checking the suite would cost the accuracy of checking the library.
+--dir
+lib
+--dir
+sorbet/rbi
+#
+# `requires_ancestor` is how the three modules that are extended into
+# something else -- Sources::Definition above all -- say what they are extended
+# into, which is the only way `raise` and `superclass` resolve inside them. It
+# is still behind a flag upstream.
+--enable-experimental-requires-ancestor
+--ignore=tmp/
+--ignore=vendor/
+--parser=prism

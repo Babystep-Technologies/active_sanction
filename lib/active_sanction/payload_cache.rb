@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "fileutils"
 require "json"
@@ -68,21 +71,23 @@ module ActiveSanction
   # to its own retention storage; this directory is under `~/.cache` and a user
   # is entitled to delete it. Storage of the parsed record is #23 and #24.
   class PayloadCache
+    extend T::Sig
+
     # The subdirectory under the configured cache directory. Kept separate from
     # validators.json so that deleting one does not disturb the other.
-    DEFAULT_DIRNAME = "payloads"
+    DEFAULT_DIRNAME = T.let("payloads", String)
 
     # Source names become directory names, so they are checked rather than
     # sanitized: quietly rewriting `../../etc` into something safe would file a
     # payload somewhere the caller cannot find it, and the callers here are
     # source adapters (#12) whose names are symbols like `:ofac_sdn`.
-    SOURCE_PATTERN = /\A[a-z0-9][a-z0-9_-]*\z/i
+    SOURCE_PATTERN = T.let(/\A[a-z0-9][a-z0-9_-]*\z/i, Regexp)
 
     # How long a file with no sidecar is left alone before pruning sweeps it.
     # A blob is renamed into place two syscalls before its sidecar is written,
     # and a `.part` file is live for as long as a download takes; an hour is
     # far past both and far short of leaving abandoned megabytes forever.
-    ORPHAN_GRACE = 3600
+    ORPHAN_GRACE = T.let(3600, Integer)
 
     # A cached payload that cannot be trusted: the sidecar is unreadable, or
     # the bytes no longer match it. Never silently repaired -- an entry that
@@ -96,11 +101,20 @@ module ActiveSanction
     # Nothing is stored under that source and checksum, or its blob is gone.
     class PayloadMissing < Error; end
 
-    attr_reader :dir, :retain
+    sig { returns(String) }
+    attr_reader :dir
 
+    # How many payloads are kept per source -- see the class comment: this is
+    # a bounded cache, not an archive.
+    sig { returns(Integer) }
+    attr_reader :retain
+
+    sig { params(dir: T.untyped, retain: T.untyped).void }
     def initialize(dir: nil, retain: ActiveSanction.config.retain_payloads)
-      @dir = -::File.expand_path((dir || ::File.join(ActiveSanction.config.cache_dir, DEFAULT_DIRNAME)).to_s)
-      @retain = Configuration.retain_payloads!(retain)
+      @dir = T.let(
+        -::File.expand_path((dir || ::File.join(ActiveSanction.config.cache_dir, DEFAULT_DIRNAME)).to_s), String
+      )
+      @retain = T.let(Configuration.retain_payloads!(retain), Integer)
     end
 
     # Stores one payload and returns its Entry, pruning the source afterwards.
@@ -111,14 +125,18 @@ module ActiveSanction
     # which is how a streaming caller supplies validators it only learns after
     # the response has been read, and `false` abandons the write entirely so
     # that a failed download commits nothing.
-    def write(source, payload = nil, **metadata)
-      raise ArgumentError, "pass a payload or a block, not both" if block_given? && payload
+    sig do
+      params(source: T.untyped, payload: T.untyped, metadata: T.untyped, block: T.untyped)
+        .returns(T.nilable(Entry))
+    end
+    def write(source, payload = nil, **metadata, &block)
+      raise ArgumentError, "pass a payload or a block, not both" if block && payload
 
       name = source!(source)
       metadata!(metadata)
       temporary = stage(name)
       begin
-        outcome = ::File.open(temporary, "wb") { |sink| block_given? ? yield(sink) : copy(payload, sink) }
+        outcome = ::File.open(temporary, "wb") { |sink| block ? block.call(sink) : copy(payload, sink) }
         return nil if outcome == false
 
         commit(name, temporary, metadata!(metadata.merge(outcome.is_a?(Hash) ? outcome : {})))
@@ -129,6 +147,7 @@ module ActiveSanction
 
     # Every entry for a source, newest first, or every entry in the cache when
     # asked for nothing in particular.
+    sig { params(source: T.untyped).returns(T::Array[Entry]) }
     def entries(source = nil)
       return sources.flat_map { |name| entries(name) }.sort_by { |entry| order(entry) } if source.nil?
 
@@ -140,8 +159,10 @@ module ActiveSanction
 
     # The payload a source was last fetched with, or nil. What a re-parse or an
     # audit starts from.
+    sig { params(source: T.untyped).returns(T.nilable(Entry)) }
     def latest(source) = entries(source).first
 
+    sig { params(source: T.untyped, checksum: T.untyped).returns(T.nilable(Entry)) }
     def find(source, checksum)
       name = source!(source)
       path = ::File.join(directory_for(name), "#{Entry.basename_for(Checksum.normalize!(checksum))}" \
@@ -153,6 +174,7 @@ module ActiveSanction
 
     # For a caller that means to read the payload: a missing entry is a failure
     # rather than a nil to check, the same way a corrupt one is.
+    sig { params(source: T.untyped, checksum: T.untyped).returns(Entry) }
     def fetch(source, checksum)
       find(source, checksum) ||
         raise(PayloadMissing, "no #{Checksum.normalize!(checksum)} payload cached for #{source}")
@@ -160,10 +182,13 @@ module ActiveSanction
 
     # The bytes, verified. `cache.read(:ofac_sdn, checksum)` is the whole point
     # of the class: the exact payload a past decision was made against.
+    sig { params(source: T.untyped, checksum: T.untyped).returns(String) }
     def read(source, checksum) = fetch(source, checksum).read
 
+    sig { params(source: T.untyped, checksum: T.untyped).returns(T::Boolean) }
     def include?(source, checksum) = !find(source, checksum).nil?
 
+    sig { returns(T::Array[Symbol]) }
     def sources
       return [] unless ::File.directory?(dir)
 
@@ -171,12 +196,15 @@ module ActiveSanction
          .map(&:to_sym).sort
     end
 
+    sig { params(source: T.untyped).returns(Integer) }
     def size(source = nil) = entries(source).size
 
+    sig { params(source: T.untyped).returns(T::Boolean) }
     def empty?(source = nil) = entries(source).empty?
 
     # Removes one entry, bytes and sidecar together, and returns it -- or nil
     # when there was nothing there.
+    sig { params(source: T.untyped, checksum: T.untyped).returns(T.nilable(Entry)) }
     def delete(source, checksum)
       entry = find(source, checksum)
       remove(entry) if entry
@@ -186,6 +214,7 @@ module ActiveSanction
     # Keeps the `retain` most recent payloads per source and discards the rest,
     # returning what was discarded. Runs after every write, so a caller only
     # calls it directly after lowering `retain` or to sweep what a crash left.
+    sig { params(source: T.untyped).returns(T::Array[Entry]) }
     def prune(source = nil)
       (source.nil? ? sources : [source!(source)]).flat_map { |name| prune_source(name) }
     end
@@ -195,6 +224,7 @@ module ActiveSanction
     # recoverable by re-fetching -- with the exception the class comment names:
     # the *previous* contents of a list are gone once a publisher overwrites
     # its file, whether or not this directory still has them.
+    sig { params(source: T.untyped).returns(T.self_type) }
     def clear(source = nil)
       if source.nil?
         FileUtils.rm_rf(dir)
@@ -204,14 +234,17 @@ module ActiveSanction
       self
     end
 
+    sig { returns(String) }
     def inspect = "#<#{self.class} #{dir} retain=#{retain} #{sources.size} source(s)>"
 
     private
 
     # Newest first, with the checksum breaking a tie so that two entries
     # written in the same microsecond still prune in a defined order.
+    sig { params(entry: Entry).returns([Rational, String]) }
     def order(entry) = [-entry.fetched_at.to_r, entry.checksum]
 
+    sig { params(name: Symbol).returns(String) }
     def stage(name)
       directory = directory_for(name)
       FileUtils.mkdir_p(directory)
@@ -222,29 +255,39 @@ module ActiveSanction
     # crash between the two leaves an unreferenced file that pruning sweeps,
     # where the other order would leave a sidecar advertising bytes that are
     # not there.
+    sig { params(name: Symbol, temporary: String, metadata: T::Hash[Symbol, T.untyped]).returns(Entry) }
     def commit(name, temporary, metadata)
-      entry = Entry.new(dir: directory_for(name), source: name, byte_size: ::File.size(temporary),
-                        checksum: Checksum.of_file(temporary), **metadata)
+      # `new(**hash)` past required keyword parameters is one of the few things
+      # Sorbet cannot check statically. #metadata! has already refused every
+      # key Entry does not declare.
+      entry = T.let(
+        T.unsafe(Entry).new(dir: directory_for(name), source: name, byte_size: ::File.size(temporary),
+                            checksum: Checksum.of_file(temporary), **metadata),
+        Entry
+      )
       ::File.rename(temporary, entry.path)
       write_metadata(entry)
       prune_source(name)
       entry
     end
 
+    sig { params(entry: Entry).void }
     def write_metadata(entry)
-      temporary = "#{entry.metadata_path}.#{Process.pid}.part"
-      ::File.write(temporary, "#{JSON.pretty_generate(entry.to_h)}\n")
-      ::File.rename(temporary, entry.metadata_path)
+      temporary = T.let("#{entry.metadata_path}.#{Process.pid}.part", T.nilable(String))
+      ::File.write(T.must(temporary), "#{JSON.pretty_generate(entry.to_h)}\n")
+      ::File.rename(T.must(temporary), entry.metadata_path)
     ensure
       FileUtils.rm_f(temporary) if temporary
     end
 
+    sig { params(payload: T.untyped, sink: T.untyped).returns(T.untyped) }
     def copy(payload, sink)
       raise ArgumentError, "a payload or a block is required" if payload.nil?
 
       payload.respond_to?(:read) ? IO.copy_stream(payload, sink) : sink.write(payload.to_s)
     end
 
+    sig { params(name: Symbol).returns(T::Array[Entry]) }
     def prune_source(name)
       discarded = entries(name).drop(retain)
       discarded.each { |entry| remove(entry) }
@@ -252,12 +295,14 @@ module ActiveSanction
       discarded
     end
 
+    sig { params(entry: Entry).void }
     def remove(entry)
       FileUtils.rm_f([entry.path, entry.metadata_path])
     end
 
     # What a crashed write leaves behind: a blob whose sidecar never landed, a
     # sidecar whose blob is gone, a `.part` file from a download that died.
+    sig { params(name: Symbol).void }
     def sweep(name)
       cutoff = Time.now - ORPHAN_GRACE
       Dir.glob(::File.join(directory_for(name), "*.{blob,json,part}")).each do |path|
@@ -265,6 +310,7 @@ module ActiveSanction
       end
     end
 
+    sig { params(path: String).returns(T::Boolean) }
     def orphan?(path)
       return true if ::File.extname(path) == ".part"
 
@@ -272,6 +318,7 @@ module ActiveSanction
       !(::File.exist?("#{stem}#{Entry::BLOB_EXTENSION}") && ::File.exist?("#{stem}#{Entry::METADATA_EXTENSION}"))
     end
 
+    sig { params(name: Symbol, path: String).returns(Entry) }
     def read_entry(name, path)
       Entry.from_h(JSON.parse(::File.read(path)), dir: directory_for(name))
     rescue JSON::ParserError, ArgumentError, TypeError => e
@@ -279,8 +326,10 @@ module ActiveSanction
                           "Delete it to drop the entry; the source re-fetches in full."
     end
 
+    sig { params(name: T.untyped).returns(String) }
     def directory_for(name) = ::File.join(dir, name.to_s)
 
+    sig { params(source: T.untyped).returns(Symbol) }
     def source!(source)
       name = source.to_s.strip
       unless name.match?(SOURCE_PATTERN)
@@ -293,6 +342,7 @@ module ActiveSanction
 
     # Checked before a byte is written, so a caller does not stream 126 MB to
     # learn it misspelled a keyword.
+    sig { params(metadata: T::Hash[Symbol, T.untyped]).returns(T::Hash[Symbol, T.untyped]) }
     def metadata!(metadata)
       unknown = metadata.keys - Entry::PROVENANCE
       raise ArgumentError, "unknown payload metadata: #{unknown.join(", ")}" if unknown.any?

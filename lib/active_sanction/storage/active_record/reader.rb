@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "json"
 require "active_sanction/entity"
@@ -24,21 +27,29 @@ module ActiveSanction
       # column edited in a console -- all of them raise rather than screen a
       # customer against a list that is quietly missing people.
       class Reader
-        ENTITY_COLUMNS = %i[
-          id external_id source source_ref entity_type dates_of_birth nationalities programs listed_on remarks
-        ].freeze
+        extend T::Sig
 
-        NAME_COLUMNS = %i[entity_id value kind quality script].freeze
-        ADDRESS_COLUMNS = %i[entity_id street city state_province postal_code country note].freeze
-        IDENTIFIER_COLUMNS = %i[entity_id kind value country issued_on expires_on note].freeze
+        ENTITY_COLUMNS = T.let(%i[
+          id external_id source source_ref entity_type dates_of_birth nationalities programs listed_on remarks
+        ].freeze, T::Array[Symbol])
+
+        NAME_COLUMNS = T.let(%i[entity_id value kind quality script].freeze, T::Array[Symbol])
+        ADDRESS_COLUMNS = T.let(
+          %i[entity_id street city state_province postal_code country note].freeze, T::Array[Symbol]
+        )
+        IDENTIFIER_COLUMNS = T.let(
+          %i[entity_id kind value country issued_on expires_on note].freeze, T::Array[Symbol]
+        )
 
         # Identifier members that are stored as JSON and rebuilt as dates.
-        IDENTIFIER_DATES = %i[issued_on expires_on].freeze
+        IDENTIFIER_DATES = T.let(%i[issued_on expires_on].freeze, T::Array[Symbol])
 
+        sig { params(row: T.untyped).void }
         def initialize(row)
-          @row = row
+          @row = T.let(row, T.untyped)
         end
 
+        sig { returns(Snapshot) }
         def call
           Snapshot.new(
             source: @row.source.to_sym, entities: entities, fetched_at: @row.fetched_at.to_time,
@@ -49,6 +60,7 @@ module ActiveSanction
 
         private
 
+        sig { returns(T::Array[Entity]) }
         def entities
           names = children(Row::Name, NAME_COLUMNS)
           addresses = children(Row::Address, ADDRESS_COLUMNS)
@@ -58,6 +70,10 @@ module ActiveSanction
           end
         end
 
+        sig do
+          params(cells: T::Hash[Symbol, T.untyped], names: T.untyped, addresses: T.untyped,
+                 identifiers: T.untyped).returns(Entity)
+        end
         def entity(cells, names, addresses, identifiers)
           key = cells[:id]
           Entity.from_h(
@@ -68,6 +84,7 @@ module ActiveSanction
           )
         end
 
+        sig { returns(T::Hash[T.untyped, T::Array[T::Hash[Symbol, T.untyped]]]) }
         def identifier_children
           children(Row::Identifier, IDENTIFIER_COLUMNS).transform_values do |list|
             list.map { |member| member.merge(IDENTIFIER_DATES.to_h { |date| [date, parse(member[date])] }) }
@@ -76,16 +93,22 @@ module ActiveSanction
 
         # Every child of every entity on this list, in one query, grouped by
         # the entity they hang off and left in the order they were written.
+        sig do
+          params(model: T.untyped, columns: T::Array[Symbol])
+            .returns(T::Hash[T.untyped, T::Array[T::Hash[Symbol, T.untyped]]])
+        end
         def children(model, columns)
           model.where(snapshot_id: @row.id).order(:entity_id, :position).pluck(*columns)
                .group_by(&:first)
                .transform_values { |group| group.map { |cells| columns.drop(1).zip(cells.drop(1)).to_h } }
         end
 
+        sig { params(model: T.untyped, columns: T::Array[Symbol]).returns(T::Array[T::Hash[Symbol, T.untyped]]) }
         def rows(model, columns)
           model.where(snapshot_id: @row.id).order(:position).pluck(*columns).map { |cells| columns.zip(cells).to_h }
         end
 
+        sig { params(json: T.untyped).returns(T.untyped) }
         def parse(json) = json.nil? ? nil : JSON.parse(json)
       end
     end

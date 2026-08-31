@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "set"
 
@@ -44,18 +47,33 @@ module ActiveSanction
     # same version of the list, which is a data problem no amount of careful
     # parsing fixes.
     class Join
+      extend T::Sig
+
       # `warnings` gathers every complaint from every file in the join, primary
       # first, and `orphans` counts the child rows that matched nothing. Both
       # are populated by #each, since that is when the files are actually read.
-      attr_reader :on, :children, :orphans, :warnings
+      sig { returns(Symbol) }
+      attr_reader :on
 
+      # The child readers, by the name the caller gave each one; that name is
+      # what #each yields them back under.
+      sig { returns(T::Hash[Symbol, T.untyped]) }
+      attr_reader :children
+
+      sig { returns(T::Hash[Symbol, Integer]) }
+      attr_reader :orphans
+
+      sig { returns(T::Array[Warning]) }
+      attr_reader :warnings
+
+      sig { params(on: T.untyped, children: T.untyped).void }
       def initialize(on:, **children)
         raise ArgumentError, "a join needs at least one child reader" if children.empty?
 
-        @on = on.to_sym
-        @children = children
-        @orphans = {}
-        @warnings = []
+        @on = T.let(on.to_sym, Symbol)
+        @children = T.let(children, T::Hash[Symbol, T.untyped])
+        @orphans = T.let({}, T::Hash[Symbol, Integer])
+        @warnings = T.let([], T::Array[Warning])
       end
 
       # Yields each primary row with its related child rows. Returns an
@@ -65,21 +83,24 @@ module ActiveSanction
       # readers reset their own warnings on re-enumeration and a join that kept
       # a stale index would report a first pass's problems against a second
       # pass's rows.
-      def each(primary)
-        return enum_for(:each, primary) unless block_given?
+      sig { params(primary: T.untyped, block: T.untyped).returns(T.untyped) }
+      def each(primary, &block)
+        return enum_for(:each, primary) unless block
 
         indexes = build_indexes
         matched = Hash.new { |hash, name| hash[name] = Set.new }
-        primary.each { |row| yield row, related(indexes, matched, row.fetch(on)) }
+        primary.each { |row| block.call(row, related(indexes, matched, row.fetch(on))) }
         @warnings = collect_warnings(primary)
         count_orphans(indexes, matched)
         self
       end
 
+      sig { returns(String) }
       def inspect = "#<#{self.class} on=#{on.inspect} children=#{children.keys.join(", ")}>"
 
       private
 
+      sig { returns(T::Hash[Symbol, T.untyped]) }
       def build_indexes
         children.transform_values { |reader| index(reader) }
       end
@@ -87,6 +108,7 @@ module ActiveSanction
       # Rows filed under their key, in the order the publisher wrote them --
       # OFAC's `alt_num` ordering is the closest thing its aliases have to a
       # priority, so it must survive the join.
+      sig { params(reader: T.untyped).returns(T::Hash[T.untyped, T::Array[T.untyped]]) }
       def index(reader)
         table = Hash.new { |hash, key| hash[key] = [] }
         reader.each do |row|
@@ -100,6 +122,10 @@ module ActiveSanction
 
       # Also records that the key was seen, which is what makes a child row
       # left over at the end of the pass an orphan rather than just unvisited.
+      sig do
+        params(indexes: T::Hash[Symbol, T.untyped], matched: T.untyped, key: T.untyped)
+          .returns(T::Hash[Symbol, T::Array[T.untyped]])
+      end
       def related(indexes, matched, key)
         indexes.to_h do |name, table|
           matched[name] << key unless key.nil?
@@ -107,12 +133,14 @@ module ActiveSanction
         end
       end
 
+      sig { params(indexes: T::Hash[Symbol, T.untyped], matched: T.untyped).void }
       def count_orphans(indexes, matched)
         @orphans = indexes.to_h do |name, table|
           [name, table.except(*matched[name]).values.sum(&:size)]
         end
       end
 
+      sig { params(primary: T.untyped).returns(T::Array[Warning]) }
       def collect_warnings(primary)
         (primary.warnings + children.values.flat_map(&:warnings)).freeze
       end

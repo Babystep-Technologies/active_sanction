@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/parsers"
 require "active_sanction/sources"
@@ -43,6 +46,8 @@ module ActiveSanction
     # losing it to keep a schema tidy is the wrong trade -- and are left for a
     # later issue to structure if a matcher turns out to want them.
     class UnConsolidated < Base
+      extend T::Sig
+
       key :un_consolidated
       jurisdiction :un
       authority "United Nations Security Council"
@@ -50,26 +55,31 @@ module ActiveSanction
 
       url :main, "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
 
-      INDIVIDUAL = "INDIVIDUAL"
-      ENTITY = "ENTITY"
+      INDIVIDUAL = T.let("INDIVIDUAL", String)
+      ENTITY = T.let("ENTITY", String)
 
-      LIST = Parsers::XmlRecords.new(records: [INDIVIDUAL, ENTITY])
+      LIST = T.let(Parsers::XmlRecords.new(records: [INDIVIDUAL, ENTITY]), Parsers::XmlRecords)
 
       # The generation timestamp the UN stamps on the document element. More
       # precise than the Last-Modified header Base falls back to, and it is the
       # string that appears on the UN's own site, so it is the one an examiner
       # asking "which version was this screened against" will recognise.
-      GENERATED_AT = "dateGenerated"
+      GENERATED_AT = T.let("dateGenerated", String)
 
       # Records that could not be used. Read after #parse; sync orchestration
       # (#34) reports them.
+      sig { returns(T::Array[Parsers::Warning]) }
       attr_reader :warnings
 
-      def initialize(...)
+      sig { params(args: T.untyped, options: T.untyped).void }
+      def initialize(*args, **options)
         super
-        @warnings = []
+        @warnings = T.let([], T::Array[Parsers::Warning])
+        @unmapped = T.let([], T::Array[Parsers::Warning])
+        @generated_at = T.let(nil, T.nilable(String))
       end
 
+      sig { override.params(raw: T.untyped).returns(T::Array[Entity]) }
       def parse(raw)
         reader = LIST.read(raw)
         entities = build(reader)
@@ -78,10 +88,12 @@ module ActiveSanction
         entities
       end
 
+      sig { override.returns(T.nilable(String)) }
       def source_version = @generated_at || super
 
       private
 
+      sig { params(reader: Parsers::XmlRecords::Reader).returns(T::Array[Entity]) }
       def build(reader)
         @unmapped = []
         reader.filter_map do |node|
@@ -95,6 +107,7 @@ module ActiveSanction
       # Committee meant to publish. None of the 1,011 published today is
       # nameless; the warning exists so that the day one is, it is visible
       # rather than absent.
+      sig { params(node: Parsers::XmlRecords::Record).returns(NilClass) }
       def note_nameless(node)
         @unmapped << Parsers::Warning.new(
           line: node.line,

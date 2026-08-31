@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/error"
 require "active_sanction/http_client"
@@ -36,25 +39,43 @@ module ActiveSanction
   # previous payload would make it impossible to tell a list that did not
   # change from a sync that did not run.
   class Fetcher
+    extend T::Sig
+
     # Sent by us unless the caller sent its own. A caller doing its own
     # conditional request -- a range fetch, a probe against a mirror -- has a
     # reason we do not know, and layering a stored ETag on top of it would
     # produce a request neither side meant.
-    CONDITIONAL_HEADERS = %w[if-none-match if-modified-since].freeze
+    CONDITIONAL_HEADERS = T.let(%w[if-none-match if-modified-since].freeze, T::Array[String])
 
-    attr_reader :client, :store, :stale_after, :logger
+    sig { returns(HttpClient) }
+    attr_reader :client
+
+    # Any store answering the ValidatorStore contract -- see #initialize.
+    sig { returns(T.untyped) }
+    attr_reader :store
+
+    # Seconds, or nil to disable the staleness clock -- see #stale?.
+    sig { returns(T.nilable(Numeric)) }
+    attr_reader :stale_after
+
+    # Anything Logger-shaped, or nil, as Configuration#logger has it.
+    sig { returns(T.untyped) }
+    attr_reader :logger
 
     # The store defaults to disk, so the second run of a cron job benefits and
     # not merely the second call in one process. A caller that would rather
     # keep nothing between runs passes ValidatorStore::Memory.new.
+    sig do
+      params(client: HttpClient, store: T.untyped, stale_after: T.nilable(Numeric), logger: T.untyped).void
+    end
     def initialize(client: HttpClient.new,
                    store: ValidatorStore::FileSystem.new,
                    stale_after: ActiveSanction.config.stale_after,
                    logger: ActiveSanction.config.logger)
-      @client = client
-      @store = store
-      @stale_after = stale_after
-      @logger = logger
+      @client = T.let(client, HttpClient)
+      @store = T.let(store, T.untyped)
+      @stale_after = T.let(stale_after, T.nilable(Numeric))
+      @logger = T.let(logger, T.untyped)
     end
 
     # Fetches conditionally and buffers the body, like HttpClient#get.
@@ -68,6 +89,10 @@ module ActiveSanction
     # `force: true` sends no validators, so the publisher has no way to answer
     # 304. For the operator who suspects the cached copy is wrong and wants the
     # bytes regardless of what the ETag says.
+    sig do
+      params(url: T.untyped, key: T.untyped, force: T::Boolean, headers: T::Hash[T.untyped, T.untyped])
+        .returns(Result)
+    end
     def fetch(url, key: url, force: false, headers: {})
       conditional(url, key, force, headers) { |request| client.get(url, headers: request) }
     end
@@ -75,6 +100,10 @@ module ActiveSanction
     # Streams conditionally to disk, like HttpClient#download. A 304 writes
     # nothing: HttpClient only streams a 2xx body, so the file already at `to:`
     # is left exactly as the last download left it.
+    sig do
+      params(url: T.untyped, to: T.untyped, key: T.untyped, force: T::Boolean,
+             headers: T::Hash[T.untyped, T.untyped]).returns(Result)
+    end
     def download(url, to:, key: url, force: false, headers: {})
       conditional(url, key, force, headers) { |request| client.download(url, to: to, headers: request) }
     end
@@ -88,38 +117,50 @@ module ActiveSanction
     # caller checks before deciding to spend a round-trip -- not a claim about
     # the publisher's current file. Only a fetch can make that claim, and a
     # cheap #fetch that comes back `unchanged?` is how to ask for it.
+    sig { params(key: T.untyped, url: T.untyped).returns(T::Boolean) }
     def stale?(key, url: nil)
       stored = store[key]
       return true if stored.nil? || stored.empty?
       return true if url && !stored.for?(url)
-      return false if stale_after.nil?
 
-      Time.now - stored.checked_at >= stale_after
+      after = stale_after
+      return false if after.nil?
+
+      Time.now - stored.checked_at >= after.to_f
     end
 
+    sig { params(key: T.untyped, url: T.untyped).returns(T::Boolean) }
     def fresh?(key, url: nil) = !stale?(key, url: url)
 
     # What is stored for a key, or nil. Mostly for a CLI that wants to print
     # when a source was last confirmed.
+    sig { params(key: T.untyped).returns(T.nilable(Validators)) }
     def validators(key) = store[key]
 
     # Drops a key's validators, so the next fetch downloads in full. The
     # supported way to do what deleting the store file does for every source at
     # once.
+    sig { params(key: T.untyped).returns(T.untyped) }
     def forget(key) = store.delete(key)
 
     private
 
-    def conditional(url, key, force, headers)
+    sig do
+      params(url: T.untyped, key: T.untyped, force: T::Boolean, headers: T::Hash[T.untyped, T.untyped],
+             block: T.proc.params(request: T::Hash[T.untyped, T.untyped]).returns(HttpClient::Response))
+        .returns(Result)
+    end
+    def conditional(url, key, force, headers, &block)
       stored = force ? nil : usable(key, url)
       log_request(key, url, stored, force)
-      response = yield merge(headers, stored)
+      response = block.call(merge(headers, stored))
       record(key, url, stored, response)
     end
 
     # Validators stored against a different URL are not merely useless, they
     # are dangerous: a 304 from the new address would say "the file you have is
     # current" about a file that came from somewhere else.
+    sig { params(key: T.untyped, url: T.untyped).returns(T.nilable(Validators)) }
     def usable(key, url)
       stored = store[key]
       return nil if stored.nil? || stored.empty?
@@ -129,6 +170,10 @@ module ActiveSanction
       nil
     end
 
+    sig do
+      params(headers: T::Hash[T.untyped, T.untyped], stored: T.nilable(Validators))
+        .returns(T::Hash[T.untyped, T.untyped])
+    end
     def merge(headers, stored)
       return headers.to_h if stored.nil?
 
@@ -142,6 +187,10 @@ module ActiveSanction
     # outlived its retries, or a 403, says nothing about whether the list
     # changed, and letting one clear the validators would turn a bad afternoon
     # at a government file server into a full re-download of every list.
+    sig do
+      params(key: T.untyped, url: T.untyped, stored: T.nilable(Validators),
+             response: HttpClient::Response).returns(Result)
+    end
     def record(key, url, stored, response)
       learned = validators_for(url, stored, response)
       store[key] = learned if learned
@@ -149,6 +198,10 @@ module ActiveSanction
       Result.new(key: key, url: url, response: response, validators: store[key])
     end
 
+    sig do
+      params(url: T.untyped, stored: T.nilable(Validators), response: HttpClient::Response)
+        .returns(T.nilable(Validators))
+    end
     def validators_for(url, stored, response)
       if response.not_modified?
         # A caller may have sent its own conditional headers, in which case a
@@ -160,6 +213,7 @@ module ActiveSanction
       end
     end
 
+    sig { params(key: T.untyped, url: T.untyped, stored: T.nilable(Validators), force: T::Boolean).void }
     def log_request(key, url, stored, force)
       return unless logger
 
@@ -169,6 +223,7 @@ module ActiveSanction
 
     # The line an operator greps for to answer "did last night's sync actually
     # transfer anything?".
+    sig { params(key: T.untyped, response: HttpClient::Response, learned: T.nilable(Validators)).void }
     def log_response(key, response, learned)
       return unless logger
 

@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "csv"
 require "stringio"
@@ -18,27 +21,39 @@ module ActiveSanction
       # so `reader.count` followed by `reader.warnings` reports the warnings
       # from the counting pass, not from two passes appended together.
       class Reader
+        extend T::Sig
+        extend T::Generic
         include Enumerable
+
+        Elem = type_member { { fixed: Row } }
 
         # A parser that raises on every row is not isolating failures, it is
         # failing -- most often because the payload is not the format the table
         # was told to expect (an HTML error page saved as .csv is the classic).
         # Collecting 19,321 warnings to say so helps nobody.
-        MAX_CONSECUTIVE_FAILURES = 100
+        MAX_CONSECUTIVE_FAILURES = T.let(100, Integer)
 
-        EOF = Object.new.freeze
+        EOF = T.let(Object.new.freeze, Object)
         private_constant :EOF
 
-        attr_reader :table, :warnings
+        sig { returns(DelimitedTable) }
+        attr_reader :table
 
+        # The rows this pass could not read. Reset by each pass -- see the
+        # class comment.
+        sig { returns(T::Array[Warning]) }
+        attr_reader :warnings
+
+        sig { params(table: DelimitedTable, payload: T.untyped).void }
         def initialize(table:, payload:)
-          @table = table
-          @payload = payload
-          @warnings = []
+          @table = T.let(table, DelimitedTable)
+          @payload = T.let(payload, T.untyped)
+          @warnings = T.let([], T::Array[Warning])
         end
 
-        def each
-          return enum_for(:each) unless block_given?
+        sig { override.params(block: T.nilable(T.proc.params(row: Row).void)).returns(T.untyped) }
+        def each(&block)
+          return enum_for(:each) unless block
 
           csv = start
           columns = table.columns || header!(csv)
@@ -48,19 +63,21 @@ module ActiveSanction
             break if values.equal?(EOF)
 
             consecutive = advance(consecutive, values)
-            yield build(columns, values, csv.lineno) unless values.nil?
+            block.call(build(columns, values, csv.lineno)) unless values.nil?
           end
           self
         end
 
         # Every row, in memory. The convenience the small files get to use;
         # anything list-sized should stay with #each.
+        sig { returns(T::Array[Row]) }
         def to_a = each.to_a
 
         private
 
         # Counts consecutive unreadable rows, and stops the pass once there
         # have been too many to be explained by anything but the wrong format.
+        sig { params(consecutive: Integer, values: T.untyped).returns(Integer) }
         def advance(consecutive, values)
           return 0 unless values.nil?
 
@@ -69,6 +86,7 @@ module ActiveSanction
           count
         end
 
+        sig { returns(CSV) }
         def start
           @warnings = []
           CSV.new(StringIO.new(payload!), **table.csv_options)
@@ -80,6 +98,7 @@ module ActiveSanction
         # sync succeed at screening against nothing, which is the most
         # expensive way this library can fail, so it raises instead. The XML
         # reader refuses the same payload for the same reason.
+        sig { returns(String) }
         def payload!
           string = decoded
           raise ParseError, "expected #{table.col_sep_name} rows, got an empty payload" if string.strip.empty?
@@ -90,6 +109,7 @@ module ActiveSanction
         # Decoding happens once per pass rather than per row, and never raises.
         # Format#decode says why, and strips the BOM; what is left here is the
         # marker only a delimited file carries.
+        sig { returns(String) }
         def decoded
           string, replaced = table.decode(@payload)
           record(0, table.invalid_bytes_message) if replaced
@@ -101,6 +121,7 @@ module ActiveSanction
         # Left alone it parses as a final one-column row, so every sync reports
         # a malformed row it can do nothing about -- and a warning that fires
         # every single time is a warning nobody reads.
+        sig { params(string: String).returns(String) }
         def trim(string) = string.sub(/\r?\n?\x1A\s*\z/, "")
 
         # Column names taken from the file's own first row, lowercased and
@@ -110,6 +131,7 @@ module ActiveSanction
         # An empty payload has already been refused, so what is left to fail on
         # here is a first row that could not be read at all -- and a file whose
         # header is unreadable has no columns to name anything by.
+        sig { params(csv: CSV).returns(T::Array[Symbol]) }
         def header!(csv)
           values = shift(csv)
           raise ParseError, "expected a header row, read nothing usable as one" if values.nil? || values.equal?(EOF)
@@ -117,12 +139,14 @@ module ActiveSanction
           values.map { |value| normalize_header(value) }
         end
 
+        sig { params(value: T.untyped).returns(Symbol) }
         def normalize_header(value)
           value.to_s.strip.downcase.gsub(/[^a-z0-9]+/, "_").delete_prefix("_").delete_suffix("_").to_sym
         end
 
         # Returns the row's values, EOF at the end of the payload, or nil for a
         # row that could not be parsed -- already recorded as a warning.
+        sig { params(csv: CSV).returns(T.untyped) }
         def shift(csv)
           row = csv.shift
           row.nil? ? EOF : row
@@ -131,6 +155,7 @@ module ActiveSanction
           nil
         end
 
+        sig { params(columns: T::Array[Symbol], values: T::Array[T.untyped], line: Integer).returns(Row) }
         def build(columns, values, line)
           record_arity(columns, values, line) unless values.size == columns.size
           Row.new(values: table.coerce(columns, values), line: line)
@@ -140,15 +165,18 @@ module ActiveSanction
         # with nil and long ones keep their extra values under no name, because
         # a publisher appending a column mid-year should degrade the fields
         # nobody has mapped yet rather than the whole list.
+        sig { params(columns: T::Array[Symbol], values: T::Array[T.untyped], line: Integer).void }
         def record_arity(columns, values, line)
           shape = values.size < columns.size ? "only #{values.size}" : values.size.to_s
           record(line, "expected #{columns.size} columns, got #{shape}", values.join(table.col_sep))
         end
 
+        sig { params(line: T.nilable(Integer), message: String, snippet: T.untyped).void }
         def record(line, message, snippet = nil)
           @warnings << Warning.new(line: line, message: message, snippet: snippet)
         end
 
+        sig { params(consecutive: Integer).void }
         def give_up!(consecutive)
           raise ParseError,
                 "#{consecutive} consecutive rows could not be parsed. This payload is almost certainly not the " \

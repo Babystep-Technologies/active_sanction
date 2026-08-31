@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 module ActiveSanction
   class ValidatorStore
@@ -11,19 +14,27 @@ module ActiveSanction
     # benefit of conditional GET from it; only a fresh boot pays for a full
     # download.
     class Memory < ValidatorStore
+      extend T::Sig
+
+      sig { params(entries: T::Hash[T.untyped, T.nilable(Validators)]).void }
       def initialize(entries = {})
-        @entries = {}
-        @mutex = Mutex.new
+        @entries = T.let({}, T::Hash[String, Validators])
+        @mutex = T.let(Mutex.new, Mutex)
         entries.each { |key, validators| self[key] = validators }
         super()
       end
 
       private
 
+      sig { override.returns(T::Hash[String, Validators]) }
       attr_reader :entries
 
-      def commit
-        @mutex.synchronize { yield @entries }
+      sig do
+        override.params(block: T.proc.params(all: T::Hash[String, Validators]).returns(T.untyped))
+                .returns(T.untyped)
+      end
+      def commit(&block)
+        @mutex.synchronize { block.call(@entries) }
       end
     end
   end
