@@ -9,6 +9,11 @@ require "webmock/rspec"
 # network must opt in with the `:live` tag.
 WebMock.disable_net_connect!(allow_localhost: true)
 
+# Shared example groups -- chiefly the adapter conformance contract that every
+# source has to pass. Loaded here rather than from each spec file so that a new
+# adapter's spec has only to name the contract, not to find it.
+Dir[File.expand_path("support/**/*.rb", __dir__)].each { |file| require file }
+
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true

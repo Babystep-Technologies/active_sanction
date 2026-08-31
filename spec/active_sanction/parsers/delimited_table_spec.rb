@@ -79,10 +79,30 @@ RSpec.describe ActiveSanction::Parsers::DelimitedTable do
       rows = headered.read(%(Ent Num,City/State/ZIP\n36,"London"\n)).to_a
       expect(rows.first.to_h.keys).to eq(%i[ent_num city_state_zip])
     end
+  end
 
-    it "reports an empty payload rather than yielding nothing in silence" do
-      expect { headered.read("").to_a }
-        .to raise_error(ActiveSanction::Parsers::ParseError, /expected a header row/)
+  # A list that arrives as no bytes at all is a failed download or a moved URL.
+  # Reported as zero rows it becomes a sync that screens against nobody, and
+  # says nothing while it does.
+  describe "an empty payload" do
+    it "is refused rather than read as a header row that never arrived" do
+      expect { described_class.new(columns: nil).read("").to_a }
+        .to raise_error(ActiveSanction::Parsers::ParseError, /expected CSV rows, got an empty payload/)
+    end
+
+    it "is refused when the columns were declared and no header is needed" do
+      expect { table.read("").to_a }
+        .to raise_error(ActiveSanction::Parsers::ParseError, /expected CSV rows, got an empty payload/)
+    end
+
+    it "is refused when the file holds only the end-of-file marker OFAC appends" do
+      expect { table.read("\r\n\x1A").to_a }
+        .to raise_error(ActiveSanction::Parsers::ParseError, /got an empty payload/)
+    end
+
+    it "names the separator it was expecting, so the wrong table is visible in the message" do
+      tsv = described_class.new(columns: columns, col_sep: "\t")
+      expect { tsv.read("").to_a }.to raise_error(ActiveSanction::Parsers::ParseError, /expected TSV rows/)
     end
   end
 

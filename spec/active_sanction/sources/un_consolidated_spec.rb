@@ -11,6 +11,8 @@ RSpec.describe ActiveSanction::Sources::UnConsolidated do
 
   def entity(ref) = entities.find { |candidate| candidate.source_ref == ref }
 
+  it_behaves_like "a sanction source", fixture: "un_consolidated/consolidated.xml"
+
   # The fixture is seven real records lifted verbatim from the published list,
   # chosen because between them they carry every quirk this adapter exists to
   # absorb: a four-part name, a name in Arabic wrapped across two lines, both
