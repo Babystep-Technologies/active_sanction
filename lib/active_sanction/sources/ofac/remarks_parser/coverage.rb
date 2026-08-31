@@ -2,7 +2,7 @@
 
 module ActiveSanction
   module Sources
-    class OfacSdn < Base
+    class Ofac < Base
       class RemarksParser
         # How much of OFAC's free text the parser understood, accumulated over
         # a whole sync.

@@ -2,7 +2,7 @@
 
 module ActiveSanction
   module Sources
-    class OfacSdn < Base
+    class Ofac < Base
       class RemarksParser
         # What OFAC calls things: every label the parser knows how to find at
         # the front of a remark segment, and the patterns compiled from them.

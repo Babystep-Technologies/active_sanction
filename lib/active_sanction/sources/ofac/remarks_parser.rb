@@ -6,7 +6,7 @@ require "active_sanction/partial_date"
 
 module ActiveSanction
   module Sources
-    class OfacSdn < Base
+    class Ofac < Base
       # Reads the fields OFAC publishes no columns for out of the free text it
       # packs them into.
       #
@@ -251,5 +251,5 @@ module ActiveSanction
   end
 end
 
-require "active_sanction/sources/ofac_sdn/remarks_parser/vocabulary"
-require "active_sanction/sources/ofac_sdn/remarks_parser/coverage"
+require "active_sanction/sources/ofac/remarks_parser/vocabulary"
+require "active_sanction/sources/ofac/remarks_parser/coverage"

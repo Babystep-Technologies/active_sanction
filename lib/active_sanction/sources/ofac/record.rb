@@ -5,18 +5,25 @@ require "active_sanction/name"
 require "active_sanction/address"
 require "active_sanction/identifier"
 require "active_sanction/sources/remarks"
-require "active_sanction/sources/ofac_sdn/remarks_parser"
+require "active_sanction/sources/ofac/remarks_parser"
 
 module ActiveSanction
   module Sources
-    class OfacSdn < Base
-      # One joined OFAC record -- a row of SDN.CSV plus the ALT and ADD rows
-      # that share its `ent_num` -- turned into an Entity.
+    class Ofac < Base
+      # One joined OFAC record -- a row of the primary file plus the ALT and
+      # ADD rows that share its `ent_num` -- turned into an Entity.
       #
       # Separate from the adapter because they are two jobs: the adapter says
       # what the list is and where it lives, and this says what OFAC's columns
       # mean. The mapping is where all the judgment sits, so it is worth being
       # able to read it on its own.
+      #
+      # Shared by both OFAC adapters, because SDN.CSV and CONS_PRIM.CSV are
+      # the same twelve columns with the same conventions -- the same is true
+      # of ALT and ADD -- and the only thing that differs between them is
+      # which list a row is on. `source` is passed in rather than hard-coded
+      # for that reason, and #remark_fields is the hook a subclass overrides
+      # to record anything its own list publishes on top.
       class Record
         # OFAC's `SDN_Type` as published, and what each maps to. Blank is the
         # one that matters: 9,923 of 19,321 rows leave it empty and every one
@@ -46,10 +53,11 @@ module ActiveSanction
         # publishes nowhere else.
         INSIGNIFICANT = /[^[:alnum:]]+/
 
-        attr_reader :row, :aliases, :addresses
+        attr_reader :row, :source, :aliases, :addresses
 
-        def initialize(row:, aliases: [], addresses: [])
+        def initialize(row:, source:, aliases: [], addresses: [])
           @row = row
+          @source = source
           @aliases = aliases
           @addresses = addresses
         end
@@ -59,7 +67,7 @@ module ActiveSanction
         def entity
           return nil if row.null?(:sdn_name)
 
-          Entity.new(source: :ofac_sdn, source_ref: row[:ent_num], type: type,
+          Entity.new(source: source, source_ref: row[:ent_num], type: type,
                      names: names, addresses: places, identifiers: identifiers,
                      programs: programs, remarks: remarks, **from_remarks)
         end
@@ -140,7 +148,15 @@ module ActiveSanction
         # OFAC's remark verbatim, then the columns that have nowhere else to
         # go, behind the marker that makes them trivial to strip again.
         def remarks
-          Remarks.build(row[:remarks], COLUMNS_IN_REMARKS.map { |column, label| [label, row[column]] })
+          Remarks.build(row[:remarks], remark_fields)
+        end
+
+        # The label/value pairs appended behind the marker. A subclass reading
+        # a list that publishes something more -- which sub-list of the
+        # consolidated file a row is on -- prepends to this rather than
+        # rewriting #remarks.
+        def remark_fields
+          COLUMNS_IN_REMARKS.map { |column, label| [label, row[column]] }
         end
 
         private

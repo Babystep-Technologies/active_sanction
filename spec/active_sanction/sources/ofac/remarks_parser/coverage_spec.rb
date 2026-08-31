@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-RSpec.describe ActiveSanction::Sources::OfacSdn::RemarksParser::Coverage do
-  let(:parser) { ActiveSanction::Sources::OfacSdn::RemarksParser }
+RSpec.describe ActiveSanction::Sources::Ofac::RemarksParser::Coverage do
+  let(:parser) { ActiveSanction::Sources::Ofac::RemarksParser }
 
   def tally(*remarks)
     remarks.each_with_object(described_class.new) { |remark, coverage| coverage.record(parser.new(remark)) }
