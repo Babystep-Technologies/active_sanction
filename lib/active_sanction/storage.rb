@@ -22,9 +22,35 @@ module ActiveSanction
     # be there has to fail loudly, because the result of screening against
     # nothing is a clean report.
     class MissingSnapshot < Error; end
+
+    # A stored snapshot that cannot be trusted to be what it says it is: a
+    # truncated file, bytes that no longer hash to the checksum recorded beside
+    # them, a sidecar that is not JSON, a list filed under one source that
+    # claims to be another.
+    #
+    # Raised rather than repaired, and rather than returning whatever could
+    # still be read. A store that hands back the 8,000 records it managed to
+    # parse out of 19,015 produces a report that looks exactly like a clean
+    # one, which is the most expensive thing this library can get wrong. An
+    # operator can always delete the list and re-sync; nobody can recover a
+    # screening decision made against a list that was quietly half there.
+    class CorruptSnapshot < Error; end
+
+    # A stored snapshot written under a Snapshot::SCHEMA_VERSION this code does
+    # not know how to read -- almost always because the directory was written
+    # by a newer active_sanction than the one now reading it.
+    #
+    # Separate from CorruptSnapshot because the file is fine and the fix is
+    # different: upgrade the gem, or discard the list and re-sync under this
+    # one. It has to be caught before the list is parsed, because a newer
+    # schema will usually still deserialize -- into records missing whatever
+    # the new version added, with a checksum that verifies, and with no
+    # symptom other than names that stop matching.
+    class UnsupportedSchema < Error; end
   end
 end
 
 require "active_sanction/storage/meta"
 require "active_sanction/storage/base"
 require "active_sanction/storage/memory"
+require "active_sanction/storage/file_system"

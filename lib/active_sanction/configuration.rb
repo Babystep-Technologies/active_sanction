@@ -58,6 +58,14 @@ module ActiveSanction
     XDG_CACHE_HOME = "XDG_CACHE_HOME"
     DEFAULT_CACHE_DIRNAME = "active_sanction"
 
+    # Where Storage::FileSystem (#24) keeps parsed snapshots. Deliberately not
+    # under `cache_dir`, and the difference is the whole distinction between
+    # the two directories: everything under `~/.cache` is recoverable by
+    # fetching again and a user is entitled to delete it, while a stored
+    # snapshot is the system of record -- once a publisher overwrites its file,
+    # the list version a past decision was screened against exists only here.
+    DEFAULT_STORAGE_DIRNAME = ".active_sanction"
+
     # How many raw payloads PayloadCache keeps per source. Three is enough to
     # diff a suspicious list against the two that came before it, and small
     # enough that a cache directory does not quietly grow by 126 MB a day. An
@@ -90,7 +98,7 @@ module ActiveSanction
     DEFAULT_SOURCES = nil
 
     attr_reader :user_agent, :open_timeout, :read_timeout, :max_redirects, :max_retries, :retry_backoff,
-                :cache_dir, :retain_payloads, :stale_after, :sources, :xml_backend, :logger
+                :cache_dir, :storage_dir, :retain_payloads, :stale_after, :sources, :xml_backend, :logger
 
     def initialize
       @user_agent = DEFAULT_USER_AGENT
@@ -100,6 +108,7 @@ module ActiveSanction
       @max_retries = DEFAULT_MAX_RETRIES
       @retry_backoff = DEFAULT_RETRY_BACKOFF
       @cache_dir = self.class.default_cache_dir
+      @storage_dir = self.class.default_storage_dir
       @retain_payloads = DEFAULT_RETAIN_PAYLOADS
       @stale_after = DEFAULT_STALE_AFTER
       @sources = DEFAULT_SOURCES
@@ -132,10 +141,11 @@ module ActiveSanction
     end
 
     def cache_dir=(value)
-      path = value.to_s.strip
-      raise ConfigurationError, "cache_dir cannot be blank" if path.empty?
+      @cache_dir = -File.expand_path(directory!(:cache_dir, value))
+    end
 
-      @cache_dir = -File.expand_path(path)
+    def storage_dir=(value)
+      @storage_dir = -File.expand_path(directory!(:storage_dir, value))
     end
 
     def retain_payloads=(value)
@@ -187,6 +197,10 @@ module ActiveSanction
       @logger = value
     end
 
+    def self.default_storage_dir
+      -File.expand_path(File.join(Dir.home, DEFAULT_STORAGE_DIRNAME))
+    end
+
     def self.default_cache_dir
       home = ENV.fetch(XDG_CACHE_HOME, nil)
       home = File.join(Dir.home, ".cache") if home.nil? || home.strip.empty?
@@ -224,6 +238,13 @@ module ActiveSanction
     end
 
     private
+
+    def directory!(name, value)
+      path = value.to_s.strip
+      raise ConfigurationError, "#{name} cannot be blank" if path.empty?
+
+      path
+    end
 
     def source_keys!(value)
       keys = Array(value).map { |key| key.to_s.strip }
