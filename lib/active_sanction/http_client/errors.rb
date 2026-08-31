@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/error"
 
@@ -33,10 +36,14 @@ module ActiveSanction
     # Raised by Response#success! for a status the caller declared fatal. It
     # carries the response, so a rescuer can still log what came back.
     class ResponseError < Error
+      extend T::Sig
+
+      sig { returns(Response) }
       attr_reader :response
 
+      sig { params(response: Response).void }
       def initialize(response)
-        @response = response
+        @response = T.let(response, Response)
         super("#{response.uri} returned #{response.status}")
       end
     end

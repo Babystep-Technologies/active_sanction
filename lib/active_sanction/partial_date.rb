@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "date"
 require "active_sanction/partial_date/parser"
@@ -18,15 +21,17 @@ module ActiveSanction
   # #overlaps? and #conflicts_with? exact regardless of how precise either side
   # is. Instances are frozen on construction and compare by value.
   class PartialDate
+    extend T::Sig
+
     # :range is a precision in the sense the scorer (#32) cares about -- how
     # much of the calendar a date could be -- not a grammatical one.
-    PRECISIONS = %i[year month day range].freeze
+    PRECISIONS = T.let(%i[year month day range].freeze, T::Array[Symbol])
 
     # Canonical member order. Snapshot (#8) checksums the serialized form, so
     # #to_h must lay its keys out the same way every time. `precision` is
     # derived rather than stored: a stored copy can disagree with the fields it
     # describes, and then two records that mean the same thing checksum apart.
-    MEMBERS = %i[year month day from to approximate].freeze
+    MEMBERS = T.let(%i[year month day from to approximate].freeze, T::Array[Symbol])
 
     # "Circa 1962" and "1963" are the same claim about a person, made by two
     # governments with different sources. Comparing an approximate date on its
@@ -35,17 +40,46 @@ module ActiveSanction
     # approximate date by a year on each side.
     APPROXIMATE_SLACK_YEARS = 1
 
-    attr_reader(*MEMBERS, :first_date, :last_date)
+    # A point date carries year/month/day and no endpoints; a range carries its
+    # endpoints and no year of its own. Which is which is #range?.
+    sig { returns(T.nilable(Integer)) }
+    attr_reader :year
+
+    sig { returns(T.nilable(Integer)) }
+    attr_reader :month
+
+    sig { returns(T.nilable(Integer)) }
+    attr_reader :day
+
+    sig { returns(T.nilable(PartialDate)) }
+    attr_reader :from
+
+    sig { returns(T.nilable(PartialDate)) }
+    attr_reader :to
+
+    sig { returns(T::Boolean) }
+    attr_reader :approximate
+
+    # The two dates that bound this one, whatever shape it is -- which is what
+    # makes #overlaps? exact regardless of how precise either side is. Never
+    # nil: #initialize derives both for every instance it will build.
+    sig { returns(Date) }
+    attr_reader :first_date
+
+    sig { returns(Date) }
+    attr_reader :last_date
 
     # Reads a date expression from free text, returning nil on anything it
     # cannot read. The vocabulary lives in Parser, which is where new source
     # spellings get added.
+    sig { params(text: T.untyped).returns(T.nilable(PartialDate)) }
     def self.parse(text)
       Parser.call(text)
     end
 
     # Rebuilds a date from #to_h output. Accepts string keys, so a record that
     # has been through JSON round-trips without a separate coercion step.
+    sig { params(hash: T.untyped).returns(T.attached_class) }
     def self.from_h(hash)
       attributes = hash.to_h.transform_keys(&:to_sym)
       unknown = attributes.keys - MEMBERS
@@ -56,25 +90,47 @@ module ActiveSanction
 
     # A span, from the UN's `TYPE_OF_DATE = BETWEEN`. Endpoints may be
     # PartialDates, #to_h hashes, or strings this class can parse.
+    sig { params(from: T.untyped, to: T.untyped, approximate: T::Boolean).returns(T.attached_class) }
     def self.range(from, to, approximate: false)
       new(from: from, to: to, approximate: approximate)
     end
 
+    # Untyped on purpose, and the same choice Entity makes: these arrive as
+    # whatever a publisher wrote and a parser made of it. What comes back out
+    # is typed -- see the readers above.
+    sig do
+      params(year: T.untyped, month: T.untyped, day: T.untyped, from: T.untyped, to: T.untyped,
+             approximate: T.untyped).void
+    end
     def initialize(year: nil, month: nil, day: nil, from: nil, to: nil, approximate: false)
-      @approximate = approximate ? true : false
-      if from.nil? && to.nil?
-        assign_point(year, month, day)
-      else
-        reject_mixed_shape(year, month, day)
-        assign_range(from, to)
-      end
+      @approximate = T.let(approximate ? true : false, T::Boolean)
+      @year = T.let(nil, T.nilable(Integer))
+      @month = T.let(nil, T.nilable(Integer))
+      @day = T.let(nil, T.nilable(Integer))
+      @from = T.let(nil, T.nilable(PartialDate))
+      @to = T.let(nil, T.nilable(PartialDate))
+      # Both branches assign the members they own and hand back the pair of
+      # dates that bound them, which is what makes those two non-nil for every
+      # instance rather than for most of them.
+      first, last =
+        if from.nil? && to.nil?
+          assign_point(year, month, day)
+        else
+          reject_mixed_shape(year, month, day)
+          assign_range(from, to)
+        end
+      @first_date = T.let(first, Date)
+      @last_date = T.let(last, Date)
       freeze
     end
 
+    sig { returns(T::Boolean) }
     def range? = !from.nil?
 
+    sig { returns(T::Boolean) }
     def approximate? = approximate
 
+    sig { returns(Symbol) }
     def precision
       return :range if range?
       return :day if day
@@ -84,23 +140,26 @@ module ActiveSanction
     end
 
     # Every date this could be, which is the whole point of the type.
+    sig { returns(T::Range[Date]) }
     def to_range = first_date..last_date
 
     # True when the two dates could describe the same day. Precision does not
     # have to match: a year-only date overlaps every full date inside it, which
     # is what lets #32 treat 1972 against 1972-04-29 as a moderate boost rather
     # than a miss.
+    sig { params(other: T.untyped).returns(T::Boolean) }
     def overlaps?(other)
       return false if other.nil?
 
       mine = comparison_range
       theirs = comparable!(other).comparison_range
-      mine.begin <= theirs.end && theirs.begin <= mine.end
+      mine.first <= theirs.last && theirs.first <= mine.last
     end
 
     # The strict complement of #overlaps? for two known dates. A missing date
     # is not a conflict -- nobody claimed anything to contradict -- so nil
     # answers false to both questions.
+    sig { params(other: T.untyped).returns(T::Boolean) }
     def conflicts_with?(other)
       return false if other.nil?
 
@@ -108,66 +167,80 @@ module ActiveSanction
     end
 
     # Widened by APPROXIMATE_SLACK_YEARS when the publisher said circa.
+    sig { returns(T::Range[Date]) }
     def comparison_range
       return to_range unless approximate?
 
       first_date.prev_year(APPROXIMATE_SLACK_YEARS)..last_date.next_year(APPROXIMATE_SLACK_YEARS)
     end
 
+    sig { returns(T::Hash[Symbol, T.untyped]) }
     def to_h
       { year: year, month: month, day: day, from: from&.to_h, to: to&.to_h, approximate: approximate }
     end
 
     # Renders in a form .parse reads back, so a date survives a trip through
     # free text -- which is how OFAC publishes them in the first place.
+    sig { returns(String) }
     def to_s
       text = range? ? "#{from} to #{to}" : point_to_s
       approximate? ? "circa #{text}" : text
     end
 
+    sig { params(other: T.untyped).returns(T::Boolean) }
     def ==(other)
-      other.instance_of?(self.class) && other.to_h == to_h
+      return false unless other.instance_of?(self.class)
+
+      to_h == other.to_h
     end
     alias eql? ==
 
+    sig { returns(Integer) }
     def hash
       [self.class, to_h].hash
     end
 
+    sig { returns(String) }
     def inspect
       "#<#{self.class} #{self} precision=#{precision.inspect}>"
     end
 
     private
 
+    sig { params(year: T.untyped, month: T.untyped, day: T.untyped).returns([Date, Date]) }
     def assign_point(year, month, day)
       raise ArgumentError, "year is required" if year.nil?
 
-      @year = integer!(:year, year)
+      number = integer!(:year, year)
+      @year = number
       @month = optional_integer(:month, month)
       @day = optional_integer(:day, day)
-      validate_point!
-      @first_date = Date.new(@year, @month || 1, @day || 1).freeze
+      validate_point!(number)
+      first = Date.new(number, @month || 1, @day || 1).freeze
       # A year-only date runs to 31 December, a month to its own real last day.
-      @last_date = (@day ? @first_date : Date.new(@year, @month || 12, -1)).freeze
+      [first, @day ? first : Date.new(number, @month || 12, -1).freeze]
     end
 
-    def validate_point!
+    sig { params(year: Integer).void }
+    def validate_point!(year)
       raise ArgumentError, "day given without a month" if @day && @month.nil?
-      raise ArgumentError, "not a real date: #{to_s.inspect}" unless Date.valid_date?(@year, @month || 1, @day || 1)
+      raise ArgumentError, "not a real date: #{to_s.inspect}" unless Date.valid_date?(year, @month || 1, @day || 1)
     end
 
+    sig { params(from: T.untyped, to: T.untyped).returns([Date, Date]) }
     def assign_range(from, to)
       raise ArgumentError, "a range needs both from and to" if from.nil? || to.nil?
 
-      @from = endpoint!(:from, from)
-      @to = endpoint!(:to, to)
-      raise ArgumentError, "range runs backwards: #{@from} to #{@to}" if @from.first_date > @to.last_date
+      first = endpoint!(:from, from)
+      last = endpoint!(:to, to)
+      @from = first
+      @to = last
+      raise ArgumentError, "range runs backwards: #{first} to #{last}" if first.first_date > last.last_date
 
-      @first_date = @from.first_date
-      @last_date = @to.last_date
+      [first.first_date, last.last_date]
     end
 
+    sig { params(year: T.untyped, month: T.untyped, day: T.untyped).void }
     def reject_mixed_shape(year, month, day)
       return if [year, month, day].all?(&:nil?)
 
@@ -177,6 +250,7 @@ module ActiveSanction
     # Endpoints are themselves PartialDates so a span between two year-only
     # dates keeps both years, and they may not nest: "between (1971 to 1972)
     # and 1973" is not something any list publishes.
+    sig { params(member: Symbol, value: T.untyped).returns(PartialDate) }
     def endpoint!(member, value)
       date = coerce_endpoint(value)
       raise ArgumentError, "#{member} is not a date: #{value.inspect}" if date.nil?
@@ -185,6 +259,7 @@ module ActiveSanction
       date
     end
 
+    sig { params(value: T.untyped).returns(T.nilable(PartialDate)) }
     def coerce_endpoint(value)
       case value
       when PartialDate then value
@@ -193,22 +268,26 @@ module ActiveSanction
       end
     end
 
+    sig { params(other: T.untyped).returns(PartialDate) }
     def comparable!(other)
       return other if other.is_a?(PartialDate)
 
       raise ArgumentError, "expected a #{self.class}, got #{other.class}"
     end
 
+    sig { params(member: Symbol, value: T.untyped).returns(T.nilable(Integer)) }
     def optional_integer(member, value)
       value.nil? ? nil : integer!(member, value)
     end
 
+    sig { params(member: Symbol, value: T.untyped).returns(Integer) }
     def integer!(member, value)
       Integer(value.to_s, 10)
     rescue TypeError, ArgumentError
       raise ArgumentError, "#{member} is not a number: #{value.inspect}"
     end
 
+    sig { returns(String) }
     def point_to_s
       case precision
       when :day then format("%<year>04d-%<month>02d-%<day>02d", year: year, month: month, day: day)

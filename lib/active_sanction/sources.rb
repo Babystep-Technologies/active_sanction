@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/configuration"
 require "active_sanction/error"
@@ -48,13 +51,24 @@ module ActiveSanction
     # did not produce one either.
     class MissingPayload < Error; end
 
-    MUTEX = Mutex.new
+    MUTEX = T.let(Mutex.new, Mutex)
     private_constant :MUTEX
 
     class << self
+      extend T::Sig
+
+      # An adapter is anything answering `.key` and `.new`, which is why every
+      # signature here says `T.untyped` where a class goes and none of them
+      # says `T.class_of(Sources::Base)`. That is the milestone this registry
+      # exists for: a bank's internal watchlist, backed by a database table
+      # with no URL and no payload, is a first-class source rather than
+      # something pretending to be a file download. Narrowing these types would
+      # quietly close what the class comment above promises is open.
+
       # Adds a source to the registry and returns it. Registering the same
       # class twice is a no-op, so a file that manages to get loaded under two
       # paths does not take the whole process down with it.
+      sig { params(source: T.untyped).returns(T.untyped) }
       def register(source)
         key = registrable!(source)
         MUTEX.synchronize do
@@ -74,6 +88,7 @@ module ActiveSanction
       # as a NoMethodError that says nothing about the misspelling. The message
       # lists what *is* registered, which is also the answer to "why is my
       # adapter not being picked up" (its file was never required).
+      sig { params(key: T.untyped).returns(T.untyped) }
       def [](key)
         name = key.to_sym
         registry.fetch(name) do
@@ -81,22 +96,28 @@ module ActiveSanction
         end
       end
 
+      sig { params(key: T.untyped).returns(T::Boolean) }
       def registered?(key) = registry.key?(key.to_sym)
 
       # Every registered adapter, ordered by key so a CLI listing and a sync
       # summary do not reshuffle themselves between runs.
+      sig { returns(T::Array[T.untyped]) }
       def all = registry.keys.sort.map { |key| registry[key] }
 
+      sig { returns(T::Array[Symbol]) }
       def keys = registry.keys.sort
 
+      sig { returns(Integer) }
       def size = registry.size
 
+      sig { returns(T::Boolean) }
       def empty? = registry.empty?
 
       # The adapters a sync should run: what `config.sources` names, or every
       # registered source when it names nothing. An unknown key raises here,
       # at the start of the run, rather than after the other lists have been
       # downloaded.
+      sig { params(configured: T.nilable(T::Array[Symbol])).returns(T::Array[T.untyped]) }
       def enabled(configured = ActiveSanction.config.sources)
         return all if configured.nil?
 
@@ -113,16 +134,22 @@ module ActiveSanction
       # require, and `require` runs once per process: a suite that emptied the
       # registry between examples would leave every later example running
       # against a library that has forgotten its own sources.
+      sig { params(key: T.untyped).returns(T.untyped) }
       def unregister(key)
         MUTEX.synchronize { registry.delete(key.to_sym) }
       end
 
       private
 
-      def registry = @registry ||= {}
+      sig { returns(T::Hash[Symbol, T.untyped]) }
+      def registry
+        @registry ||= T.let({}, T.nilable(T::Hash[Symbol, T.untyped]))
+      end
 
+      sig { returns(String) }
       def list = registry.empty? ? "(nothing)" : keys.join(", ")
 
+      sig { params(source: T.untyped).returns(Symbol) }
       def registrable!(source)
         unless source.respond_to?(:key) && source.respond_to?(:new)
           raise ArgumentError, "a source must answer .key and .new, got #{source.inspect}"
@@ -131,6 +158,7 @@ module ActiveSanction
         Definition.key!(source.key)
       end
 
+      sig { params(key: Symbol, source: T.untyped, claimed: T.untyped).returns(String) }
       def duplicate_message(key, source, claimed)
         "cannot register #{source} as #{key.inspect}: #{claimed} already claims that key. A key is the public " \
           "name of a list -- in configuration, in stored snapshots, in every match result that cites it -- so two " \

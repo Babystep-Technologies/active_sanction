@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "digest"
 
@@ -48,31 +51,35 @@ module ActiveSanction
       # every Canadian record ever stored, which makes each of them a versioned
       # decision rather than a cleanup.
       module SourceRef
+        extend T::Sig
+
         # Case and the publisher's stray padding are noise: `Venezuela ` and
         # `1, Part 1 ` are published both with and without their trailing
         # space, and a record must not change id when a space does. Nothing
         # further is folded -- not punctuation, not diacritics -- because every
         # additional fold is another way for two genuinely different records to
         # collide into one id.
-        NORMALIZE = /[[:space:]]+/
+        NORMALIZE = T.let(/[[:space:]]+/, Regexp)
 
         # A NUL cannot appear in XML character data at all, so no two different
         # sets of field values can be re-parenthesized into each other:
         # ("a", "bc") and ("ab", "c") hash apart.
-        SEPARATOR = "\u0000"
+        SEPARATOR = T.let("\u0000", String)
 
         # 64 bits of SHA-256. Across 5,690 records the chance of any collision
         # at all is about one in a trillion, and an id this length stays
         # readable in a log line and in the report that quotes it.
-        LENGTH = 16
+        LENGTH = T.let(16, Integer)
 
         module_function
 
+        sig { params(country: T.untyped, schedule: T.untyped, item: T.untyped, name: T.untyped).returns(String) }
         def for(country:, schedule:, item:, name:)
           parts = [country, schedule, item, name].map { |part| normalize(part) }
-          -Digest::SHA256.hexdigest(parts.join(SEPARATOR))[0, LENGTH]
+          -T.must(Digest::SHA256.hexdigest(parts.join(SEPARATOR))[0, LENGTH])
         end
 
+        sig { params(value: T.untyped).returns(String) }
         def normalize(value) = value.to_s.split(NORMALIZE).join(" ").downcase
       end
     end

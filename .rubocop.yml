@@ -35,12 +35,14 @@ RSpec/ExampleLength:
   Max: 10
 
 # These files cover the test harness itself rather than a class:
-# network_isolation_spec that the suite cannot reach the internet, and the two
-# conformance specs the shared example groups that every source adapter and
-# every storage adapter are held to.
+# network_isolation_spec that the suite cannot reach the internet,
+# sorbet_runtime_spec what a signature does and does not do in a host's
+# process, and the two conformance specs the shared example groups that every
+# source adapter and every storage adapter are held to.
 RSpec/DescribeClass:
   Exclude:
     - "spec/network_isolation_spec.rb"
+    - "spec/sorbet_runtime_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
 
@@ -59,19 +61,48 @@ Metrics/ParameterLists:
 # The same rule holds for the two halves of the ActiveRecord adapter that turn
 # a canonical record into a row and a row back into a canonical record: both
 # grow by exactly one column and one hash key per field the record has.
+#
+# Sorbet's `T.let` is why the ceiling moved from 17 to 28 (#73). Declaring an
+# instance variable's type is a method call, so ABC counts one branch per
+# member on top of the assignment it already counted -- which means a value
+# object's constructor now scores roughly twice what it did for exactly the
+# same code. What is left measured is the thing worth measuring: a method that
+# branches, rather than one that copies a record's fields into itself.
 Metrics/AbcSize:
+  Max: 28
   Exclude:
     - "lib/active_sanction/entity.rb"
     - "lib/active_sanction/storage/active_record/reader.rb"
     - "lib/active_sanction/storage/active_record/writer.rb"
 
+# A constructor now declares the type of each instance variable it assigns,
+# which is what carries the longest of them past fifteen lines (#73).
 Metrics/MethodLength:
-  Max: 15
+  Max: 18
 
 # Value objects run long by construction: every field costs a keyword argument,
 # a reader, a validation, a #to_h key and a line of documentation. Splitting one
 # record's rules across two classes to satisfy a line count would make them
 # harder to find, not easier. The parsing vocabulary that genuinely is a second
 # job already lives in its own class (PartialDate::Parser).
+#
+# 140 became 190 with #73: a reader is now two lines rather than one, because
+# the `sig` above it says what it returns.
 Metrics/ClassLength:
-  Max: 140
+  Max: 190
+
+# The same rule for the one module that carries as much declaration as a class:
+# Sources::Definition is a reader and a writer for every declaration a source
+# adapter makes, each of which now carries a signature.
+Metrics/ModuleLength:
+  Max: 130
+
+# Both of these want `def each(&)` and `foo(&)`, and Sorbet cannot sign an
+# anonymous block: a `sig` names every parameter, so a block a method forwards
+# has to have a name to be named. The signature is worth more than the
+# shorthand -- it is what says what the block is called with.
+Naming/BlockForwarding:
+  EnforcedStyle: explicit
+
+Style/ArgumentsForwarding:
+  UseAnonymousForwarding: false

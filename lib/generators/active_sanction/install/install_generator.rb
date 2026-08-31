@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "rails/generators"
 require "rails/generators/active_record"
@@ -23,12 +26,14 @@ module ActiveSanction
     # change ships as a second migration, which is the same cost every other
     # table in the host application pays.
     class InstallGenerator < ::Rails::Generators::Base
+      extend T::Sig
       include ::ActiveRecord::Generators::Migration
 
       source_root File.expand_path("templates", __dir__)
 
       desc "Creates the migration for the ActiveSanction storage tables."
 
+      sig { void }
       def create_migration_file
         migration_template "create_active_sanction_tables.rb.tt",
                            File.join(db_migrate_path, "create_active_sanction_tables.rb")
@@ -39,6 +44,7 @@ module ActiveSanction
       # Stamped into the generated class so the migration keeps running under
       # the Rails compatibility layer it was written against, which is what
       # `ActiveRecord::Migration[7.1]` means.
+      sig { returns(String) }
       def migration_version
         "[#{::ActiveRecord::VERSION::MAJOR}.#{::ActiveRecord::VERSION::MINOR}]"
       end

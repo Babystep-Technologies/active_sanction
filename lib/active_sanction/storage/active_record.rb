@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_record"
 require "json"
@@ -75,22 +78,24 @@ module ActiveSanction
     # readers on other processes and other machines get that for free rather
     # than from a rename that only holds within one filesystem.
     class ActiveRecord < Base
+      extend T::Sig
+
       # Snapshot versions this code can read. Anything above the version it
       # writes was produced by a newer gem.
-      READABLE_SCHEMA_VERSIONS = (1..Snapshot::SCHEMA_VERSION)
+      READABLE_SCHEMA_VERSIONS = T.let(1..Snapshot::SCHEMA_VERSION, T::Range[Integer])
 
       # Rows per `insert_all`. Big enough that a full OFAC sync is a few dozen
       # statements rather than 19,015, small enough that no single statement is
       # megabytes of SQL a database has to parse in one piece.
-      DEFAULT_BATCH_SIZE = 1_000
+      DEFAULT_BATCH_SIZE = T.let(1_000, Integer)
 
       # What `normalized_value` is declared as, because it is indexed and MySQL
       # will not index an unbounded column. Comfortably past the longest name
       # any of the launch lists publishes.
-      PREFILTER_KEY_LIMIT = 512
+      PREFILTER_KEY_LIMIT = T.let(512, Integer)
 
-      COMBINING_MARKS = /\p{Mn}+/
-      NON_ALPHANUMERIC = /[^[:alnum:]]+/
+      COMBINING_MARKS = T.let(/\p{Mn}+/, Regexp)
+      NON_ALPHANUMERIC = T.let(/[^[:alnum:]]+/, Regexp)
 
       # The key a name is filed under in `active_sanction_names.normalized_value`
       # and the key a query has to build to find it:
@@ -110,6 +115,7 @@ module ActiveSanction
       #
       # Because it is stored, changing this fold makes the stored keys stale.
       # A release that changes it will say so, and the fix is a re-sync.
+      sig { params(value: T.untyped).returns(String) }
       def self.prefilter_key(value)
         folded = value.to_s.unicode_normalize(:nfkd).gsub(COMBINING_MARKS, "").downcase
         folded.gsub(NON_ALPHANUMERIC, " ").strip.squeeze(" ").slice(0, PREFILTER_KEY_LIMIT).to_s
@@ -119,21 +125,26 @@ module ActiveSanction
       # adapter built in a Rails initializer must not open a connection to say
       # hello, and a host running `rails db:migrate` would then be unable to
       # boot the application that migrates it.
+      sig { returns(T::Boolean) }
       def self.installed?
         Row::ALL.all?(&:table_exists?)
       rescue ::ActiveRecord::ActiveRecordError
         false
       end
 
+      # Rows per `insert_all` -- see DEFAULT_BATCH_SIZE.
+      sig { returns(Integer) }
       attr_reader :batch_size
 
+      sig { params(batch_size: T.untyped).void }
       def initialize(batch_size: DEFAULT_BATCH_SIZE)
-        @batch_size = batch_size!(batch_size)
+        @batch_size = T.let(batch_size!(batch_size), Integer)
         super()
       end
 
       # Replaces the source's list inside one transaction: the previous
       # generation is dropped and the new one written, or neither happens.
+      sig { override.params(snapshot: T.untyped).returns(Snapshot) }
       def write_snapshot(snapshot)
         stored = snapshot!(snapshot)
         key = source_key!(stored.source)
@@ -146,6 +157,7 @@ module ActiveSanction
         stored
       end
 
+      sig { override.params(source: T.untyped).returns(T.nilable(Snapshot)) }
       def read_snapshot(source)
         row = snapshot_row(source_key!(source))
         return nil if row.nil?
@@ -156,13 +168,17 @@ module ActiveSanction
 
       # One row read, and no entities. What makes printing how old six lists
       # are six primary-key lookups rather than six full deserializations.
+      sig { override.params(source: T.untyped).returns(T.nilable(Meta)) }
       def snapshot_meta(source)
         row = snapshot_row(source_key!(source))
-        row && Meta.new(source: row.source, fetched_at: row.fetched_at.to_time, checksum: row.checksum,
-                        record_count: row.record_count, schema_version: row.schema_version,
-                        source_version: row.source_version)
+        return nil if row.nil?
+
+        Meta.new(source: row.source, fetched_at: row.fetched_at.to_time, checksum: row.checksum,
+                 record_count: row.record_count, schema_version: row.schema_version,
+                 source_version: row.source_version)
       end
 
+      sig { override.params(source: T.untyped).returns(T::Boolean) }
       def delete_snapshot(source)
         key = source_key!(source)
         connected do
@@ -177,12 +193,15 @@ module ActiveSanction
       # Sorted in Ruby rather than by the database, so a summary does not
       # reshuffle itself when the same lists are read through a connection with
       # a different collation.
+      sig { override.returns(T::Array[Symbol]) }
       def sources = connected { Row::Snapshot.pluck(:source) }.map(&:to_sym).sort
 
       private
 
+      sig { params(key: Symbol).returns(T.untyped) }
       def snapshot_row(key) = connected { Row::Snapshot.find_by(source: key.to_s) }
 
+      sig { params(key: Symbol, snapshot: Snapshot).returns(T.untyped) }
       def create_row(key, snapshot)
         Row::Snapshot.create!(source: key.to_s, fetched_at: snapshot.fetched_at, checksum: snapshot.checksum,
                               record_count: snapshot.record_count, schema_version: snapshot.schema_version,
@@ -193,6 +212,7 @@ module ActiveSanction
       # refuses to build if it does not match the one stored beside them, which
       # is what turns every way of losing a row into an exception rather than
       # into a clean report.
+      sig { params(row: T.untyped).returns(Snapshot) }
       def build(row)
         Reader.new(row).call
       rescue Snapshot::ChecksumMismatch, ArgumentError, TypeError, JSON::ParserError => e
@@ -202,6 +222,7 @@ module ActiveSanction
       # Checked before a record is read, because a snapshot written by a newer
       # gem will usually still deserialize -- into records missing whatever the
       # new version added, with no symptom other than names that stop matching.
+      sig { params(row: T.untyped).void }
       def schema_version!(row)
         return if READABLE_SCHEMA_VERSIONS.cover?(row.schema_version)
 
@@ -215,8 +236,9 @@ module ActiveSanction
       # An un-migrated database is a misconfigured installation, not a corrupt
       # list, and it has a different fix -- so it is worth saying which one it
       # is rather than letting a bare `no such table` reach the caller.
-      def connected
-        yield
+      sig { params(block: T.proc.returns(T.untyped)).returns(T.untyped) }
+      def connected(&block)
+        block.call
       rescue ::ActiveRecord::StatementInvalid
         raise if self.class.installed?
 
@@ -226,14 +248,18 @@ module ActiveSanction
               "ActiveSanction::Storage::FileSystem, which needs no schema."
       end
 
+      sig { params(value: T.untyped).returns(Integer) }
       def batch_size!(value)
-        integer = Integer(value, exception: false)
+        # `exception: false` answers nil for anything unparseable, which the
+        # stdlib RBI does not say -- hence the nilable annotation.
+        integer = T.let(Integer(value, exception: false), T.nilable(Integer))
         raise ConfigurationError, "batch_size must be a whole number of rows, got #{value.inspect}" if integer.nil?
         raise ConfigurationError, "batch_size must be at least 1, got #{integer}" unless integer.positive?
 
         integer
       end
 
+      sig { params(row: T.untyped, detail: String).returns(String) }
       def corrupt(row, detail)
         "the stored #{row.source} list cannot be trusted to be the list it says it is (#{detail}). Nothing partial " \
           "is returned from storage -- delete the snapshot and re-sync the source to replace it."

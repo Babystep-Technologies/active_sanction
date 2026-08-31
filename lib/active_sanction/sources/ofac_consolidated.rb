@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/sources"
 require "active_sanction/sources/ofac"
@@ -56,6 +59,8 @@ module ActiveSanction
     # of the 481 published records. The three it is not are all the same
     # ambiguity, and SHARED is where it lives.
     class OfacConsolidated < Ofac
+      extend T::Sig
+
       key :ofac_consolidated
 
       url :prim, "https://sanctionslistservice.ofac.treas.gov/api/download/CONS_PRIM.CSV"
@@ -64,14 +69,14 @@ module ActiveSanction
 
       # The sub-lists, spelled the way OFAC's own `/sanctions-lists` endpoint
       # spells them -- which is what a report has to print beside a hit.
-      NAMES = {
+      NAMES = T.let({
         ssi: "Sectoral Sanctions Identifications List",
         cmic: "Non-SDN CMIC List",
         ns_plc: "Non-SDN Palestinian Legislative Council List",
         ns_mbs: "Non-SDN Menu-Based Sanctions List",
         capta: "CAPTA List",
         fse: "FSE List"
-      }.freeze
+      }.freeze, T::Hash[Symbol, String])
 
       # Program code to sub-list, for every program that names exactly one.
       #
@@ -80,7 +85,7 @@ module ActiveSanction
       # it says nothing about which non-SDN list they are on. FSE-IR and FSE-SY
       # are carried because the FSE list is one OFAC still publishes and can
       # refill, though nothing is on it today.
-      LISTS = {
+      LISTS = T.let({
         "UKRAINE-EO13662" => :ssi,
         "UKRAINE-EO13685" => :ssi,
         "VENEZUELA-EO13850" => :ssi,
@@ -95,7 +100,7 @@ module ActiveSanction
         "CAPTA" => :capta,
         "FSE-IR" => :fse,
         "FSE-SY" => :fse
-      }.freeze
+      }.freeze, T::Hash[String, Symbol])
 
       # The one program OFAC uses for two lists, and the rule that reads it.
       #
@@ -113,7 +118,10 @@ module ActiveSanction
       # OFAC published is on the entity verbatim for anyone who needs to look
       # closer -- but it is an error, and nothing in the CSVs distinguishes
       # those three from the 89 rows carrying the identical program pair.
-      SHARED = { "RUSSIA-EO14024" => { with: :ssi, alone: :ns_mbs } }.freeze
+      SHARED = T.let(
+        { "RUSSIA-EO14024" => { with: :ssi, alone: :ns_mbs } }.freeze,
+        T::Hash[String, T::Hash[Symbol, Symbol]]
+      )
 
       # Which sub-lists a record is on, as an Array of the keys NAMES uses.
       # Takes an Entity, or the programs themselves.
@@ -124,6 +132,7 @@ module ActiveSanction
       #
       # Empty for a record whose programs name no list this adapter knows,
       # which is what #parse warns about.
+      sig { params(programs: T.untyped).returns(T::Array[Symbol]) }
       def self.lists(programs)
         codes = programs.respond_to?(:programs) ? programs.programs : Array(programs)
         certain = codes.filter_map { |code| LISTS[code] }.uniq
@@ -133,10 +142,12 @@ module ActiveSanction
       end
 
       # The same answer as OFAC spells it, which is what goes in a report.
+      sig { params(programs: T.untyped).returns(T::Array[String]) }
       def self.names(programs) = lists(programs).map { |list| NAMES.fetch(list) }
 
       private
 
+      sig { override.returns(T.untyped) }
       def record_class = Record
 
       # A row whose programs name no sub-list is the signal that OFAC has
@@ -144,11 +155,13 @@ module ActiveSanction
       # intact, but nothing downstream can say which list it puts it on until
       # LISTS learns the code. Every other adapter's drift shows up as a
       # parse warning, and so does this.
+      sig { override.params(record: T.untyped).void }
       def note(record)
         super
         note_unattributed(record) if record.lists.empty?
       end
 
+      sig { params(record: T.untyped).void }
       def note_unattributed(record)
         @unmapped << Parsers::Warning.new(
           line: record.row.line,

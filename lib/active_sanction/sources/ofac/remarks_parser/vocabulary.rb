@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 module ActiveSanction
   module Sources
@@ -15,9 +18,11 @@ module ActiveSanction
         # each -- so this table is deliberately the high-volume ones rather
         # than an attempt at all of them.
         module Vocabulary
+          extend T::Sig
+
           # The labels that map onto a canonical field. `citizen` and
           # `nationality` are one field written two ways, and OFAC uses both.
-          FIELDS = {
+          FIELDS = T.let({
             "DOB" => :date_of_birth,
             "POB" => :place_of_birth,
             "nationality" => :nationality,
@@ -26,7 +31,7 @@ module ActiveSanction
             "a.k.a." => :aka,
             "f.k.a." => :fka,
             "n.k.a." => :nka
-          }.freeze
+          }.freeze, T::Hash[String, Symbol])
 
           # Every document label OFAC writes, grouped by the Identifier kind it
           # means. One kind covers many labels because governments name the
@@ -36,7 +41,7 @@ module ActiveSanction
           # not lost: it becomes the identifier's `note`, because :tax_id is
           # our word for it and "R.F.C." is theirs, and a user justifying a hit
           # needs to see theirs.
-          DOCUMENTS = {
+          DOCUMENTS = T.let({
             passport: ["Passport", "Diplomatic Passport"],
             national_id: [
               "National ID No.", "Identification Number", "Cedula No.", "C.U.R.P.", "C.U.I.P.",
@@ -64,21 +69,21 @@ module ActiveSanction
               # Published with its own gloss attached, every time, all 52 of them.
               "Aircraft Construction Number (also called L/N or S/N or F/N)", "Aircraft Construction Number"
             ]
-          }.freeze
+          }.freeze, T::Hash[Symbol, T::Array[String]])
 
           # Shapes that are recognized and carry nothing to extract: statutory
           # citations, relationship notes, contact details, the date a company
           # rather than a person was established. Naming them is what makes the
           # coverage statistic mean something -- without this list the number
           # would sit near half forever and real drift would hide in the noise.
-          PROSE = [
+          PROSE = T.let([
             "Secondary sanctions risk", "Additional Sanctions Information", "Linked To",
             "Transactions Prohibited For Persons Owned or Controlled By U.S. Financial Institutions",
             "Organization Established Date", "Organization Type", "Target Type", "Executive Order",
             "CAATSA Section", "For more information", "Website", "Email Address", "Phone Number",
             "Telephone", "Fax", "Vessel Year of Build", "Former Vessel Flag", "Aircraft Manufacture Date",
             "Aircraft Model", "Aircraft Operator"
-          ].freeze
+          ].freeze, T::Array[String])
 
           # A label is followed by whitespace, a `#` (`NIT # 123`) or a colon,
           # and may carry one full stop this table does not spell ("Matricula
@@ -91,20 +96,24 @@ module ActiveSanction
           # The alternation is escaped and joined by hand rather than built
           # with Regexp.union, which embeds its own `(?-mix:...)` and would
           # switch case-insensitivity back off for the labels inside it.
+          sig { params(labels: T::Array[String], tail: String).returns(Regexp) }
           def self.pattern(labels, tail)
             alternation = labels.sort_by { |label| -label.length }.map { |label| Regexp.escape(label) }.join("|")
             /\A(?<label>#{alternation})\.?(?=[\s#:]|\z)[\s#:]*#{tail}\z/i
           end
 
-          DOCUMENT_KINDS = DOCUMENTS.each_with_object({}) do |(kind, labels), lookup|
-            labels.each { |label| lookup[label.downcase] = kind }
-          end.freeze
+          DOCUMENT_KINDS = T.let(
+            DOCUMENTS.each_with_object({}) do |(kind, labels), lookup|
+              labels.each { |label| lookup[label.downcase] = kind }
+            end.freeze,
+            T::Hash[String, Symbol]
+          )
 
-          FIELD_KINDS = FIELDS.transform_keys(&:downcase).freeze
+          FIELD_KINDS = T.let(FIELDS.transform_keys(&:downcase).freeze, T::Hash[String, Symbol])
 
-          FIELD_PATTERN = pattern(FIELDS.keys, "(?<value>.*)")
-          DOCUMENT_PATTERN = pattern(DOCUMENTS.values.flatten, "(?<rest>.*)")
-          PROSE_PATTERN = pattern(PROSE, ".*")
+          FIELD_PATTERN = T.let(pattern(FIELDS.keys, "(?<value>.*)"), Regexp)
+          DOCUMENT_PATTERN = T.let(pattern(DOCUMENTS.values.flatten, "(?<rest>.*)"), Regexp)
+          PROSE_PATTERN = T.let(pattern(PROSE, ".*"), Regexp)
         end
       end
     end

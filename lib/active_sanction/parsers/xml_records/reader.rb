@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 module ActiveSanction
   module Parsers
@@ -18,23 +21,36 @@ module ActiveSanction
       # so `reader.count` followed by `reader.warnings` reports the warnings
       # from the counting pass, not from two passes appended together.
       class Reader
+        extend T::Sig
+        extend T::Generic
         include Enumerable
 
-        attr_reader :table, :warnings
+        Elem = type_member { { fixed: Record } }
 
+        sig { returns(XmlRecords) }
+        attr_reader :table
+
+        # The records this pass could not read. Reset by each pass -- see the
+        # class comment.
+        sig { returns(T::Array[Warning]) }
+        attr_reader :warnings
+
+        sig { params(table: XmlRecords, payload: T.untyped).void }
         def initialize(table:, payload:)
-          @table = table
-          @payload = payload
-          @warnings = []
-          @backend = nil
+          @table = T.let(table, XmlRecords)
+          @payload = T.let(payload, T.untyped)
+          @warnings = T.let([], T::Array[Warning])
+          @backend = T.let(nil, T.untyped)
+          @count = T.let(0, Integer)
         end
 
-        def each(&)
-          return enum_for(:each) unless block_given?
+        sig { override.params(block: T.nilable(T.proc.params(record: Record).void)).returns(T.untyped) }
+        def each(&block)
+          return enum_for(:each) unless block
 
           @warnings = []
           @backend = table.backend.new(table: table, xml: decoded)
-          read(&)
+          read(&block)
           self
         end
 
@@ -45,6 +61,7 @@ module ActiveSanction
         #
         # Parsing far enough to answer costs only the bytes up to the first
         # record, so asking before a pass is cheap; asking after one is free.
+        sig { returns(T::Hash[String, T.untyped]) }
         def root
           each.first if @backend.nil?
           @backend&.root || {}
@@ -52,8 +69,10 @@ module ActiveSanction
 
         # Every record, in memory. The convenience the small lists get to use;
         # anything list-sized should stay with #each.
+        sig { returns(T::Array[Record]) }
         def to_a = each.to_a
 
+        sig { returns(String) }
         def inspect = "#<#{self.class} #{table.record_names.join(", ")} via #{table.backend}>"
 
         private
@@ -70,17 +89,19 @@ module ActiveSanction
         # payload was never XML. An HTML error page saved under a .xml URL is
         # the classic, and reporting that as "0 records, one warning" would let
         # a sync succeed at screening against nothing.
-        def read
+        sig { params(block: T.proc.params(record: Record).void).void }
+        def read(&block)
           @count = 0
           @backend.each_record do |record|
             @count += 1
-            yield record
+            block.call(record)
           end
         rescue MalformedDocument => e
           give_up!(e) if @count.zero?
           record(e.line, "the document ended after #{@count} record(s): #{e.message}")
         end
 
+        sig { returns(String) }
         def decoded
           string, replaced = table.decode(@payload)
           record(nil, table.invalid_bytes_message) if replaced
@@ -89,10 +110,12 @@ module ActiveSanction
           string
         end
 
+        sig { params(line: T.nilable(Integer), message: String).void }
         def record(line, message)
           @warnings << Warning.new(line: line, message: message)
         end
 
+        sig { params(error: MalformedDocument).void }
         def give_up!(error)
           raise ParseError,
                 "no <#{table.record_names.join("> or <")}> element could be read before the document stopped " \

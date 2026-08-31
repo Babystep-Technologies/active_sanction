@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "fileutils"
 require "json"
@@ -90,51 +93,58 @@ module ActiveSanction
     # Two processes writing the *same* source at once is not supported and is
     # not made safe by anything here -- run one sync.
     class FileSystem < Base
+      extend T::Sig
+
       # The sidecar, and the commit point. Its presence is what makes a
       # directory a stored source, and replacing it is what publishes a write.
-      META_FILENAME = "meta.json"
+      META_FILENAME = T.let("meta.json", String)
 
-      SNAPSHOT_PREFIX = "snapshot-"
-      SNAPSHOT_EXTENSION = ".json.gz"
+      SNAPSHOT_PREFIX = T.let("snapshot-", String)
+      SNAPSHOT_EXTENSION = T.let(".json.gz", String)
 
       # Snapshot versions this code can read. Anything above the version it
       # writes was produced by a newer gem; anything at or below it round-trips
       # through Snapshot.from_h, which folds the version into the checksum it
       # verifies, so a list cannot be read under a schema it was not written
       # under without the mismatch being caught.
-      READABLE_SCHEMA_VERSIONS = (1..Snapshot::SCHEMA_VERSION)
+      READABLE_SCHEMA_VERSIONS = T.let(1..Snapshot::SCHEMA_VERSION, T::Range[Integer])
 
       # Zlib's default, not its best. A parsed OFAC list is tens of megabytes
       # of highly repetitive JSON that gzip already reduces by better than 90%;
       # the last few points cost several seconds of a sync and buy a rounding
       # error of disk.
-      COMPRESSION_LEVEL = Zlib::DEFAULT_COMPRESSION
+      COMPRESSION_LEVEL = T.let(Zlib::DEFAULT_COMPRESSION, Integer)
 
       # A checksum becomes a filename, so it is matched rather than sanitized:
       # this is the one place a value read back off disk is joined to a path,
       # and `sha256:<64 hex>` is the only shape allowed through.
-      CHECKSUM_PATTERN = /\A#{Snapshot::ALGORITHM}:(\h{64})\z/
+      CHECKSUM_PATTERN = T.let(/\A#{Snapshot::ALGORITHM}:(\h{64})\z/, Regexp)
 
       # A directory is only a source if it is named like one. Held to the rule
       # source keys are held to everywhere, so an unrelated directory a user
       # left under `root` is not reported as a sanctions list.
-      SOURCE_PATTERN = Sources::Definition::KEY_PATTERN
+      SOURCE_PATTERN = T.let(Sources::Definition::KEY_PATTERN, Regexp)
 
       # How long a `.part` file from a killed write is left alone before the
       # next write sweeps it. Well past any real write and short of leaving
       # abandoned megabytes on disk forever.
-      ORPHAN_GRACE = 3600
+      ORPHAN_GRACE = T.let(3600, Integer)
 
+      # The directory every source is filed under. Its layout is private --
+      # see the class comment.
+      sig { returns(String) }
       attr_reader :root
 
+      sig { params(root: T.untyped).void }
       def initialize(root: nil)
-        @root = -::File.expand_path((root || ActiveSanction.config.storage_dir).to_s)
+        @root = T.let(-::File.expand_path((root || ActiveSanction.config.storage_dir).to_s), String)
         super()
       end
 
       # Writes the list, then publishes it by replacing `meta.json`. The
       # previous generation stays readable until that rename lands and is swept
       # immediately after it.
+      sig { override.params(snapshot: T.untyped).returns(Snapshot) }
       def write_snapshot(snapshot)
         stored = snapshot!(snapshot)
         directory = directory_for(source_key!(stored.source))
@@ -147,12 +157,13 @@ module ActiveSanction
         stored
       end
 
+      sig { override.params(source: T.untyped).returns(T.nilable(Snapshot)) }
       def read_snapshot(source)
         key = source_key!(source)
         directory = directory_for(key)
         meta = read_meta(directory)
         meta, json = read_list(directory, meta) if meta
-        return nil if json.nil?
+        return nil if json.nil? || meta.nil?
 
         build(key, meta, json, snapshot_path(directory, meta.checksum))
       end
@@ -161,8 +172,10 @@ module ActiveSanction
       # CLI (#36) and the per-source summary in sync (#34) cheap: printing how
       # old six lists are reads six small JSON files rather than inflating and
       # deserializing tens of megabytes.
+      sig { override.params(source: T.untyped).returns(T.nilable(Meta)) }
       def snapshot_meta(source) = read_meta(directory_for(source_key!(source)))
 
+      sig { override.params(source: T.untyped).returns(T::Boolean) }
       def delete_snapshot(source)
         directory = directory_for(source_key!(source))
         stored = ::File.file?(::File.join(directory, META_FILENAME))
@@ -174,6 +187,7 @@ module ActiveSanction
       # does not parse them: this is what `stored?`, `empty?` and `clear` are
       # built on, and one unreadable list must not make the store impossible to
       # inspect or to repair.
+      sig { override.returns(T::Array[Symbol]) }
       def sources
         return [] unless ::File.directory?(root)
 
@@ -182,48 +196,55 @@ module ActiveSanction
            .map(&:to_sym).sort
       end
 
+      sig { override.returns(String) }
       def inspect = "#<#{self.class} #{root} #{list}>"
 
       private
 
+      sig { params(key: T.untyped).returns(String) }
       def directory_for(key) = ::File.join(root, key.to_s)
 
+      sig { params(directory: String, checksum: T.untyped).returns(String) }
       def snapshot_path(directory, checksum)
         ::File.join(directory, "#{SNAPSHOT_PREFIX}#{checksum_slug!(checksum)}#{SNAPSHOT_EXTENSION}")
       end
 
+      sig { params(checksum: T.untyped).returns(String) }
       def checksum_slug!(checksum)
         match = CHECKSUM_PATTERN.match(checksum.to_s)
         raise CorruptSnapshot, "#{checksum.inspect} is not a #{Snapshot::ALGORITHM} checksum" if match.nil?
 
-        "#{Snapshot::ALGORITHM}-#{match[1].downcase}"
+        "#{Snapshot::ALGORITHM}-#{T.must(match[1]).downcase}"
       end
 
       # Bytes go to a `.part` sibling, are flushed to the platter, and only
       # then take the real name. A rename within a directory is atomic, so no
       # reader ever opens a partially written file -- it sees the previous one
       # or the new one.
-      def write_atomically(path)
-        temporary = "#{path}.#{Process.pid}-#{SecureRandom.hex(8)}.part"
-        ::File.open(temporary, "wb") do |file|
-          yield(file)
+      sig { params(path: String, block: T.proc.params(file: ::File).void).void }
+      def write_atomically(path, &block)
+        temporary = T.let("#{path}.#{Process.pid}-#{SecureRandom.hex(8)}.part", T.nilable(String))
+        ::File.open(T.must(temporary), "wb") do |file|
+          block.call(file)
           file.flush
           file.fsync
         end
-        ::File.rename(temporary, path)
+        ::File.rename(T.must(temporary), path)
       ensure
-        FileUtils.rm_f(temporary)
+        FileUtils.rm_f(temporary) if temporary
       end
 
       # The rename that publishes a write. Everything the new generation needs
       # is already on disk and fsynced by the time this runs, so the list a
       # reader gets is whole whichever side of it they arrive on.
+      sig { params(directory: String, meta: Meta).void }
       def commit(directory, meta)
         write_atomically(::File.join(directory, META_FILENAME)) do |file|
           file.write("#{JSON.pretty_generate(meta.to_h)}\n")
         end
       end
 
+      sig { params(json: String, sink: ::File).void }
       def compress(json, sink)
         gzip = Zlib::GzipWriter.new(sink, COMPRESSION_LEVEL)
         begin
@@ -239,6 +260,7 @@ module ActiveSanction
       # between our reading the sidecar and our opening what it pointed at, so
       # the sidecar is read again before the absence is believed -- and the
       # generation that read finds is the one the caller is answered with.
+      sig { params(directory: String, meta: Meta).returns(T.nilable([Meta, String])) }
       def read_list(directory, meta)
         json = inflate(snapshot_path(directory, meta.checksum))
         return [meta, json] unless json.nil?
@@ -251,6 +273,7 @@ module ActiveSanction
          inflate(path) || raise(CorruptSnapshot, corrupt(path, "the sidecar names a list that is not there"))]
       end
 
+      sig { params(path: String).returns(T.nilable(String)) }
       def inflate(path)
         Zlib.gunzip(::File.binread(path))
       rescue Errno::ENOENT
@@ -259,26 +282,32 @@ module ActiveSanction
         raise CorruptSnapshot, corrupt(path, e.message)
       end
 
+      sig { params(directory: String).returns(T.nilable(Meta)) }
       def read_meta(directory)
-        path = ::File.join(directory, META_FILENAME)
-        hash = JSON.parse(::File.read(path))
-        raise CorruptSnapshot, corrupt(path, "it does not hold a JSON object") unless hash.is_a?(Hash)
+        path = T.let(::File.join(directory, META_FILENAME), T.nilable(String))
+        hash = JSON.parse(::File.read(T.must(path)))
+        raise CorruptSnapshot, corrupt(T.must(path), "it does not hold a JSON object") unless hash.is_a?(Hash)
 
-        schema_version!(hash["schema_version"], path)
+        schema_version!(hash["schema_version"], T.must(path))
         Meta.from_h(hash)
       rescue Errno::ENOENT
         nil
       rescue JSON::ParserError, ArgumentError, TypeError => e
-        raise CorruptSnapshot, corrupt(path, e.message)
+        # `T.must` because Sorbet reads a `rescue` as reachable before the
+        # first assignment in the body; `path` is that assignment.
+        raise CorruptSnapshot, corrupt(T.must(path), e.message)
       end
 
       # Checked against the sidecar before a byte of the list is inflated, so
       # an unreadable schema costs a small read rather than tens of megabytes,
       # and so it is caught before Snapshot.from_h has a chance to build
       # plausible records out of a shape this version does not understand.
+      sig { params(value: T.untyped, path: String).returns(Integer) }
       def schema_version!(value, path)
-        version = Integer(value, exception: false)
-        return version if version && READABLE_SCHEMA_VERSIONS.cover?(version)
+        # `exception: false` answers nil for anything unparseable, which the
+        # stdlib RBI does not say -- hence the nilable annotation.
+        version = T.let(Integer(value, exception: false), T.nilable(Integer))
+        return version if !version.nil? && READABLE_SCHEMA_VERSIONS.cover?(version)
 
         raise UnsupportedSchema,
               "#{path} was written under snapshot schema_version #{value.inspect}; active_sanction #{VERSION} " \
@@ -292,6 +321,7 @@ module ActiveSanction
       # it catch the pair coming apart: a sidecar describing a different
       # generation than the file it points at, or a list filed under the wrong
       # source.
+      sig { params(key: Symbol, meta: Meta, json: String, path: String).returns(Snapshot) }
       def build(key, meta, json, path)
         snapshot = Snapshot.from_h(JSON.parse(json))
         wrong_generation = "it holds #{snapshot.checksum}, not the #{meta.checksum} recorded in #{META_FILENAME}"
@@ -303,6 +333,7 @@ module ActiveSanction
         raise CorruptSnapshot, corrupt(path, e.message)
       end
 
+      sig { params(path: String, detail: String).returns(String) }
       def corrupt(path, detail)
         "#{path} cannot be trusted to be the list it says it is (#{detail}). Nothing partial is returned from " \
           "storage -- delete #{::File.dirname(path)} and re-sync the source to replace it."
@@ -311,6 +342,7 @@ module ActiveSanction
       # Everything the committed generation does not need: the list files of
       # generations it replaced, and `.part` files old enough to be from a
       # write that died rather than one in flight.
+      sig { params(directory: String, keep: String).void }
       def prune(directory, keep)
         Dir.glob(::File.join(directory, "#{SNAPSHOT_PREFIX}*#{SNAPSHOT_EXTENSION}")).each do |path|
           FileUtils.rm_f(path) unless path == keep

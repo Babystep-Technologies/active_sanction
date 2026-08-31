@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 module ActiveSanction
   module Sources
@@ -31,14 +34,17 @@ module ActiveSanction
     # marker now, and one format, and adding a third source does not add a
     # third convention.
     module Remarks
-      MARKER = "[source fields]"
+      extend T::Sig
 
-      SEPARATOR = "; "
+      MARKER = T.let("[source fields]", String)
+
+      SEPARATOR = T.let("; ", String)
 
       # `fields` is a list of label/value pairs. A value may be an Array -- the
       # UN files three designations under one element -- and a label whose
       # value is missing or blank is left out entirely rather than printed
       # against an empty string.
+      sig { params(published: T.untyped, fields: T.untyped).returns(T.nilable(String)) }
       def self.build(published, fields = [])
         appended = Array(fields).filter_map { |label, value| entry(label, value) }
         text = string_or_nil(published)
@@ -51,16 +57,19 @@ module ActiveSanction
       # back off. nil when the publisher wrote nothing and every word in the
       # remark was put there by us, which is the honest answer: a consumer
       # asking what the publisher said should not be handed a vessel's tonnage.
+      sig { params(remarks: T.untyped).returns(T.nilable(String)) }
       def self.published(remarks)
         string_or_nil(remarks.to_s.split(MARKER, 2).first)
       end
 
+      sig { params(label: T.untyped, value: T.untyped).returns(T.nilable(String)) }
       def self.entry(label, value)
         values = Array(value).filter_map { |item| string_or_nil(item) }
         "#{label}: #{values.join(", ")}" if values.any?
       end
       private_class_method :entry
 
+      sig { params(value: T.untyped).returns(T.nilable(String)) }
       def self.string_or_nil(value)
         return nil if value.nil?
 

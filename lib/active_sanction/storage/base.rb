@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/error"
 require "active_sanction/snapshot"
@@ -54,10 +57,13 @@ module ActiveSanction
     # conformance group ("a storage adapter") is what holds an override to
     # meaning the same thing.
     class Base
+      extend T::Sig
+
       # Replaces everything stored for `snapshot.source` and returns the
       # snapshot. One source at a time: a sync isolates its lists from each
       # other (#34), so a write must not be able to disturb a list it was not
       # given.
+      sig { params(_snapshot: T.untyped).returns(Snapshot) }
       def write_snapshot(_snapshot)
         raise NotImplementedError, "#{self.class} must implement #write_snapshot(snapshot)"
       end
@@ -69,6 +75,7 @@ module ActiveSanction
       # which raises. What an adapter must never do is answer an empty snapshot:
       # "nothing was ever fetched" and "this list has nobody on it" are
       # different states, and only one of them is safe to screen against.
+      sig { params(_source: T.untyped).returns(T.nilable(Snapshot)) }
       def read_snapshot(_source)
         raise NotImplementedError, "#{self.class} must implement #read_snapshot(source)"
       end
@@ -76,12 +83,14 @@ module ActiveSanction
       # Drops a source's snapshot and returns whether there was one to drop.
       # Deleting a source that was never stored is not an error: it is the
       # state the caller asked for.
+      sig { params(_source: T.untyped).returns(T::Boolean) }
       def delete_snapshot(_source)
         raise NotImplementedError, "#{self.class} must implement #delete_snapshot(source)"
       end
 
       # Every source with a stored snapshot, sorted, so a CLI listing and a
       # sync summary do not reshuffle themselves between runs.
+      sig { returns(T::Array[Symbol]) }
       def sources
         raise NotImplementedError, "#{self.class} must implement #sources"
       end
@@ -93,6 +102,7 @@ module ActiveSanction
       # Meta exists to avoid. An adapter that keeps this separately -- #24's
       # `meta.json` sidecar, a metadata row -- overrides it and answers without
       # deserializing tens of megabytes to print an age.
+      sig { params(source: T.untyped).returns(T.nilable(Meta)) }
       def snapshot_meta(source)
         snapshot = read_snapshot(source)
         snapshot && Meta.from_snapshot(snapshot)
@@ -102,6 +112,7 @@ module ActiveSanction
       # named the source itself and cannot do its job without it -- screening
       # against a list that is not there returns a clean report, which is the
       # most expensive thing this library can get wrong.
+      sig { params(source: T.untyped).returns(Snapshot) }
       def fetch_snapshot(source)
         key = source_key!(source)
         read_snapshot(key) || raise(MissingSnapshot, missing_message(key))
@@ -124,6 +135,9 @@ module ActiveSanction
       # yielding fewer entities, because a screening run that quietly covers
       # two of the three lists it was configured with is indistinguishable from
       # one that covers all three.
+      sig do
+        params(sources: T.untyped, block: T.nilable(T.proc.params(entity: T.untyped).void)).returns(T.untyped)
+      end
       def each_entity(sources: nil, &block)
         return enum_for(:each_entity, sources: sources) unless block
 
@@ -133,31 +147,37 @@ module ActiveSanction
 
       # Whether a source has a stored snapshot. Answered off #sources rather
       # than by reading one, so asking is cheap for every adapter.
+      sig { params(source: T.untyped).returns(T::Boolean) }
       def stored?(source) = sources.include?(source_key!(source))
 
+      sig { returns(Integer) }
       def size = sources.size
 
+      sig { returns(T::Boolean) }
       def empty? = sources.empty?
 
       # Drops every snapshot and returns the store. Deliberately spelled out
       # rather than implemented as a truncation, so an adapter only ever has to
       # get one deletion path right.
+      sig { returns(T.self_type) }
       def clear
         sources.each { |source| delete_snapshot(source) }
         self
       end
 
+      sig { returns(String) }
       def inspect = "#<#{self.class} #{list}>"
 
       private
 
       # The snapshots a caller asked for, in the order they were asked for.
-      def each_snapshot(named)
-        return Array(named).each { |source| yield(fetch_snapshot(source)) } unless named.nil?
+      sig { params(named: T.untyped, block: T.proc.params(snapshot: Snapshot).void).void }
+      def each_snapshot(named, &block)
+        return Array(named).each { |source| block.call(fetch_snapshot(source)) } unless named.nil?
 
         sources.each do |source|
           snapshot = read_snapshot(source)
-          yield(snapshot) if snapshot
+          block.call(snapshot) if snapshot
         end
       end
 
@@ -167,12 +187,14 @@ module ActiveSanction
       # every adapter that writes files. Sharing it means #24 cannot be handed
       # a key that escapes its root, and it means a name that is not a source
       # fails the same way wherever it is typed.
+      sig { params(value: T.untyped).returns(Symbol) }
       def source_key!(value) = Sources::Definition.key!(value)
 
       # A Snapshot and not merely something snapshot-shaped. What makes a
       # stored list auditable is that its checksum was computed over its own
       # content by the class that knows how; a hash of the right shape carries
       # a checksum somebody typed.
+      sig { params(value: T.untyped).returns(Snapshot) }
       def snapshot!(value)
         unless value.is_a?(Snapshot)
           raise ArgumentError, "write_snapshot takes an ActiveSanction::Snapshot, got #{value.class}"
@@ -181,11 +203,13 @@ module ActiveSanction
         value
       end
 
+      sig { params(key: Symbol).returns(String) }
       def missing_message(key)
         "no snapshot stored for #{key.inspect}. Stored: #{list}. A source has to be synced before it can be " \
           "screened against -- ActiveSanction::Sources[#{key.inspect}].new.sync"
       end
 
+      sig { returns(String) }
       def list = empty? ? "(nothing)" : sources.join(", ")
     end
   end

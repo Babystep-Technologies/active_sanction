@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 module ActiveSanction
   module Sources
@@ -32,54 +35,81 @@ module ActiveSanction
         # and "we have never seen this" are different states and only the
         # second is actionable. `extracted` counts the second kind alone.
         class Coverage
+          extend T::Sig
+
           # A shape, not a segment: enough leading words to recognize the
           # pattern, with digits masked so that 4,000 distinct tax numbers
           # collapse into one line rather than flooding the histogram.
-          SHAPE_WORDS = 3
+          SHAPE_WORDS = T.let(3, Integer)
 
-          attr_reader :segments, :extracted, :recognized, :unknown
+          sig { returns(Integer) }
+          attr_reader :segments
 
+          sig { returns(Integer) }
+          attr_reader :extracted
+
+          # Extracted plus prose: a citation known to carry no fields is
+          # recognized, and only what is neither is actionable.
+          sig { returns(Integer) }
+          attr_reader :recognized
+
+          # Unrecognized shapes to how many segments each cost.
+          sig { returns(T::Hash[String, Integer]) }
+          attr_reader :unknown
+
+          sig { void }
           def initialize
-            @segments = 0
-            @extracted = 0
-            @recognized = 0
-            @unknown = Hash.new(0)
+            @segments = T.let(0, Integer)
+            @extracted = T.let(0, Integer)
+            @recognized = T.let(0, Integer)
+            @unknown = T.let(Hash.new(0), T::Hash[String, Integer])
           end
 
           # Folds one parsed remark in. Returns self, so a caller can chain it
           # into a fold over the file.
+          sig { params(parsed: RemarksParser).returns(T.self_type) }
           def record(parsed)
             @segments += parsed.segments.size
             @extracted += parsed.extracted.size
             @recognized += parsed.extracted.size + parsed.prose.size
-            parsed.unrecognized.each { |segment| @unknown[shape(segment)] += 1 }
+            parsed.unrecognized.each do |segment|
+              shape = shape(segment)
+              @unknown[shape] = @unknown.fetch(shape, 0) + 1
+            end
             self
           end
 
           # 0.0 for an empty run rather than a division by zero: a sync that
           # read no remarks has no coverage to report, and neither perfect nor
           # nil is an honest way to say so.
+          sig { returns(Float) }
           def ratio = segments.zero? ? 0.0 : recognized.fdiv(segments)
 
-          def percentage = (ratio * 100).round(1)
+          sig { returns(Float) }
+          def percentage = (ratio * 100).round(1).to_f
 
           # The unrecognized shapes that cost the most segments, which is where
           # a new label shows up first.
+          sig { params(count: Integer).returns(T::Array[T.untyped]) }
           def top(count = 10) = unknown.sort_by { |shape, tally| [-tally, shape] }.first(count)
 
+          sig { returns(T::Hash[Symbol, T.untyped]) }
           def to_h
             { segments: segments, extracted: extracted, recognized: recognized,
               ratio: ratio, unknown: unknown.size }
           end
 
+          sig { returns(String) }
           def to_s
             "recognized #{recognized} of #{segments} segments (#{percentage}%), #{extracted} extracted"
           end
 
+          sig { returns(String) }
           def inspect = "#<#{self.class} #{self}>"
 
           private
 
+          sig { params(segment: String).returns(String) }
           def shape(segment)
             -segment.split(/\s+/).first(SHAPE_WORDS).join(" ").gsub(/\d/, "#")
           end

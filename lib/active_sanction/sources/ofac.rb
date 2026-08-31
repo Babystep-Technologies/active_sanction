@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/parsers"
 require "active_sanction/sources"
@@ -39,6 +42,8 @@ module ActiveSanction
     # reading and joining from Parsers. It required no change to any of them,
     # which is the property M4 exists to prove.
     class Ofac < Base
+      extend T::Sig
+
       jurisdiction :us
       authority "U.S. Department of the Treasury, Office of Foreign Assets Control"
       format :csv
@@ -46,48 +51,70 @@ module ActiveSanction
       # OFAC serves Windows-1252, not UTF-8, and says nothing about it in a
       # header. Read as UTF-8 the accented names in the list -- and there are
       # thousands -- arrive as replacement characters.
-      ENCODING = Encoding::WINDOWS_1252
+      ENCODING = T.let(Encoding::WINDOWS_1252, Encoding)
 
       # OFAC writes "-0- " for null, with a trailing space, in every one of its
       # files and roughly a quarter of a million times overall.
-      NULL = "-0-"
+      NULL = T.let("-0-", String)
 
       # Column names, positional: all six files ship without a header row.
       # Declaring them here also pins each file's width, so a column inserted
       # upstream surfaces as a warning on every row rather than as 19,321
       # entities quietly built from shifted fields.
-      PRIMARY_COLUMNS = %i[
+      PRIMARY_COLUMNS = T.let(%i[
         ent_num sdn_name sdn_type program title call_sign vessel_type
         tonnage gross_registered_tonnage vessel_flag vessel_owner remarks
-      ].freeze
+      ].freeze, T::Array[Symbol])
 
-      ALT_COLUMNS = %i[ent_num alt_num alt_type alt_name alt_remarks].freeze
+      ALT_COLUMNS = T.let(%i[ent_num alt_num alt_type alt_name alt_remarks].freeze, T::Array[Symbol])
 
-      ADD_COLUMNS = %i[ent_num add_num address city_state_province_postal_code country add_remarks].freeze
+      ADD_COLUMNS = T.let(
+        %i[ent_num add_num address city_state_province_postal_code country add_remarks].freeze,
+        T::Array[Symbol]
+      )
 
-      PRIMARY = Parsers::DelimitedTable.new(columns: PRIMARY_COLUMNS, null: NULL, encoding: ENCODING)
-      ALT = Parsers::DelimitedTable.new(columns: ALT_COLUMNS, null: NULL, encoding: ENCODING)
-      ADD = Parsers::DelimitedTable.new(columns: ADD_COLUMNS, null: NULL, encoding: ENCODING)
+      PRIMARY = T.let(
+        Parsers::DelimitedTable.new(columns: PRIMARY_COLUMNS, null: NULL, encoding: ENCODING),
+        Parsers::DelimitedTable
+      )
+      ALT = T.let(
+        Parsers::DelimitedTable.new(columns: ALT_COLUMNS, null: NULL, encoding: ENCODING),
+        Parsers::DelimitedTable
+      )
+      ADD = T.let(
+        Parsers::DelimitedTable.new(columns: ADD_COLUMNS, null: NULL, encoding: ENCODING),
+        Parsers::DelimitedTable
+      )
 
       # Rows that could not be read, and child rows that matched no entity.
       # Populated by #parse and read afterwards -- sync orchestration (#34)
       # reports them, and a nonzero orphan count is the signal that the three
       # files were downloaded at different moments and no longer agree.
-      attr_reader :warnings, :orphans
+      sig { returns(T::Array[Parsers::Warning]) }
+      attr_reader :warnings
+
+      # Child rows that matched no entity, by file -- a nonzero count means the
+      # three files were downloaded at different moments.
+      sig { returns(T::Hash[Symbol, T.untyped]) }
+      attr_reader :orphans
 
       # How much of OFAC's free text the last #parse understood. Not a warning,
       # because an unread segment is not an error -- it is still in the remark,
       # in the publisher's own words -- but a figure to watch: it is the only
       # thing that moves when OFAC changes how it writes a passport line.
+      sig { returns(RemarksParser::Coverage) }
       attr_reader :remarks_coverage
 
-      def initialize(...)
+      sig { params(args: T.untyped, options: T.untyped).void }
+      def initialize(*args, **options)
         super
-        @warnings = []
-        @orphans = {}
-        @remarks_coverage = RemarksParser::Coverage.new
+        @warnings = T.let([], T::Array[Parsers::Warning])
+        @orphans = T.let({}, T::Hash[Symbol, T.untyped])
+        @remarks_coverage = T.let(RemarksParser::Coverage.new, RemarksParser::Coverage)
+        @unmapped = T.let([], T::Array[Parsers::Warning])
       end
 
+      sig { override.params(raw: T.untyped).returns(T::Array[Entity]) }
       def parse(raw)
         join = Parsers::Join.new(on: :ent_num, aliases: ALT.read(raw[:alt]), addresses: ADD.read(raw[:add]))
         entities = build(join, PRIMARY.read(raw[primary_file]))
@@ -100,17 +127,20 @@ module ActiveSanction
       # for the SDN list, `:prim` for the consolidated one. The first file an
       # adapter declares, by the convention that the primary comes before the
       # children it is joined to.
-      def primary_file = urls.keys.first
+      sig { returns(Symbol) }
+      def primary_file = T.must(urls.keys.first)
 
       private
 
       # The class each joined row is handed to. Overridden by an adapter whose
       # list publishes something the shared mapping does not know about.
+      sig { returns(T.untyped) }
       def record_class = Record
 
       # Coverage is folded over every row, the nameless ones that produce no
       # entity included: the question it answers is how much of the file this
       # parser can read, and a row we drop is still a row OFAC published.
+      sig { params(join: Parsers::Join, rows: T.untyped).returns(T::Array[Entity]) }
       def build(join, rows)
         @unmapped = []
         @remarks_coverage = RemarksParser::Coverage.new
@@ -128,11 +158,13 @@ module ActiveSanction
       # Everything worth saying about one record before it becomes an entity.
       # A subclass adds to it rather than replacing it, so a list that can
       # complain about more still complains about the same things.
+      sig { params(record: T.untyped).void }
       def note(record)
         note_unknown_type(record) if record.unknown_type?
         @remarks_coverage.record(record.parsed_remarks)
       end
 
+      sig { params(record: T.untyped).void }
       def note_unknown_type(record)
         @unmapped << Parsers::Warning.new(
           line: record.row.line,
@@ -140,6 +172,7 @@ module ActiveSanction
         )
       end
 
+      sig { params(row: Parsers::DelimitedTable::Row).void }
       def note_nameless(row)
         @unmapped << Parsers::Warning.new(
           line: row.line, message: "row #{row[:ent_num].inspect} has no SDN_Name and was skipped"

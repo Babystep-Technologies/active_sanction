@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "json"
 require "active_sanction/storage/base"
@@ -25,12 +28,16 @@ module ActiveSanction
       # `pluck` of their ids follows: one extra query per sync, against a
       # method that works everywhere.
       class Writer
+        extend T::Sig
+
+        sig { params(row: T.untyped, snapshot: Snapshot, batch_size: Integer).void }
         def initialize(row, snapshot, batch_size:)
-          @row = row
-          @snapshot = snapshot
-          @batch_size = batch_size
+          @row = T.let(row, T.untyped)
+          @snapshot = T.let(snapshot, Snapshot)
+          @batch_size = T.let(batch_size, Integer)
         end
 
+        sig { returns(T.untyped) }
         def call
           write_entities
           write_children
@@ -39,15 +46,18 @@ module ActiveSanction
 
         private
 
+        sig { void }
         def write_entities
           each_batch { |pairs| insert(Row::Entity, pairs.map { |entity, position| entity_row(entity, position) }) }
         end
 
+        sig { void }
         def write_children
           ids = entity_ids
           each_batch { |pairs| write_batch(pairs, ids) }
         end
 
+        sig { params(pairs: T::Array[T.untyped], ids: T::Array[T.untyped]).void }
         def write_batch(pairs, ids)
           insert(Row::Name, pairs.flat_map { |entity, index| name_rows(entity, ids.fetch(index)) })
           insert(Row::Address, pairs.flat_map { |entity, index| address_rows(entity, ids.fetch(index)) })
@@ -56,16 +66,20 @@ module ActiveSanction
 
         # The list in slices, each entity paired with the position it was
         # written at -- which is the index its primary key sits at in `ids`.
-        def each_batch(&) = @snapshot.entities.each_with_index.each_slice(@batch_size, &)
+        sig { params(block: T.proc.params(pairs: T::Array[T.untyped]).void).void }
+        def each_batch(&block) = @snapshot.entities.each_with_index.each_slice(@batch_size, &block)
 
         # Ordered by the column the writer just filled in, so the id at index
         # `n` belongs to the entity written at position `n`.
+        sig { returns(T::Array[T.untyped]) }
         def entity_ids = Row::Entity.where(snapshot_id: @row.id).order(:position).pluck(:id)
 
+        sig { params(model: T.untyped, rows: T::Array[T::Hash[Symbol, T.untyped]]).void }
         def insert(model, rows)
           rows.each_slice(@batch_size) { |slice| model.insert_all(slice) }
         end
 
+        sig { params(entity: Entity, position: Integer).returns(T::Hash[Symbol, T.untyped]) }
         def entity_row(entity, position)
           {
             snapshot_id: @row.id, position: position, external_id: entity.id, source: entity.source.to_s,
@@ -75,6 +89,7 @@ module ActiveSanction
           }
         end
 
+        sig { params(entity: Entity, entity_id: T.untyped).returns(T::Array[T::Hash[Symbol, T.untyped]]) }
         def name_rows(entity, entity_id)
           entity.names.each_with_index.map do |name, position|
             {
@@ -85,6 +100,7 @@ module ActiveSanction
           end
         end
 
+        sig { params(entity: Entity, entity_id: T.untyped).returns(T::Array[T::Hash[Symbol, T.untyped]]) }
         def address_rows(entity, entity_id)
           entity.addresses.each_with_index.map do |address, position|
             {
@@ -95,6 +111,7 @@ module ActiveSanction
           end
         end
 
+        sig { params(entity: Entity, entity_id: T.untyped).returns(T::Array[T::Hash[Symbol, T.untyped]]) }
         def identifier_rows(entity, entity_id)
           entity.identifiers.each_with_index.map do |identifier, position|
             {
@@ -110,6 +127,7 @@ module ActiveSanction
         # give, which keeps the column readable in a database console and
         # matches what the canonical record means by an absent member: Entity
         # reads a nil collection back as an empty one.
+        sig { params(value: T.untyped).returns(T.nilable(String)) }
         def json(value)
           return nil if value.nil? || (value.respond_to?(:empty?) && value.empty?)
 

@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/entity"
 require "active_sanction/name"
@@ -22,17 +25,19 @@ module ActiveSanction
       # three record shapes a `<record>` is has to be read off which elements
       # it happens to carry. See #type.
       class Record
-        COUNTRY = "Country-Pays"
-        LAST_NAME = "LastName-NomDeFamille"
-        GIVEN_NAME = "GivenName-Prenom"
-        ENTITY_OR_SHIP = "EntityOrShip-EntiteOuNavire"
-        ALIASES = "Aliases-Alias"
-        TITLE_OR_SHIP_TYPE = "TitleOrShipType-TitreOuTypeDeNavire"
-        IMO = "ShipIMONumber-NumeroOMIDuNavire"
-        BORN_OR_BUILT = "DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire"
-        SCHEDULE = "Schedule-Annexe"
-        ITEM = "Item-NumeroDarticle"
-        LISTED_ON = "DateOfListing-DateDinscription"
+        extend T::Sig
+
+        COUNTRY = T.let("Country-Pays", String)
+        LAST_NAME = T.let("LastName-NomDeFamille", String)
+        GIVEN_NAME = T.let("GivenName-Prenom", String)
+        ENTITY_OR_SHIP = T.let("EntityOrShip-EntiteOuNavire", String)
+        ALIASES = T.let("Aliases-Alias", String)
+        TITLE_OR_SHIP_TYPE = T.let("TitleOrShipType-TitreOuTypeDeNavire", String)
+        IMO = T.let("ShipIMONumber-NumeroOMIDuNavire", String)
+        BORN_OR_BUILT = T.let("DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire", String)
+        SCHEDULE = T.let("Schedule-Annexe", String)
+        ITEM = T.let("Item-NumeroDarticle", String)
+        LISTED_ON = T.let("DateOfListing-DateDinscription", String)
 
         # The bilingual separator, which is not one string. Countries pair on
         # ` / ` and vessel types and titles pair on `|`, which the publisher
@@ -40,40 +45,52 @@ module ActiveSanction
         # with a line break inside the half either side of it. The English half
         # is the one before the first separator; whichever separator comes
         # first in the string is the one that split it.
-        BILINGUAL = %r{\s*\|\s*|\s+/\s+}
+        BILINGUAL = T.let(%r{\s*\|\s*|\s+/\s+}, Regexp)
 
         # The one separator in the alias field that means what it looks like.
         # See CanadaSema's class comment for why the comma is left alone.
-        ALIAS_SEPARATOR = ";"
+        ALIAS_SEPARATOR = T.let(";", String)
 
         # Nine of the 2,598 published dates are two candidate dates rather than
         # one -- `1972-08-26 or 1974-05-31`, `1987/1988` -- which is exactly
         # what `Entity#dates_of_birth` is plural for. Only consulted after the
         # whole string has failed to parse, so `1963-1964` stays the span the
         # publisher wrote and no ISO date is ever split on its own separator.
-        ALTERNATIVES = %r{\s+or\s+|\s*/\s*}i
+        ALTERNATIVES = T.let(%r{\s+or\s+|\s*/\s*}i, Regexp)
 
         # Every element carrying a name or a name-like string arrives padded
         # with whitespace the publisher did not mean, and 764 of those pads are
         # U+00A0 rather than a space -- which `String#strip` does not touch, so
         # `Premier ` would reach the matcher as a name nothing types.
-        WHITESPACE = /[[:space:]]+/
+        WHITESPACE = T.let(/[[:space:]]+/, Regexp)
 
         # For comparing two names the publisher wrote with different
         # punctuation, which is the only thing that makes an alias a duplicate
         # of the primary name rather than a second name.
-        INSIGNIFICANT = /[^[:alnum:]]+/
+        INSIGNIFICANT = T.let(/[^[:alnum:]]+/, Regexp)
 
-        attr_reader :node, :warnings
+        sig { returns(Parsers::XmlRecords::Record) }
+        attr_reader :node
 
+        # Fields of this record that could not be read. Collected by the
+        # adapter after #entity -- see CanadaSema#build.
+        sig { returns(T::Array[Parsers::Warning]) }
+        attr_reader :warnings
+
+        sig { params(node: Parsers::XmlRecords::Record).void }
         def initialize(node)
-          @node = node
-          @warnings = []
+          @node = T.let(node, Parsers::XmlRecords::Record)
+          @warnings = T.let([], T::Array[Parsers::Warning])
+          @source_ref = T.let(nil, T.nilable(String))
+          @names = T.let(nil, T.nilable(T::Array[Name]))
+          @primary_name = T.let(nil, T.nilable(String))
+          @dates_of_birth = T.let(nil, T.nilable(T::Array[PartialDate]))
         end
 
         # The entity, or nil for a record with no name in any of its three name
         # elements -- which cannot be screened against and is never what Global
         # Affairs meant to publish.
+        sig { returns(T.nilable(Entity)) }
         def entity
           return nil if names.empty?
 
@@ -87,6 +104,7 @@ module ActiveSanction
         # what separates them. The 1,445 records naming an entity with no IMO
         # number are called organizations: some of them may be ships the
         # publisher gave no number for, and nothing in the file says which.
+        sig { returns(Symbol) }
         def type
           return :vessel unless node.null?(IMO)
 
@@ -94,6 +112,7 @@ module ActiveSanction
         end
 
         # Derived, because Canada publishes no id at all. See SourceRef.
+        sig { returns(String) }
         def source_ref
           @source_ref ||= SourceRef.for(country: node[COUNTRY], schedule: node[SCHEDULE],
                                         item: node[ITEM], name: primary_name)
@@ -101,6 +120,7 @@ module ActiveSanction
 
         # The primary name, then every alias the publisher separated
         # unambiguously, minus any that is only the primary name repunctuated.
+        sig { returns(T::Array[Name]) }
         def names
           @names ||= build_names
         end
@@ -112,12 +132,15 @@ module ActiveSanction
         # sanctions program -- and for 80 of the records it says so outright,
         # naming the Justice for Victims of Corrupt Foreign Officials
         # Regulations rather than a country at all.
+        sig { returns(T::Array[String]) }
         def programs = [english(node[COUNTRY])].compact
 
+        sig { returns(T.nilable(PartialDate)) }
         def listed_on = PartialDate.parse(node[LISTED_ON])
 
         # Empty for a vessel: the element it would come from is the ship's
         # build date, and a hull laid down in 1980 has not got a date of birth.
+        sig { returns(T::Array[PartialDate]) }
         def dates_of_birth
           return [] if type == :vessel
 
@@ -128,6 +151,7 @@ module ActiveSanction
         # IMO rather than by an owner -- so it is by far the most decisive
         # thing this list publishes about anything. Filed as a registration
         # number, which is what it is, with the note saying whose.
+        sig { returns(T::Array[Identifier]) }
         def identifiers
           return [] if node.null?(IMO)
 
@@ -142,10 +166,12 @@ module ActiveSanction
         # nil. What is kept is the citation the id was derived from, which is
         # what an examiner needs to look a listing up in the Gazette, and both
         # halves of every bilingual value verbatim.
+        sig { returns(T.nilable(String)) }
         def remarks = Remarks.build(nil, extras)
 
         private
 
+        sig { returns(T::Array[Name]) }
         def build_names
           primary = primary_name
           return [] if primary.nil?
@@ -164,21 +190,25 @@ module ActiveSanction
         # a name into a screening form. The parts are joined the way they are
         # spoken instead; the publisher's filing order is not lost, because the
         # two elements are what the remark records the citation against.
+        sig { returns(T.nilable(String)) }
         def primary_name
           @primary_name ||= collapse(node[ENTITY_OR_SHIP]) ||
                             collapse([node[GIVEN_NAME], node[LAST_NAME]].compact.join(" "))
         end
 
+        sig { returns(T::Array[String]) }
         def alias_values
           collapse(node[ALIASES]).to_s.split(ALIAS_SEPARATOR).filter_map { |value| collapse(value) }
         end
 
+        sig { params(value: String).returns(String) }
         def comparable(value) = value.gsub(INSIGNIFICANT, "").downcase
 
         # A date the whole string reads as, or the two candidates it reads as
         # when split. Anything else is kept verbatim in the remark and warned
         # about rather than dropped: `born in the early 1970s` is real signal
         # that this class has no shape for.
+        sig { returns(T::Array[PartialDate]) }
         def published_dates
           raw = collapse(node[BORN_OR_BUILT])
           return [] if raw.nil?
@@ -189,12 +219,14 @@ module ActiveSanction
           alternatives(raw)
         end
 
+        sig { params(raw: String).returns(T::Array[PartialDate]) }
         def alternatives(raw)
           dates = raw.split(ALTERNATIVES).filter_map { |part| PartialDate.parse(part) }
           note_unreadable(raw) if dates.empty?
           dates
         end
 
+        sig { params(raw: String).void }
         def note_unreadable(raw)
           @warnings << Parsers::Warning.new(
             line: node.line,
@@ -209,6 +241,7 @@ module ActiveSanction
         # the publisher wrote survives. Only the publisher's own line wrapping
         # is taken out -- sixteen vessel types are published with a newline
         # mid-phrase, and a remark is a line in a report.
+        sig { returns(T::Array[T.untyped]) }
         def extras
           [["Country", node[COUNTRY]], ["Schedule", node[SCHEDULE]], ["Item", node[ITEM]],
            [title_label, node[TITLE_OR_SHIP_TYPE]], *date_extras]
@@ -217,11 +250,13 @@ module ActiveSanction
 
         # One element, two meanings, split by what the record is -- the same
         # split the date element needs, for the same reason.
+        sig { returns(String) }
         def title_label = type == :vessel ? "Vessel type" : "Title"
 
         # A build year for a ship, and for anyone else the date string only if
         # nothing could be read from it, so a date already in `dates_of_birth`
         # is not also printed here.
+        sig { returns(T::Array[T.untyped]) }
         def date_extras
           return [["Built", node[BORN_OR_BUILT]]] if type == :vessel
           return [] if dates_of_birth.any?
@@ -231,8 +266,10 @@ module ActiveSanction
 
         # The English half of a value the publisher wrote in both languages,
         # and the whole of one it wrote in only one.
+        sig { params(value: T.untyped).returns(T.nilable(String)) }
         def english(value) = collapse(value.to_s.split(BILINGUAL, 2).first)
 
+        sig { params(value: T.untyped).returns(T.nilable(String)) }
         def collapse(value)
           string = value.to_s.split(WHITESPACE).join(" ")
           string.empty? ? nil : -string

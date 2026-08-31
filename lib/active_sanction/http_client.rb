@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "fileutils"
 require "net/http"
@@ -35,9 +38,11 @@ module ActiveSanction
   # and the UN's XML disagree about encoding, and guessing here would corrupt
   # one of them. Parsers (#14, #15) declare what they expect.
   class HttpClient
+    extend T::Sig
+
     # 303 is included even though it is defined to change the method, because
     # this client only ever issues GET and so already complies.
-    REDIRECT_STATUSES = [301, 302, 303, 307, 308].freeze
+    REDIRECT_STATUSES = T.let([301, 302, 303, 307, 308].freeze, T::Array[Integer])
 
     # Failures worth trying again. A 4xx is never in here: a 403 for a missing
     # User-Agent or a 404 for a retired URL says the request is wrong, and
@@ -46,34 +51,60 @@ module ActiveSanction
     # OpenSSL errors are deliberately absent: a certificate that does not
     # verify will not verify a second later either, and quietly retrying a TLS
     # failure against a government endpoint is not a behaviour worth having.
-    TRANSIENT_ERRORS = [
-      EOFError, IOError, SocketError, Net::HTTPBadResponse, Net::ProtocolError,
-      Errno::ECONNABORTED, Errno::ECONNREFUSED, Errno::ECONNRESET,
-      Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::EPIPE, Errno::ETIMEDOUT
-    ].freeze
+    TRANSIENT_ERRORS = T.let(
+      [
+        EOFError, IOError, SocketError, Net::HTTPBadResponse, Net::ProtocolError,
+        Errno::ECONNABORTED, Errno::ECONNREFUSED, Errno::ECONNRESET,
+        Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::EPIPE, Errno::ETIMEDOUT
+      ].freeze,
+      T::Array[T.class_of(StandardError)]
+    )
 
-    attr_reader :user_agent, :open_timeout, :read_timeout, :max_redirects, :max_retries, :retry_backoff
+    # Checked when the client is built, so a blank one raises before a socket
+    # is opened rather than earning a 403 from OFAC.
+    sig { returns(String) }
+    attr_reader :user_agent
+
+    sig { returns(Numeric) }
+    attr_reader :open_timeout
+
+    sig { returns(Numeric) }
+    attr_reader :read_timeout
+
+    sig { returns(Integer) }
+    attr_reader :max_redirects
+
+    sig { returns(Integer) }
+    attr_reader :max_retries
+
+    sig { returns(Numeric) }
+    attr_reader :retry_backoff
 
     # Settings default to the global configuration, read at construction, so a
     # client built inside a source adapter honours whatever the host
     # application set at boot without threading a config object through every
     # adapter.
+    sig do
+      params(user_agent: T.untyped, open_timeout: Numeric, read_timeout: Numeric, max_redirects: Integer,
+             max_retries: Integer, retry_backoff: Numeric).void
+    end
     def initialize(user_agent: ActiveSanction.config.user_agent,
                    open_timeout: ActiveSanction.config.open_timeout,
                    read_timeout: ActiveSanction.config.read_timeout,
                    max_redirects: ActiveSanction.config.max_redirects,
                    max_retries: ActiveSanction.config.max_retries,
                    retry_backoff: ActiveSanction.config.retry_backoff)
-      @user_agent = Configuration.user_agent!(user_agent)
-      @open_timeout = open_timeout
-      @read_timeout = read_timeout
-      @max_redirects = max_redirects
-      @max_retries = max_retries
-      @retry_backoff = retry_backoff
+      @user_agent = T.let(Configuration.user_agent!(user_agent), String)
+      @open_timeout = T.let(open_timeout, Numeric)
+      @read_timeout = T.let(read_timeout, Numeric)
+      @max_redirects = T.let(max_redirects, Integer)
+      @max_retries = T.let(max_retries, Integer)
+      @retry_backoff = T.let(retry_backoff, Numeric)
     end
 
     # Fetches a URL and buffers the body in memory. Right for the index pages
     # and small XML lists; use #download for anything list-sized.
+    sig { params(url: T.untyped, headers: T::Hash[T.untyped, T.untyped]).returns(Response) }
     def get(url, headers: {})
       fetch(url, headers: headers)
     end
@@ -86,6 +117,7 @@ module ActiveSanction
     # Given a path, the download lands on a sibling `.part` file and is renamed
     # only once the server has answered 2xx, so an interrupted or 404'd fetch
     # never leaves something at the destination that looks like a list.
+    sig { params(url: T.untyped, to: T.untyped, headers: T::Hash[T.untyped, T.untyped]).returns(Response) }
     def download(url, to:, headers: {})
       return fetch(url, headers: headers, sink: to) if to.respond_to?(:write)
 
@@ -94,17 +126,21 @@ module ActiveSanction
 
     private
 
+    sig { params(url: T.untyped, path: String, headers: T::Hash[T.untyped, T.untyped]).returns(Response) }
     def stream_to_path(url, path, headers)
       partial = "#{path}.part"
-      response = File.open(partial, "wb") { |file| fetch(url, headers: headers, sink: file) }
+      response = T.let(File.open(partial, "wb") { |file| fetch(url, headers: headers, sink: file) }, Response)
       File.rename(partial, path) if response.success?
       response
     ensure
-      FileUtils.rm_f(partial)
+      # `T.must` because Sorbet reads an `ensure` as reachable before the first
+      # assignment in the body; `partial` is that assignment.
+      FileUtils.rm_f(T.must(partial))
     end
 
     # One hop at a time: each is retried on its own, so a 500 from the blob
     # store the second hop landed on does not replay the first.
+    sig { params(url: T.untyped, headers: T::Hash[T.untyped, T.untyped], sink: T.untyped).returns(Response) }
     def fetch(url, headers:, sink: nil)
       uri = uri!(url)
       request_headers = headers!(headers)
@@ -122,14 +158,18 @@ module ActiveSanction
       end
     end
 
+    sig do
+      params(uri: URI::Generic, headers: T::Hash[String, String], sink: T.untyped,
+             redirects: T::Array[URI::Generic]).returns(Response)
+    end
     def perform(uri, headers, sink, redirects)
-      response = nil
+      response = T.let(nil, T.nilable(Response))
       build_http(uri).start do |session|
         session.request(Net::HTTP::Get.new(uri, headers)) do |raw|
           response = receive(raw, uri, sink, redirects)
         end
       end
-      response
+      T.must(response)
     end
 
     # Only a successful body is streamed. An error page is small and the caller
@@ -139,9 +179,13 @@ module ActiveSanction
     # A 304 is the one status with nothing to read either way: it is defined to
     # carry no body, and handing back the empty string `read_body` produces
     # would give conditional GET (#10) something a caller could try to parse.
+    sig do
+      params(raw: T.untyped, uri: URI::Generic, sink: T.untyped,
+             redirects: T::Array[URI::Generic]).returns(Response)
+    end
     def receive(raw, uri, sink, redirects)
       status = raw.code.to_i
-      body = nil
+      body = T.let(nil, T.nilable(String))
       if status == 304
         nil
       elsif sink && status.between?(200, 299)
@@ -157,6 +201,7 @@ module ActiveSanction
     # retry has to start the sink over rather than append a second prefix to
     # the first. An append-only sink cannot be reset; it is the caller's to
     # handle, and #download's own path never produces one.
+    sig { params(sink: T.untyped).void }
     def rewind(sink)
       return unless sink.respond_to?(:truncate) && sink.respond_to?(:rewind)
 
@@ -167,12 +212,13 @@ module ActiveSanction
     # Exponential backoff, no jitter: this is one process fetching a handful of
     # files on a schedule, not a fleet that needs de-synchronizing, and a
     # deterministic delay is one less thing for a stuck sync to explain.
-    def with_retries(uri)
+    sig { params(uri: URI::Generic, block: T.proc.returns(Response)).returns(Response) }
+    def with_retries(uri, &block)
       attempt = 0
       loop do
         attempt += 1
         begin
-          response = yield
+          response = block.call
           return response unless retry_status?(response, attempt)
         rescue Timeout::Error => e
           raise TimeoutError, failure_message(uri, e, attempt) unless attempt <= max_retries
@@ -183,14 +229,17 @@ module ActiveSanction
       end
     end
 
+    sig { params(response: Response, attempt: Integer).returns(T::Boolean) }
     def retry_status?(response, attempt)
       response.server_error? && attempt <= max_retries
     end
 
+    sig { params(attempt: Integer).returns(Numeric) }
     def backoff_for(attempt)
       retry_backoff * (2**(attempt - 1))
     end
 
+    sig { params(uri: URI::Generic).returns(Net::HTTP) }
     def build_http(uri)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = uri.scheme == "https"
@@ -204,6 +253,7 @@ module ActiveSanction
     # rather than only the configured one is what makes the guarantee real: the
     # request that goes out is the one checked, and it is checked here, before
     # a socket is opened.
+    sig { params(extra: T.untyped).returns(T::Hash[String, String]) }
     def headers!(extra)
       headers = extra.to_h.to_h { |name, value| [name.to_s, value.to_s] }
       key = headers.keys.find { |name| name.casecmp?("user-agent") }
@@ -213,6 +263,7 @@ module ActiveSanction
       headers.merge("User-Agent" => agent)
     end
 
+    sig { params(url: T.untyped).returns(URI::Generic) }
     def uri!(url)
       uri = url.is_a?(URI::Generic) ? url : URI.parse(url.to_s)
       raise ArgumentError, "#{url.inspect} is not an http(s) URL" unless uri.is_a?(URI::HTTP) && uri.host
@@ -224,6 +275,7 @@ module ActiveSanction
 
     # `Location` is allowed to be relative, and publishers use that, so it is
     # resolved against the URL that produced it rather than parsed alone.
+    sig { params(from: URI::Generic, location: T.untyped, seen: T::Array[String]).returns(URI::Generic) }
     def next_hop(from, location, seen)
       target = URI.join(from, location)
       raise InvalidRedirect, "#{from} redirected to #{location.inspect}" unless target.is_a?(URI::HTTP) && target.host
@@ -235,10 +287,12 @@ module ActiveSanction
       raise InvalidRedirect, "#{from} redirected to an unusable location #{location.inspect}: #{e.message}"
     end
 
+    sig { params(redirects: T::Array[URI::Generic]).returns(String) }
     def chain_message(redirects)
       "#{redirects.first} exceeded #{max_redirects} redirects: #{redirects.join(" -> ")}"
     end
 
+    sig { params(uri: URI::Generic, error: Exception, attempts: Integer).returns(String) }
     def failure_message(uri, error, attempts)
       "GET #{uri} failed after #{attempts} attempt#{"s" unless attempts == 1}: #{error.class}: #{error.message}"
     end

@@ -1,4 +1,7 @@
+# typed: strict
 # frozen_string_literal: true
+
+require "sorbet-runtime"
 
 require "active_sanction/entity"
 require "active_sanction/name"
@@ -25,57 +28,85 @@ module ActiveSanction
       # for that reason, and #remark_fields is the hook a subclass overrides
       # to record anything its own list publishes on top.
       class Record
+        extend T::Sig
+
         # OFAC's `SDN_Type` as published, and what each maps to. Blank is the
         # one that matters: 9,923 of 19,321 rows leave it empty and every one
         # of them is an organization. Defaulting blank to "unknown" would
         # mis-type the largest group in the list.
-        TYPES = { "individual" => :individual, "vessel" => :vessel, "aircraft" => :aircraft }.freeze
+        TYPES = T.let(
+          { "individual" => :individual, "vessel" => :vessel, "aircraft" => :aircraft }.freeze,
+          T::Hash[String, Symbol]
+        )
 
         # ALT.CSV's `alt_type`, which OFAC publishes as exactly these three.
-        ALIAS_KINDS = { "aka" => :aka, "fka" => :fka, "nka" => :nka }.freeze
+        ALIAS_KINDS = T.let({ "aka" => :aka, "fka" => :fka, "nka" => :nka }.freeze, T::Hash[String, Symbol])
 
         # Multiple programs arrive in one field separated by `] [`:
         # `"IRAQ2] [IRGC] [SDGT"` is three sanctions programs, not one.
-        PROGRAM_SEPARATOR = /\]\s*\[/
+        PROGRAM_SEPARATOR = T.let(/\]\s*\[/, Regexp)
 
         # Columns OFAC publishes outside its Remarks field that the canonical
         # model has no home for. Appended to remarks rather than dropped: a
         # vessel's flag and owner are real screening signal, and losing them to
         # keep a schema tidy is the wrong trade.
-        COLUMNS_IN_REMARKS = {
+        COLUMNS_IN_REMARKS = T.let({
           title: "Title", vessel_type: "Vessel type", tonnage: "Tonnage",
           gross_registered_tonnage: "GRT", vessel_flag: "Vessel flag", vessel_owner: "Vessel owner"
-        }.freeze
+        }.freeze, T::Hash[Symbol, String])
 
         # A name matches one already on the record when the letters and digits
         # agree; OFAC's own punctuation does not have to. 24 of the 4,349
         # inline aliases repeat an ALT.CSV row, and the rest are names the list
         # publishes nowhere else.
-        INSIGNIFICANT = /[^[:alnum:]]+/
+        INSIGNIFICANT = T.let(/[^[:alnum:]]+/, Regexp)
 
-        attr_reader :row, :source, :aliases, :addresses
+        sig { returns(Parsers::DelimitedTable::Row) }
+        attr_reader :row
 
+        # The list this row is on, passed in rather than hard-coded: SDN.CSV
+        # and CONS_PRIM.CSV are read by this same class.
+        sig { returns(Symbol) }
+        attr_reader :source
+
+        sig { returns(T::Array[Parsers::DelimitedTable::Row]) }
+        attr_reader :aliases
+
+        sig { returns(T::Array[Parsers::DelimitedTable::Row]) }
+        attr_reader :addresses
+
+        sig do
+          params(row: Parsers::DelimitedTable::Row, source: Symbol,
+                 aliases: T::Array[Parsers::DelimitedTable::Row],
+                 addresses: T::Array[Parsers::DelimitedTable::Row]).void
+        end
         def initialize(row:, source:, aliases: [], addresses: [])
-          @row = row
-          @source = source
-          @aliases = aliases
-          @addresses = addresses
+          @row = T.let(row, Parsers::DelimitedTable::Row)
+          @source = T.let(source, Symbol)
+          @aliases = T.let(aliases, T::Array[Parsers::DelimitedTable::Row])
+          @addresses = T.let(addresses, T::Array[Parsers::DelimitedTable::Row])
+          @parsed_remarks = T.let(nil, T.nilable(RemarksParser))
         end
 
         # The entity, or nil for a row with no name -- which cannot be screened
         # against and is never what OFAC meant to publish.
+        sig { returns(T.nilable(Entity)) }
         def entity
           return nil if row.null?(:sdn_name)
 
-          Entity.new(source: source, source_ref: row[:ent_num], type: type,
-                     names: names, addresses: places, identifiers: identifiers,
-                     programs: programs, remarks: remarks, **from_remarks)
+          # `new(**hash)` past required keyword parameters is one of the few
+          # things Sorbet cannot check statically. #from_remarks below is the
+          # hash, and it carries the two members it names and nothing else.
+          T.unsafe(Entity).new(source: source, source_ref: row[:ent_num], type: type,
+                               names: names, addresses: places, identifiers: identifiers,
+                               programs: programs, remarks: remarks, **from_remarks)
         end
 
         # The members no OFAC column feeds. De-duplicated because one entity's
         # remark can report the same nationality twice -- "nationality Iran;
         # alt. nationality Iran" -- and a record that claims one thing twice
         # is not a record that claims it more strongly.
+        sig { returns(T::Hash[Symbol, T.untyped]) }
         def from_remarks
           { dates_of_birth: parsed_remarks.dates_of_birth.uniq,
             nationalities: parsed_remarks.nationalities.uniq }
@@ -85,10 +116,12 @@ module ActiveSanction
         # rather than kept private because the adapter folds every record's
         # into one coverage figure, which is how drift in a heuristic parser
         # gets noticed at all.
+        sig { returns(RemarksParser) }
         def parsed_remarks
           @parsed_remarks ||= RemarksParser.new(row[:remarks])
         end
 
+        sig { returns(Symbol) }
         def type
           published = row[:sdn_type]
           return :organization if published.nil?
@@ -100,6 +133,7 @@ module ActiveSanction
         # surfacing rather than silently absorbing: a new value here means the
         # list grew a category, and everything in it is currently being called
         # an organization.
+        sig { returns(T::Boolean) }
         def unknown_type?
           published = row[:sdn_type]
           !published.nil? && !TYPES.key?(published.downcase)
@@ -110,11 +144,13 @@ module ActiveSanction
         # priority, so it is preserved rather than sorted away. Last come the
         # aliases that appear only inside the remark -- 4,325 names that are in
         # no other column of any of the three files.
+        sig { returns(T::Array[Name]) }
         def names
           published = [Name.new(value: row[:sdn_name], kind: :primary)] + alias_names
           published + new_names(published, parsed_remarks.aliases)
         end
 
+        sig { returns(T::Array[Address]) }
         def places
           addresses.filter_map { |address| place(address) }
         end
@@ -123,6 +159,7 @@ module ActiveSanction
         # through Identifier's own equality, which already treats `AB-123 456`
         # and `ab123456` as one document, so a number OFAC wrote twice does not
         # become two.
+        sig { returns(T::Array[Identifier]) }
         def identifiers
           (call_sign + parsed_remarks.identifiers).uniq
         end
@@ -131,6 +168,7 @@ module ActiveSanction
         # it far more like a document number than like a name -- and an
         # Identifier is matchable where a line of remarks is not. Filed as
         # :other because it is not any of the document kinds the model names.
+        sig { returns(T::Array[Identifier]) }
         def call_sign
           return [] if row.null?(:call_sign)
 
@@ -139,14 +177,16 @@ module ActiveSanction
           []
         end
 
+        sig { returns(T::Array[String]) }
         def programs
           return [] if row.null?(:program)
 
-          row[:program].split(PROGRAM_SEPARATOR).map { |program| program.strip.delete("[]") }.reject(&:empty?)
+          T.must(row[:program]).split(PROGRAM_SEPARATOR).map { |program| program.strip.delete("[]") }.reject(&:empty?)
         end
 
         # OFAC's remark verbatim, then the columns that have nowhere else to
         # go, behind the marker that makes them trivial to strip again.
+        sig { returns(T.nilable(String)) }
         def remarks
           Remarks.build(row[:remarks], remark_fields)
         end
@@ -155,19 +195,23 @@ module ActiveSanction
         # a list that publishes something more -- which sub-list of the
         # consolidated file a row is on -- prepends to this rather than
         # rewriting #remarks.
+        sig { returns(T::Array[T.untyped]) }
         def remark_fields
           COLUMNS_IN_REMARKS.map { |column, label| [label, row[column]] }
         end
 
         private
 
+        sig { params(published: T::Array[Name], candidates: T::Array[Name]).returns(T::Array[Name]) }
         def new_names(published, candidates)
           seen = published.map { |name| key(name) }
           candidates.reject { |name| seen.include?(key(name)) }
         end
 
+        sig { params(name: Name).returns(String) }
         def key(name) = name.value.upcase.gsub(INSIGNIFICANT, "")
 
+        sig { returns(T::Array[Name]) }
         def alias_names
           aliases.filter_map do |alt|
             next nil if alt.null?(:alt_name)
@@ -187,6 +231,7 @@ module ActiveSanction
         # is why a full sync yields ~21.9k addresses from ~25.1k rows. An
         # Address that locates nothing cannot be screened on and would only
         # inflate the count.
+        sig { params(address: Parsers::DelimitedTable::Row).returns(T.nilable(Address)) }
         def place(address)
           Address.new(street: address[:address], city: address[:city_state_province_postal_code],
                       country: address[:country], note: address[:add_remarks])
