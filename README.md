@@ -150,6 +150,42 @@ A source nobody has synced reads back as `nil` and never as an empty snapshot: "
 
 `each_entity` is an `Enumerator` and reads one list at a time, so building an index over every source does not first materialize every entity of every source.
 
+### The default store: gzipped JSON in a directory
+
+`Storage::FileSystem` is what an installation gets without provisioning anything. `zlib` and `json` are stdlib, so persisting 19,015 OFAC records costs a directory — which is what makes the same library usable from a cron job, a CLI, a CI run, and an air-gapped host that only ever receives a copied directory.
+
+```ruby
+store = ActiveSanction::Storage::FileSystem.new                # ~/.active_sanction
+store = ActiveSanction::Storage::FileSystem.new(root: "/srv/lists")
+
+ActiveSanction.configure { |c| c.storage_dir = "/srv/lists" }  # or globally
+```
+
+`storage_dir` is deliberately not under `cache_dir`. Everything in the cache directory can be fetched again and a user is entitled to delete it; a stored snapshot cannot be fetched again, because publishers overwrite their files in place and the list version a past decision was screened against exists only here.
+
+**The layout is private.** What is on disk is optimized for local reading and rewriting and is expected to change; the portable, cross-machine representation is the bundle format, which has its own stability contract. As it stands, each source gets a directory holding a `meta.json` sidecar and one gzipped list:
+
+```
+~/.active_sanction/ofac_sdn/meta.json
+~/.active_sanction/ofac_sdn/snapshot-sha256-9f86d081884c7d65....json.gz
+```
+
+The sidecar is exactly `Storage::Meta#to_h`, which is what makes `snapshot_meta` cheap: printing how old six lists are reads six small JSON files instead of inflating and deserializing tens of megabytes.
+
+**A sync killed part-way through either has not happened or has happened completely.** That is why the list file is named after the content it holds rather than sitting at a fixed `snapshot.json.gz`. Replacing a list means replacing both the list and the sidecar describing it, and whichever order two renames happen in, a process killed between them leaves a snapshot and a meta that do not describe each other — the new list under the old checksum, or a sidecar advertising records that are not there. Either way the previous list is gone and the source is unreadable until the next successful sync.
+
+Naming the file after its checksum removes the conflict. A new list goes down under a name nothing else occupies, so it cannot destroy the list already there, and `meta.json` — one small file, one atomic rename — is the single point at which the new generation becomes live. Interrupt before that rename and the store is exactly as it was, plus a stray file the next write sweeps; interrupt after it and the new list is live and complete. There is no third state.
+
+**Nothing partial is ever returned.** `Snapshot.from_h` re-derives the checksum from the records that came back and refuses to build if it does not match the one stored with them, so a truncated file, an edited record and a dropped record all raise rather than screening against a list that is quietly missing names:
+
+```ruby
+store.read_snapshot(:ofac_sdn)   # => raises Storage::CorruptSnapshot, naming the directory to delete
+```
+
+A snapshot written by a newer `active_sanction` raises `Storage::UnsupportedSchema` instead, and does so from the sidecar before the list is inflated — a newer schema will usually still deserialize, into records missing whatever it added, with a checksum that verifies and no symptom other than names that stop matching.
+
+Many readers and one writer, across processes, is the arrangement it is built for: a scheduled sync replacing a list while web workers screen against it. Committing is a rename, so a reader sees the whole previous generation or the whole new one. Two processes syncing the *same* source at once is not supported and nothing here makes it safe.
+
 ### The storage contract
 
 Every storage adapter is held to one shared example group, `"a storage adapter"`, the same way every source adapter is held to `"a sanction source"`:
