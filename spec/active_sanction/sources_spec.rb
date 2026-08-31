@@ -138,7 +138,7 @@ RSpec.describe ActiveSanction::Sources do
       register(source(:demo_list))
 
       expect { described_class[:ofac_sdb] }
-        .to raise_error(ActiveSanction::Sources::UnknownSource, /Registered: demo_list/)
+        .to raise_error(ActiveSanction::Sources::UnknownSource, /Registered: .*\bdemo_list\b/)
     end
   end
 

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<data-set xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<record>
+		<Country-Pays>Belarus / Bélarus</Country-Pays>
+		<LastName-NomDeFamille>Atabekov</LastName-NomDeFamille>
+		<GivenName-Prenom>Khazalbek Bakhtibekovich</GivenName-Prenom>
+		<Schedule-Annexe>1, Part 1</Schedule-Annexe>
+		<Item-NumeroDarticle>1</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2020-09-28</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Belarus / Bélarus</Country-Pays>
+		<LastName-NomDeFamille>Balaba</LastName-NomDeFamille>
+		<GivenName-Prenom>Dmitry Vladimirovich</GivenName-Prenom>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>1972</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Schedule-Annexe>1, Part 1</Schedule-Annexe>
+		<Item-NumeroDarticle>2</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2020-09-28</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Belarus / Bélarus</Country-Pays>
+		<LastName-NomDeFamille>Barsukov</LastName-NomDeFamille>
+		<GivenName-Prenom>Aleksandr Petrovich</GivenName-Prenom>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>1965-04-29</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Schedule-Annexe>1, Part 1</Schedule-Annexe>
+		<Item-NumeroDarticle>3</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2020-09-28</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Iran</Country-Pays>
+		<EntityOrShip-EntiteOuNavire>Islamic Revolutionary Guard Corps/Corps des Gardiens de la Révolution islamique</EntityOrShip-EntiteOuNavire>
+		<Aliases-Alias>IRGC, Army of the Guardians of the Islamic Revolution, Iranian Revolutionary Guards, IRG, Sepah-e Pasdaran-e Enghelab-e Eslami/GRI, CGRI, l'Armée des Gardiens de la Révolution islamique, Gardiens de la Révolution iranienne, Sepah-e Pasdaran-e Enghelab-e Eslami et Pasdaran</Aliases-Alias>
+		<Schedule-Annexe>1, Part 1</Schedule-Annexe>
+		<Item-NumeroDarticle>136</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2016-02-05</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Iran</Country-Pays>
+		<LastName-NomDeFamille>Fazli</LastName-NomDeFamille>
+		<GivenName-Prenom>Ali </GivenName-Prenom>
+		<Schedule-Annexe>1, Part 2</Schedule-Annexe>
+		<Item-NumeroDarticle>3</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2016-02-05</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Justice for Victims of Corrupt Foreign Officials Regulations (JVCFOR) / Règlement relatif à la justice pour les victimes de dirigeants étrangers corrompus (RJVDEC)</Country-Pays>
+		<LastName-NomDeFamille>ABAHUSSAIN</LastName-NomDeFamille>
+		<GivenName-Prenom>Mansour Othman </GivenName-Prenom>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>1972-08-10 or 1972-08-11</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Item-NumeroDarticle>54</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2018-11-29</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Russia / Russie</Country-Pays>
+		<LastName-NomDeFamille>TROTSENKO </LastName-NomDeFamille>
+		<GivenName-Prenom>Roman Viktorovich</GivenName-Prenom>
+		<Aliases-Alias>Roman Victorovich Trocenko, Роман Викторович Троценко</Aliases-Alias>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>1970-09-12</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Schedule-Annexe>1, Part 1 </Schedule-Annexe>
+		<Item-NumeroDarticle>1520</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2025-06-13</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Russia / Russie</Country-Pays>
+		<LastName-NomDeFamille>MORDASHOV</LastName-NomDeFamille>
+		<GivenName-Prenom>Kirill Alekseevich</GivenName-Prenom>
+		<Aliases-Alias>Кирилл Алексеевич Мордашов</Aliases-Alias>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>Sep-99</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Schedule-Annexe>1, Part 1</Schedule-Annexe>
+		<Item-NumeroDarticle>1114</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2023-02-23</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Russia / Russie</Country-Pays>
+		<EntityOrShip-EntiteOuNavire>Lakhta Plaza</EntityOrShip-EntiteOuNavire>
+		<Aliases-Alias>Lakhta Plaza Limited Liability Company; Lakhta Plaza LLC; Общество c Ограниченной Ответственностью "Лахта Плаза"</Aliases-Alias>
+		<Schedule-Annexe>1, Part 2</Schedule-Annexe>
+		<Item-NumeroDarticle>401</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2023-07-19</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Russia / Russie</Country-Pays>
+		<EntityOrShip-EntiteOuNavire>Balitiyskiy III</EntityOrShip-EntiteOuNavire>
+		<TitleOrShipType-TitreOuTypeDeNavire>General Cargo/Multi Purpose | Cargo classique/navire polyvalent</TitleOrShipType-TitreOuTypeDeNavire>
+		<ShipIMONumber-NumeroOMIDuNavire>7612448</ShipIMONumber-NumeroOMIDuNavire>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>1980</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Schedule-Annexe>1.1</Schedule-Annexe>
+		<Item-NumeroDarticle>1</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2025-02-21</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Russia / Russie</Country-Pays>
+		<EntityOrShip-EntiteOuNavire>Premier </EntityOrShip-EntiteOuNavire>
+		<TitleOrShipType-TitreOuTypeDeNavire>Oil Products Tanker | Navire-citerne pour produits pétroliers</TitleOrShipType-TitreOuTypeDeNavire>
+		<ShipIMONumber-NumeroOMIDuNavire>9577082</ShipIMONumber-NumeroOMIDuNavire>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>2011</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Schedule-Annexe>1.1</Schedule-Annexe>
+		<Item-NumeroDarticle>278</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2025-06-13</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Russia / Russie</Country-Pays>
+		<EntityOrShip-EntiteOuNavire>Dmitry Mendeleev</EntityOrShip-EntiteOuNavire>
+		<TitleOrShipType-TitreOuTypeDeNavire>Bunkering Tanker
+(LNG) | Navire-citerne de
+soutage (GNL)</TitleOrShipType-TitreOuTypeDeNavire>
+		<ShipIMONumber-NumeroOMIDuNavire> 9888182</ShipIMONumber-NumeroOMIDuNavire>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>2021</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Schedule-Annexe>1.1</Schedule-Annexe>
+		<Item-NumeroDarticle>634</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2026-06-12</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Sudan / Soudan</Country-Pays>
+		<LastName-NomDeFamille>Hamdan Dagalo</LastName-NomDeFamille>
+		<GivenName-Prenom>Abdelrahim </GivenName-Prenom>
+		<Aliases-Alias>Abdel Rahim Hamdan Dagalo, Abdelrahim Dagalo, Abdul Rahim Dagalo and Abdelrahim Hamdan Dagalo Mousa Arabic:عبدالرحيم دقلو</Aliases-Alias>
+		<DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>born in the early 1970s</DateOfBirthOrShipBuildDate-DateDeNaissanceOuDateDeConstructionDuNavire>
+		<Schedule-Annexe>Part 1</Schedule-Annexe>
+		<Item-NumeroDarticle>1</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2024-04-12</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Syria / Syrie</Country-Pays>
+		<TitleOrShipType-TitreOuTypeDeNavire>Major General | major-général</TitleOrShipType-TitreOuTypeDeNavire>
+		<LastName-NomDeFamille>Al-Ahmad</LastName-NomDeFamille>
+		<GivenName-Prenom>Jumah </GivenName-Prenom>
+		<Schedule-Annexe>Part 2</Schedule-Annexe>
+		<Item-NumeroDarticle>60</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2011-12-23</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Ukraine</Country-Pays>
+		<LastName-NomDeFamille>AKSYONOV</LastName-NomDeFamille>
+		<GivenName-Prenom>Serhiy Valeriyovich</GivenName-Prenom>
+		<Schedule-Annexe>Part 1</Schedule-Annexe>
+		<Item-NumeroDarticle>1</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2014-03-17</DateOfListing-DateDinscription>
+	</record>
+	<record>
+		<Country-Pays>Venezuela </Country-Pays>
+		<LastName-NomDeFamille>MADURO MOROS</LastName-NomDeFamille>
+		<GivenName-Prenom>Nicolás</GivenName-Prenom>
+		<Item-NumeroDarticle>1</Item-NumeroDarticle>
+		<DateOfListing-DateDinscription>2017-09-22</DateOfListing-DateDinscription>
+	</record>
+</data-set>
