@@ -84,8 +84,10 @@ RSpec.describe ActiveSanction::Sources::OfacSdn do
       expect(entity("36").names.map(&:kind)).to eq(%i[primary aka fka])
     end
 
+    # Three from ALT.CSV, and then the one OFAC wrote into the remark instead
+    # of filing it as a row.
     it "carries OFAC's own aka/fka/nka distinction through" do
-      expect(entity("2674").names.map(&:kind)).to eq(%i[primary aka nka])
+      expect(entity("2674").names.map(&:kind)).to eq(%i[primary aka nka aka])
     end
 
     it "decodes the Windows-1252 OFAC serves, which UTF-8 would turn into noise" do
@@ -123,13 +125,11 @@ RSpec.describe ActiveSanction::Sources::OfacSdn do
     end
 
     it "keeps OFAC's own remark verbatim and first" do
-      expect(entity("2674").remarks)
-        .to start_with("DOB 10 Dec 1948; POB Egypt; nationality Egypt; Passport 123456 (Egypt) [source fields]")
+      expect(entity("2674").remarks).to start_with("DOB 10 Dec 1948; alt. DOB 1948; POB Egypt;")
     end
 
     it "appends a title, which OFAC publishes as a column rather than in the remark" do
-      expect(described_class.published_remarks(entity("2674").remarks))
-        .to eq("DOB 10 Dec 1948; POB Egypt; nationality Egypt; Passport 123456 (Egypt)")
+      expect(entity("2674").remarks).to include("[source fields] Title: Director of the Palestine Liberation Front")
     end
 
     it "hands #19 back the published remark with the appended columns stripped" do
@@ -141,11 +141,52 @@ RSpec.describe ActiveSanction::Sources::OfacSdn do
     end
   end
 
+  # All of it lives in free-text Remarks. RemarksParser is what reads it, and
+  # is specced on its own; what matters here is that the adapter wires what it
+  # produced onto the entity, and that nothing was taken out of the remark to
+  # get it there.
   describe "the fields OFAC has no columns for" do
-    # All of it lives in free-text Remarks and is #19's job. Empty here is the
-    # honest state -- and visibly empty is better than quietly half-parsed.
-    it "leaves dates of birth, nationality and passports unparsed for now" do
-      expect(entity("2674")).to have_attributes(listed_on: nil, nationalities: [], identifiers: [])
+    it "reads the dates of birth out of the remark, all of them" do
+      expect(entity("2674").dates_of_birth.map(&:to_s)).to eq(%w[1948-12-10 1948])
+    end
+
+    it "reads the nationality" do
+      expect(entity("2674").nationalities).to eq(["Egypt"])
+    end
+
+    it "reads a passport, which is the strongest signal the matcher gets" do
+      expect(entity("2674").identifiers.map { |id| [id.kind, id.value, id.country] })
+        .to eq([[:passport, "123456", "Egypt"]])
+    end
+
+    it "adds the aliases OFAC publishes only inside the remark" do
+      expect(entity("2674").names.map(&:value)).to include("ABU ABBAS")
+    end
+
+    it "leaves the whole remark in place, the segments it could not read included" do
+      expect(described_class.published_remarks(entity("2674").remarks))
+        .to end_with("a.k.a. 'ABU ABBAS'; Member of the Palestine Liberation Front")
+    end
+
+    it "keeps the vessel call sign alongside anything the remark named" do
+      expect(entity("7157").identifiers.map(&:note)).to eq(["call sign"])
+    end
+  end
+
+  describe "how much of the free text it read" do
+    it "counts the segments of every row, the nameless ones included" do
+      entities
+      expect(adapter.remarks_coverage.segments).to eq(12)
+    end
+
+    it "ranks the shapes it did not recognize, which is where a new OFAC label shows up" do
+      entities
+      expect(adapter.remarks_coverage.top(1)).to eq([["Member of the", 1]])
+    end
+
+    it "starts over on the next parse rather than accumulating across syncs" do
+      2.times { adapter.parse(raw) }
+      expect(adapter.remarks_coverage.segments).to eq(12)
     end
   end
 
@@ -202,6 +243,21 @@ RSpec.describe ActiveSanction::Sources::OfacSdn do
       snapshot = described_class.new.sync
 
       expect(snapshot.record_count).to be_within(2_000).of(19_321)
+    end
+
+    # The acceptance criterion for #19, and the only place it can be checked:
+    # a committed fixture proves the patterns work, and only the published file
+    # says how much of what OFAC writes they actually cover. The floor is set
+    # well below the ~97% the current file reads so that this fails on drift
+    # rather than on a quarter's worth of new designations.
+    it "reads most of the free text OFAC packs its identifiers into" do
+      # Its own validator store, so this downloads rather than being handed a
+      # 304 by whatever the example before it left in the shared cache.
+      source = described_class.new(fetcher: ActiveSanction::Fetcher.new(store: ActiveSanction::ValidatorStore::Memory.new),
+                                   cache: nil)
+      source.sync
+
+      expect(source.remarks_coverage.percentage).to be > 90
     end
   end
 end

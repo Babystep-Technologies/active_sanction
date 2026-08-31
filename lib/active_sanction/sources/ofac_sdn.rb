@@ -23,17 +23,18 @@ module ActiveSanction
     # Each is fetched and cached independently by Base, because they change
     # independently; the join happens here, in #parse.
     #
-    # ### What this adapter does not do
+    # ### The fields OFAC publishes no columns for
     #
-    # OFAC has no structured date of birth, place of birth, nationality or
-    # passport columns. All of it is prose in `Remarks`:
+    # There is no date of birth, place of birth, nationality or passport
+    # column. All of it is prose in `Remarks`:
     #
     #     "DOB 10 Dec 1948; POB Egypt; nationality Egypt; Passport 123456 (Egypt)"
     #
-    # Extracting it is heuristic work with its own failure modes, so it is its
-    # own issue (#19) rather than something smuggled in here. Until then the
-    # remark is retained verbatim and those fields are empty -- which is the
-    # honest state, and visible as such, rather than half-parsed.
+    # RemarksParser reads it, and #remarks_coverage reports how much of it it
+    # understood -- 97% of the published file's 88,827 segments, which is a
+    # figure to watch rather than a guarantee. The remark is kept verbatim
+    # either way, so a pattern that goes stale costs structure and never
+    # content.
     #
     # This adapter is written entirely against the public extension points:
     # declarations from Definition, fetch and cache and checksum from Base,
@@ -81,10 +82,17 @@ module ActiveSanction
       # files were downloaded at different moments and no longer agree.
       attr_reader :warnings, :orphans
 
+      # How much of OFAC's free text the last #parse understood. Not a warning,
+      # because an unread segment is not an error -- it is still in the remark,
+      # in the publisher's own words -- but a figure to watch: it is the only
+      # thing that moves when OFAC changes how it writes a passport line.
+      attr_reader :remarks_coverage
+
       def initialize(...)
         super
         @warnings = []
         @orphans = {}
+        @remarks_coverage = RemarksParser::Coverage.new
       end
 
       def parse(raw)
@@ -97,12 +105,17 @@ module ActiveSanction
 
       private
 
+      # Coverage is folded over every row, the nameless ones that produce no
+      # entity included: the question it answers is how much of the file this
+      # parser can read, and a row we drop is still a row OFAC published.
       def build(join, rows)
         @unmapped = []
+        @remarks_coverage = RemarksParser::Coverage.new
         entities = []
         join.each(rows) do |row, related|
           record = Record.new(row: row, aliases: related[:aliases], addresses: related[:addresses])
           note_unknown_type(record) if record.unknown_type?
+          @remarks_coverage.record(record.parsed_remarks)
           entity = record.entity
           entity.nil? ? note_nameless(row) : entities << entity
         end

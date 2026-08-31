@@ -1,0 +1,44 @@
+# Real Remarks values from OFAC's published SDN.CSV, one per line, chosen to
+# cover every shape RemarksParser claims to read plus several it does not.
+#
+# They are quoted verbatim, punctuation and typos included: the point of a
+# corpus is to be what the publisher actually wrote, so a spec that passes
+# against it is a spec that passes against the file. Lines beginning with `#`
+# are comments and blank lines are ignored; a published remark is never
+# either.
+DOB 17 Jul 1970; POB Baghdad, Iraq; nationality Iraq.
+DOB circa 1937.
+DOB 1971 to 1973; POB Sudan; Gender Male.
+DOB 01 Jan 1955 to 31 Dec 1956.
+DOB Jan 1964; POB Wuwei, Gansu, China; Gender Male.
+DOB 31 Jul 1951; alt. DOB 01 Jul 1951; POB Savnik, Serbia and Montenegro; alt. POB Petnic, Serbia and Montenegro.
+DOB 10 May 1978; citizen Russia; Gender Male.
+a.k.a. 'SHAM HOLDING'; a.k.a. 'CHAM'.
+Vessel Registration Identification IMO 7406784; f.k.a. 'ANA I'; f.k.a. 'SAND SWAN'.
+DOB 30 Aug 1967; POB Germany; nationality Turkey; Passport 778456 (Turkey) issued 14 May 1997 expires 13 May 2007.
+DOB 01 Jan 1960; nationality Turkey; Additional Sanctions Information - Subject to Secondary Sanctions; Passport U 04765836 (Turkey); Personal ID Card 58786069032; alt. Personal ID Card AK 8136255 (Italy).
+Additional Sanctions Information - Subject to Secondary Sanctions; Passport A0009228; alt. Passport 4229533; a.k.a. 'FAKHRIZADEH'.
+DOB 09 Sep 1963; nationality Guinea; citizen Guinea; Diplomatic Passport 00085498 (Guinea).
+DOB 01 Sep 1944; Passport H90011666 (Hong Kong); National ID No. K357514(4) (Hong Kong); a.k.a. 'P'U LI'.
+Tax ID No. 102858071 (Serbia); Registration Number 17499858 (Serbia); Linked To: ANDRIC, Goran.
+DOB 02 Jul 1957; Cedula No. 3370637 (Colombia).
+DOB 15 Sep 1979; POB Badiraguato, Sinaloa, Mexico; R.F.C. AAZO790915AL6 (Mexico); C.U.R.P. AAZO790915HSLLPS09 (Mexico).
+Folio Mercantil No. 18740 (Jalisco) (Mexico).
+Vessel Registration Identification IMO 9154000; MMSI 352900000; Linked To: IMS LTD.
+Aircraft Construction Number (also called L/N or S/N or F/N) 8305; Aircraft Manufacture Date 1991; Aircraft Model IL-76TD; Aircraft Operator YAS AIR; Aircraft Manufacturer's Serial Number (MSN) 1013409297; Secondary sanctions risk: section 1(b) of Executive Order 13224, as amended by Executive Order 13886; Linked To: POUYA AIR.
+SWIFT/BIC TATBIRTH.
+DOB 14 Sep 1981; POB Thunder Bay, Ontario, Canada; nationality Canada; Gender Male; Digital Currency Address - TRX TAoLw5yD5XUoHWeBZRSZ1ExK9HMv2CiPvP; alt. Digital Currency Address - TRX TVNyvx2astt2AB1Us67ENjfMZeEXZeiuu6; alt. Digital Currency Address - TRX TPJ1JNX98MJpHueBJeF5SVSg85z8mYg1P1; a.k.a. 'KING, James Conrad'.
+Secondary sanctions risk: See Section 11 of Executive Order 14024.; a.k.a. 'GVC'.
+Linked To: YAKUZA.
+DOB 23 Nov 1950; POB Bijela Voda, Sokolac Canton, Bosnia-Herzegovina; Passport 3943074 (Bosnia and Herzegovina) issued 27 Sep 2002; Passport issued in Sarajevo, Bosnia-Herzegovina; a.k.a. 'MINEUR'.
+DOB 1969; alt. DOB 10 Oct 1969; POB Xudur, Somalia; alt. POB Keren, Eritrea; nationality Eritrea; Secondary sanctions risk: section 1(b) of Executive Order 13224, as amended by Executive Order 13886; Passport 0310857 (Eritrea) issued 21 Aug 2006 expires 20 Aug 2008; National ID No. 1372584 (Kenya); (Following data derived from an Eritrean passport issued under the alias name of Mukhtar Abdullahi Ali: Alt. DOB: 10 October 1969; Alt. POB: Keren Eritrea; nationality: Eritrean; National ID No.: 1372584, Kenya; Passport No.: 0310857, Eritrea, Issue Date 21 August 2006, Expire Date 20 August 2008); a.k.a. 'ABU MANSUR'; a.k.a. 'ABU MANSOUR'.
+DOB 1958; nationality Mali; Gender Male; Passport D9011156 (Mali).
+Organization Established Date 1984.
+Tax ID No. 18571; Trade License No. 41992 (Libya); License 4541992.
+Business Registration Number 21756 (Iraq); Linked To: KIDMA TECH OJSC.
+Unified Social Credit Code (USCC) 91130104MA07T43608 (China).
+Identification Number IMO 0025596.
+DOB 03 Feb 1970; nationality Mexico; Gender Male; Electoral Registry No. GMARLS70020314H800 (Mexico).
+DOB 10 Jan 1961; POB Germany; Head of the Belarusian State Television and Radio Company (BSTRC); Member of the Upper House of Parliament.
+DOB 13 May 1964; ICTY indictee.
+Additional Sanctions Information - Subject to Secondary Sanctions; all offices worldwide.
