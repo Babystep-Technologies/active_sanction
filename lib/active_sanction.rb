@@ -19,6 +19,7 @@ require "active_sanction/sources"
 require "active_sanction/sources/ofac_sdn"
 require "active_sanction/sources/ofac_consolidated"
 require "active_sanction/sources/un_consolidated"
+require "active_sanction/sources/canada_sema"
 
 module ActiveSanction
   class << self
