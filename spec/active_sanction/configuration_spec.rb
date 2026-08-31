@@ -59,6 +59,34 @@ RSpec.describe ActiveSanction::Configuration do
     end
   end
 
+  describe "#storage_dir" do
+    it "defaults to a directory of its own in the user's home" do
+      expect(described_class.new.storage_dir).to eq(File.join(Dir.home, ".active_sanction"))
+    end
+
+    # Not under XDG_CACHE_HOME, and the split is the point: everything in
+    # cache_dir can be fetched again, and a stored snapshot cannot -- once a
+    # publisher overwrites its file, the version a past decision was screened
+    # against exists only in storage.
+    it "is not under the cache directory a user is entitled to delete" do
+      config = described_class.new
+
+      expect(config.storage_dir).not_to start_with(config.cache_dir)
+    end
+
+    it "expands a relative path, so the directory does not follow the working directory" do
+      config = described_class.new
+      config.storage_dir = "tmp/lists"
+
+      expect(config.storage_dir).to eq(File.expand_path("tmp/lists"))
+    end
+
+    it "rejects a blank directory" do
+      expect { described_class.new.storage_dir = "  " }
+        .to raise_error(ActiveSanction::ConfigurationError, /storage_dir cannot be blank/)
+    end
+  end
+
   describe "#retain_payloads" do
     it "takes a count" do
       config = described_class.new
