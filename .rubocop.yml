@@ -34,13 +34,15 @@ Style/Documentation:
 RSpec/ExampleLength:
   Max: 10
 
-# Both files cover the test harness itself rather than a class:
-# network_isolation_spec that the suite cannot reach the internet, and
-# conformance_spec the shared example group every source adapter is held to.
+# These files cover the test harness itself rather than a class:
+# network_isolation_spec that the suite cannot reach the internet, and the two
+# conformance specs the shared example groups that every source adapter and
+# every storage adapter are held to.
 RSpec/DescribeClass:
   Exclude:
     - "spec/network_isolation_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
+    - "spec/active_sanction/storage/conformance_spec.rb"
 
 # The canonical model is value objects: one keyword argument and one hash key
 # per field. Splitting `initialize` or `to_h` to satisfy a count would make

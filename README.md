@@ -120,6 +120,60 @@ entity.remarks    # => "[source fields] Country: Belarus / Bélarus; Schedule: 1
 
 Aliases are split on semicolons and never on commas. A comma is genuinely ambiguous in this field: `Завод "Дагдизель", АО` would yield a bare Russian legal form as an alias, and `Министерство образования, науки и молодежи Республики Крым` is one ministry rather than two. That costs recall on roughly 300 records whose primary name is published anyway, which is the cheaper of the two mistakes.
 
+### Storing what a sync produced
+
+A synced list is a `Snapshot` — one source's entities plus a checksum over their content — and storage keeps one per source, written whole and read back whole.
+
+```ruby
+store = ActiveSanction::Storage::Memory.new
+store.write_snapshot(ActiveSanction::Sources[:ofac_sdn].new.sync)
+
+store.sources                    # => [:ofac_sdn]
+store.read_snapshot(:ofac_sdn)   # => Snapshot, or nil if it was never synced
+store.snapshot_meta(:ofac_sdn)   # => fetched_at, checksum, record_count, without reading the list
+store.each_entity { |entity| index.add(entity) }
+```
+
+Those five methods are the whole interface, and the rule they exist to enforce is that **nothing on the query path may name a concrete store**. The matcher is written against `Storage::Base` and against nothing else, which is what lets an installation put its lists in gzipped JSON, in Postgres, or in something it wrote itself without any of that reaching the code that decides whether two names are the same person. It is also why the interface lands before the matcher rather than after it: an interface extracted from a matcher that already reads files is an interface shaped like files.
+
+`Storage::Memory` is a real adapter — a process that syncs and screens without wanting to own a directory should use it, and pays only a full download on each boot — and it is also the test double for storage throughout this suite. It is written as a `Storage::Base` subclass implementing the same four methods as everything else rather than as a Hash a spec passes around, because a double that is not held to the contract stops describing what the real adapters do a release or two before anyone notices.
+
+Two of its rules are about the same failure, which is the one this library can least afford:
+
+```ruby
+store.read_snapshot(:eu_fsf)             # => nil
+store.fetch_snapshot(:eu_fsf)            # => raises Storage::MissingSnapshot
+store.each_entity(sources: %i[ofac_sdn eu_fsf])   # => raises Storage::MissingSnapshot
+```
+
+A source nobody has synced reads back as `nil` and never as an empty snapshot: "we have never fetched this" and "this list has nobody on it" are different states, and no sanctions list has ever said the second. And a caller that *named* its lists gets an exception for one that is missing rather than fewer entities, because a screening run that quietly covers two of the three lists an application configured is indistinguishable from one that covers all three — and both report the name clear.
+
+`each_entity` is an `Enumerator` and reads one list at a time, so building an index over every source does not first materialize every entity of every source.
+
+### The storage contract
+
+Every storage adapter is held to one shared example group, `"a storage adapter"`, the same way every source adapter is held to `"a sanction source"`:
+
+```ruby
+RSpec.describe ActiveSanction::Storage::Memory do
+  it_behaves_like "a storage adapter"
+end
+```
+
+An adapter that needs something to be built says how, and is otherwise held to exactly the same checklist:
+
+```ruby
+RSpec.describe ActiveSanction::Storage::FileSystem do
+  it_behaves_like "a storage adapter" do
+    def build_store = described_class.new(root: Dir.mktmpdir)
+  end
+end
+```
+
+Most of what it checks is a way of losing records quietly. A store that returns an empty snapshot for a source nobody synced, one that drops the third of four entities on the way back, one that reorders them, one that accumulates two writes of a list instead of replacing it — none of those raise, all of them return something that looks like a sanctions list, and the report they produce says the name you screened is clear. What it deliberately says nothing about is durability, concurrency and performance, which are the things the adapters genuinely differ on: that a file write is atomic, that a database write is one transaction, that the in-memory store is safe to screen from on many threads. Those are properties of one implementation, and each adapter's own spec has to make them.
+
+The group is `spec/support/shared_examples/storage_adapter.rb`, and `spec/active_sanction/storage/conformance_spec.rb` holds it to being able to fail: each example there takes one rule out of an otherwise conforming adapter and checks that the contract notices.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/active_sanction. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/active_sanction/blob/master/CODE_OF_CONDUCT.md).
