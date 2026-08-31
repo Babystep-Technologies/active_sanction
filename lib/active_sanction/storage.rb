@@ -54,3 +54,20 @@ require "active_sanction/storage/meta"
 require "active_sanction/storage/base"
 require "active_sanction/storage/memory"
 require "active_sanction/storage/file_system"
+
+# Storage::ActiveRecord (#25) is optional in the strong sense: ActiveRecord is
+# not a dependency of this gem and must not become one, so the adapter is
+# loaded only where it can be, and the gem is fully usable without it.
+#
+# Both orders have to work, which is why this is two clauses rather than one.
+# A script that requires ActiveRecord itself has already defined the constant
+# by the time this file runs, and the first clause loads the adapter now. A
+# Rails application loads ActiveSupport long before ActiveRecord::Base -- the
+# framework is deliberately lazy about it -- so the second clause books the
+# adapter onto the hook Rails runs when Base is finally loaded. An application
+# that wants it unconditionally can always require it by name.
+if defined?(ActiveRecord::Base)
+  require "active_sanction/storage/active_record"
+elsif defined?(ActiveSupport) && ActiveSupport.respond_to?(:on_load)
+  ActiveSupport.on_load(:active_record) { require "active_sanction/storage/active_record" }
+end

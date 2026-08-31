@@ -55,9 +55,15 @@ Metrics/ParameterLists:
 # gains, so their ABC size measures how many fields a sanctions record has and
 # nothing else. Splitting either in half to satisfy the count would make them
 # harder to read, not easier.
+#
+# The same rule holds for the two halves of the ActiveRecord adapter that turn
+# a canonical record into a row and a row back into a canonical record: both
+# grow by exactly one column and one hash key per field the record has.
 Metrics/AbcSize:
   Exclude:
     - "lib/active_sanction/entity.rb"
+    - "lib/active_sanction/storage/active_record/reader.rb"
+    - "lib/active_sanction/storage/active_record/writer.rb"
 
 Metrics/MethodLength:
   Max: 15
