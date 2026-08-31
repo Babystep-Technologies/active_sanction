@@ -15,3 +15,10 @@ gem "rspec", "~> 3.13"
 gem "rubocop", "~> 1.75"
 gem "rubocop-rspec", "~> 3.5"
 gem "webmock", "~> 3.25"
+
+# Not dependencies of the gem -- Storage::ActiveRecord loads only when a host
+# has already loaded ActiveRecord, and the gem is fully usable without it. They
+# are here so that adapter is covered by the suite rather than shipped on the
+# assumption that it works.
+gem "activerecord", ">= 7.1"
+gem "sqlite3", ">= 1.6"

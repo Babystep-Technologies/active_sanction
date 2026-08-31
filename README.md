@@ -186,6 +186,35 @@ A snapshot written by a newer `active_sanction` raises `Storage::UnsupportedSche
 
 Many readers and one writer, across processes, is the arrangement it is built for: a scheduled sync replacing a list while web workers screen against it. Committing is a rename, so a reader sees the whole previous generation or the whole new one. Two processes syncing the *same* source at once is not supported and nothing here makes it safe.
 
+### Storing lists in the host's database
+
+`Storage::ActiveRecord` is optional in the strong sense: ActiveRecord is not a dependency of this gem and must not become one. The adapter is loaded only where ActiveRecord has already been loaded — by the host, or by Rails, whichever order that happens in — and everything above works with it absent.
+
+```console
+$ rails generate active_sanction:install
+$ rails db:migrate
+```
+
+```ruby
+store = ActiveSanction::Storage::ActiveRecord.new
+store.write_snapshot(ActiveSanction::Sources[:ofac_sdn].new.sync)
+```
+
+**What the database buys is the prefilter.** Scoring 19,015 OFAC records against one name in Ruby is the cost the matcher wants to avoid paying, and an indexed equality probe narrows that to a handful of candidates before any of them are loaded:
+
+```ruby
+ActiveSanction::Storage::ActiveRecord::Row::Name.matching("Aiman al-Zawahiri").pluck(:entity_id)
+ActiveSanction::Storage::ActiveRecord::Row::Identifier.matching("AB-123 456").pluck(:entity_id)
+```
+
+So unlike the filesystem layout, the schema here is public: five tables, `active_sanction_snapshots` and `active_sanction_entities` with `active_sanction_names`, `_addresses` and `_identifiers` hanging off them, with the models, columns and associations part of what the adapter promises. `normalized_value` is the indexed column both scopes probe, and `ActiveSanction::Storage::ActiveRecord.prefilter_key` is how a query builds the same key the write built — a key folded any other way will not find the rows. That fold is deliberately crude and deliberately not the matcher's normalizer: its only job is candidate generation, where a key that collides too eagerly costs a few extra records to score and a key that misses costs a sanctioned person who never reaches the scorer at all.
+
+**A write is one transaction, and `insert_all` in batches inside it.** A full OFAC SDN sync is 19,015 entities and some 65,000 rows hanging off them; a sync that dies partway through rolls back to the list that was there before it, so there is no half-updated list to inspect and none to screen against. Row-at-a-time saves are the obvious alternative and are not what this does.
+
+**Nothing partial is ever returned**, on the same terms as the filesystem adapter and by the same mechanism. The snapshot is rebuilt with the checksum stored beside it, so construction re-derives the digest over the records that actually came back — a row deleted by hand, a write that half landed, a column edited in a console all raise `Storage::CorruptSnapshot` rather than screening a customer against a list that is quietly missing people. That is also why `each_entity` is inherited rather than reimplemented as a cursor: a checksum covers a whole list, so a store that streamed rows straight to the matcher would be handing it records it cannot prove are all of them.
+
+Concurrency is the database's problem, which is the point — readers on other processes and other machines see the list as it was before a write or as it is after it, rather than depending on a rename that only holds within one filesystem.
+
 ### The storage contract
 
 Every storage adapter is held to one shared example group, `"a storage adapter"`, the same way every source adapter is held to `"a sanction source"`:
@@ -205,6 +234,8 @@ RSpec.describe ActiveSanction::Storage::FileSystem do
   end
 end
 ```
+
+The ActiveRecord adapter is held to it against a database built by rendering and running the migration the generator actually copies, rather than one the suite wrote for itself — a schema no user gets is a schema the suite would keep passing against on the day it stopped matching the adapter.
 
 Most of what it checks is a way of losing records quietly. A store that returns an empty snapshot for a source nobody synced, one that drops the third of four entities on the way back, one that reorders them, one that accumulates two writes of a list instead of replacing it — none of those raise, all of them return something that looks like a sanctions list, and the report they produce says the name you screened is clear. What it deliberately says nothing about is durability, concurrency and performance, which are the things the adapters genuinely differ on: that a file write is atomic, that a database write is one transaction, that the in-memory store is safe to screen from on many threads. Those are properties of one implementation, and each adapter's own spec has to make them.
 

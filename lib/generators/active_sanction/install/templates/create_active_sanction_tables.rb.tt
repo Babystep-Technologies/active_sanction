@@ -1,0 +1,142 @@
+# frozen_string_literal: true
+
+# Storage for ActiveSanction::Storage::ActiveRecord.
+#
+# One row per synced list, one per record on it, and one per name, address and
+# identifier hanging off that record. A full OFAC SDN sync is one snapshot row,
+# 19,015 entity rows and some 65,000 child rows -- OFAC ships 39,468 names and
+# 25,078 addresses -- written with `insert_all` inside a single transaction.
+#
+# ### Why the children carry `snapshot_id` as well as `entity_id`
+#
+# So that reading a list is four indexed range scans rather than an `IN` clause
+# holding 19,015 entity ids, so that replacing one is four `delete_all`s, and
+# so that a host can scope a lookup to the list it means to screen against.
+#
+# ### Why `normalized_value` is indexed
+#
+# It is the candidate-generation path: an equality probe that narrows 19,015
+# records to the few hundred worth scoring in Ruby, before any of them are
+# loaded. Write the key with
+# `ActiveSanction::Storage::ActiveRecord.prefilter_key` at query time -- it is
+# the same fold this adapter applied on the way in, and a key built any other
+# way will not find the rows.
+#
+# ### Why there are no foreign keys
+#
+# These tables are owned wholly by the adapter, which deletes children before
+# parents inside the transaction that replaces a list, so nothing here depends
+# on the database enforcing the order. Adding the constraints costs a check per
+# row on a write that inserts tens of thousands of them. A host that wants them
+# anyway can add them: the delete order above is already the one they require.
+class <%= migration_class_name %> < ActiveRecord::Migration<%= migration_version %>
+  def change
+    create_table :active_sanction_snapshots do |t|
+      t.string   :source, null: false
+      t.datetime :fetched_at, null: false
+      # sha256:<64 hex>, and what a match result cites: "which list version
+      # cleared this customer" is answered by comparing an audit record's
+      # checksum against this column, without loading either list.
+      t.string   :checksum, null: false
+      t.integer  :record_count, null: false
+      t.integer  :schema_version, null: false
+      t.string   :source_version
+
+      # One stored list per source, enforced by the database rather than by
+      # the adapter alone: a sync replaces a list, and two rows for one source
+      # would mean screening against whichever the query planner returned.
+      t.index :source, unique: true
+    end
+
+    create_table :active_sanction_entities do |t|
+      t.bigint  :snapshot_id, null: false
+      # The order the publisher emitted the record in. A snapshot checksums its
+      # entities order-independently, so nothing else would catch a store
+      # handing rows back in whatever order the planner chose -- and a report
+      # whose rows move between two runs against an unchanged list is a report
+      # an examiner cannot cite.
+      t.integer :position, null: false
+      # ActiveSanction::Entity#id: the publisher's own reference, namespaced by
+      # source, e.g. "ofac_sdn:2674". Not unique across the table -- two
+      # snapshots of the same list both hold it.
+      t.string  :external_id, null: false
+      t.string  :source, null: false
+      # `type` is Rails' single-table-inheritance column, so the canonical
+      # record's `type` (individual, organization, vessel, aircraft) is stored
+      # under a name that will not make ActiveRecord try to instantiate it.
+      t.string  :entity_type, null: false
+      t.string  :source_ref
+      # JSON, as the canonical value objects serialize themselves. These are
+      # small, repeated, and nothing screens on them structurally, so they do
+      # not earn tables of their own the way names and identifiers do. `text`
+      # rather than a native JSON column so one migration runs everywhere; a
+      # host on PostgreSQL that wants to query them can change the type.
+      t.text    :dates_of_birth
+      t.text    :nationalities
+      t.text    :programs
+      t.text    :listed_on
+      t.text    :remarks
+
+      t.index %i[snapshot_id position], unique: true
+      t.index %i[snapshot_id external_id]
+    end
+
+    create_table :active_sanction_names do |t|
+      t.bigint  :entity_id, null: false
+      t.bigint  :snapshot_id, null: false
+      t.integer :position, null: false
+      # `text`, because what the publisher wrote has to come back byte for byte
+      # -- the snapshot's checksum is computed over it, so a column that
+      # truncated a long organization name would fail the read rather than
+      # quietly shorten a name.
+      t.text    :value, null: false
+      # Bounded, because it is indexed and MySQL will not index an unbounded
+      # column. 512 is comfortably past the longest name any of the launch
+      # lists publishes, and the key builder truncates to it so that a
+      # pathological name still produces a key a query can reproduce.
+      t.string  :normalized_value, null: false, limit: 512
+      t.string  :kind, null: false
+      t.string  :quality
+      t.string  :script
+
+      t.index %i[entity_id position], unique: true
+      t.index :snapshot_id
+      t.index :normalized_value
+    end
+
+    create_table :active_sanction_addresses do |t|
+      t.bigint  :entity_id, null: false
+      t.bigint  :snapshot_id, null: false
+      t.integer :position, null: false
+      t.text    :street
+      t.string  :city
+      t.string  :state_province
+      t.string  :postal_code
+      t.string  :country
+      t.text    :note
+
+      t.index %i[entity_id position], unique: true
+      t.index :snapshot_id
+    end
+
+    create_table :active_sanction_identifiers do |t|
+      t.bigint  :entity_id, null: false
+      t.bigint  :snapshot_id, null: false
+      t.integer :position, null: false
+      t.string  :kind, null: false
+      t.text    :value, null: false
+      # ActiveSanction::Identifier#normalized_value: the number with everything
+      # that is not alphanumeric removed, which is what lets OFAC's
+      # `AB-123 456` and the UN's `AB123456` find each other.
+      t.string  :normalized_value, null: false, limit: 512
+      t.string  :country
+      t.text    :issued_on
+      t.text    :expires_on
+      t.text    :note
+
+      t.index %i[entity_id position], unique: true
+      t.index :snapshot_id
+      t.index :normalized_value
+    end
+  end
+end
