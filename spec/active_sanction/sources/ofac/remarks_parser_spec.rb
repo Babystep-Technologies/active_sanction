@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe ActiveSanction::Sources::OfacSdn::RemarksParser do
+RSpec.describe ActiveSanction::Sources::Ofac::RemarksParser do
   def parse(text) = described_class.new(text)
 
   # Every remark in the corpus is a string OFAC published. The file is
