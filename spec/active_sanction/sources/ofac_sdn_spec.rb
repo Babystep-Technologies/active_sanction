@@ -17,6 +17,9 @@ RSpec.describe ActiveSanction::Sources::OfacSdn do
 
   def entity(ref) = entities.find { |candidate| candidate.source_ref == ref }
 
+  it_behaves_like "a sanction source",
+                  fixture: { sdn: "ofac_sdn/SDN.CSV", alt: "ofac_sdn/ALT.CSV", add: "ofac_sdn/ADD.CSV" }
+
   describe "what it declares" do
     it "registers itself, so requiring the gem is enough to reach it" do
       expect(ActiveSanction::Sources[:ofac_sdn]).to eq(described_class)

@@ -71,7 +71,20 @@ module ActiveSanction
 
         def start
           @warnings = []
-          CSV.new(StringIO.new(decoded), **table.csv_options)
+          CSV.new(StringIO.new(payload!), **table.csv_options)
+        end
+
+        # No sanctions list has ever been published empty, so a payload with
+        # nothing in it is a failed download, a moved URL or an outage -- never
+        # a day on which nobody is sanctioned. Yielding no rows would let a
+        # sync succeed at screening against nothing, which is the most
+        # expensive way this library can fail, so it raises instead. The XML
+        # reader refuses the same payload for the same reason.
+        def payload!
+          string = decoded
+          raise ParseError, "expected #{table.col_sep_name} rows, got an empty payload" if string.strip.empty?
+
+          string
         end
 
         # Decoding happens once per pass rather than per row, and never raises.
@@ -94,9 +107,12 @@ module ActiveSanction
         # snake_cased so that `City/State/Province/ZIP/Postal Code` and
         # `city_state_province_zip_postal_code` are the same column to an
         # adapter regardless of how the publisher capitalized it this quarter.
+        # An empty payload has already been refused, so what is left to fail on
+        # here is a first row that could not be read at all -- and a file whose
+        # header is unreadable has no columns to name anything by.
         def header!(csv)
           values = shift(csv)
-          raise ParseError, "expected a header row, got an empty payload" if values.nil? || values.equal?(EOF)
+          raise ParseError, "expected a header row, read nothing usable as one" if values.nil? || values.equal?(EOF)
 
           values.map { |value| normalize_header(value) }
         end
