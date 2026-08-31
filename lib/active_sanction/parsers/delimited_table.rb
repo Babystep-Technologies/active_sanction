@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "csv"
+require "active_sanction/parsers/format"
 require "active_sanction/parsers/delimited_table/row"
 require "active_sanction/parsers/delimited_table/reader"
 
@@ -43,12 +44,12 @@ module ActiveSanction
     # uses both conventions in one file (they all do) should not make an
     # adapter check for both.
     class DelimitedTable
-      DEFAULT_ENCODING = Encoding::UTF_8
+      include Format
 
       SEPARATOR_NAMES = { "," => "CSV", "\t" => "TSV", "|" => "pipe-delimited text",
                           ";" => "semicolon-delimited text" }.freeze
 
-      attr_reader :columns, :nulls, :col_sep, :quote_char, :encoding
+      attr_reader :columns, :col_sep, :quote_char
 
       # `liberal_parsing` is on by default because these files are published,
       # not validated: an unescaped quote inside a company name is common
@@ -71,19 +72,6 @@ module ActiveSanction
 
       # Whether the file names its own columns.
       def headers? = columns.nil?
-
-      # What a caller declared as null, resolved. Public because an adapter
-      # joining files by hand needs the same rule the reader applies.
-      #
-      #   table.value("-0- ")   # => nil
-      #   table.value("  ")     # => nil
-      #   table.value(" CUBA")  # => "CUBA"
-      def value(raw)
-        string = raw.to_s.strip
-        return nil if string.empty? || nulls.include?(string)
-
-        -string
-      end
 
       # Zips a row's values against the column names. Extra values are dropped
       # and missing ones are nil; the Reader has already warned about both.
@@ -122,20 +110,6 @@ module ActiveSanction
         raise ArgumentError, "columns cannot be empty; pass nil to read them from the file's header" if value.empty?
 
         value.map { |name| name.to_s.strip.to_sym }
-      end
-
-      # Accepts one sentinel or several: a publisher that writes both "-0-" and
-      # "N/A" is not unusual, and an adapter should be able to say so once.
-      def nulls!(value)
-        Array(value).map { |sentinel| -sentinel.to_s.strip }.reject(&:empty?).uniq.freeze
-      end
-
-      def encoding!(value)
-        return value if value.is_a?(Encoding)
-
-        Encoding.find(value.to_s)
-      rescue ArgumentError
-        raise ArgumentError, "unknown encoding #{value.inspect}"
       end
     end
   end

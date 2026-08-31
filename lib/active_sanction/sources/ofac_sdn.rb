@@ -87,13 +87,6 @@ module ActiveSanction
         @orphans = {}
       end
 
-      # OFAC's own free text for an entity, with the columns this adapter
-      # appended stripped back off. What #19's remarks parser should read, so
-      # that it never sees a vessel flag and mistakes it for a nationality.
-      def self.published_remarks(remarks)
-        remarks.to_s.split(Record::COLUMN_MARKER, 2).first
-      end
-
       def parse(raw)
         join = Parsers::Join.new(on: :ent_num, aliases: ALT.read(raw[:alt]), addresses: ADD.read(raw[:add]))
         entities = build(join, SDN.read(raw[:sdn]))

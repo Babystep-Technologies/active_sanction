@@ -4,6 +4,7 @@ require "active_sanction/entity"
 require "active_sanction/name"
 require "active_sanction/address"
 require "active_sanction/identifier"
+require "active_sanction/sources/remarks"
 
 module ActiveSanction
   module Sources
@@ -37,12 +38,6 @@ module ActiveSanction
           title: "Title", vessel_type: "Vessel type", tonnage: "Tonnage",
           gross_registered_tonnage: "GRT", vessel_flag: "Vessel flag", vessel_owner: "Vessel owner"
         }.freeze
-
-        # Separates OFAC's own free text from the columns appended after it.
-        # #19 parses dates and passport numbers out of the published remark and
-        # must not see these, so it takes the text before this marker -- which
-        # OfacSdn.published_remarks does, and is the supported way to ask.
-        COLUMN_MARKER = " [OFAC columns] "
 
         attr_reader :row, :aliases, :addresses
 
@@ -108,14 +103,9 @@ module ActiveSanction
         end
 
         # OFAC's remark verbatim, then the columns that have nowhere else to
-        # go, after a marker that makes them trivial to strip again.
+        # go, behind the marker that makes them trivial to strip again.
         def remarks
-          extras = COLUMNS_IN_REMARKS.filter_map do |column, label|
-            "#{label}: #{row[column]}" unless row.null?(column)
-          end
-          return row[:remarks] if extras.empty?
-
-          [row[:remarks], extras.join("; ")].compact.join(COLUMN_MARKER)
+          Remarks.build(row[:remarks], COLUMNS_IN_REMARKS.map { |column, label| [label, row[column]] })
         end
 
         private

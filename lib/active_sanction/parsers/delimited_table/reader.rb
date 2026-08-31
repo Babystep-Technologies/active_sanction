@@ -74,36 +74,21 @@ module ActiveSanction
           CSV.new(StringIO.new(decoded), **table.csv_options)
         end
 
-        # Decoding happens once per pass rather than per row, and never raises:
-        # a byte that is not valid in the declared encoding becomes U+FFFD and
-        # is reported, because losing one character of one address is a far
-        # better outcome than refusing to load the list. OFAC serves Windows-1252
-        # and the UN serves UTF-8, and neither declares it in a header we can
-        # trust, which is why the encoding is something the adapter states.
+        # Decoding happens once per pass rather than per row, and never raises.
+        # Format#decode says why, and strips the BOM; what is left here is the
+        # marker only a delimited file carries.
         def decoded
-          string = @payload.to_s.dup.force_encoding(table.encoding)
-          return trim(string) if string.valid_encoding? && table.encoding == Encoding::UTF_8
-
-          warn_invalid_bytes unless string.valid_encoding?
-          trim(string.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "�"))
+          string, replaced = table.decode(@payload)
+          record(0, table.invalid_bytes_message) if replaced
+          trim(string)
         end
 
-        # Strips the two markers that are file structure rather than data.
-        #
-        # A UTF-8 BOM left in place becomes part of the first column of the
-        # first row, which turns a header named "ent_num" into "﻿ent_num"
-        # and an id of 36 into something that is not an integer.
-        #
         # SUB (0x1A) is CP/M's end-of-file character, and DOS-lineage export
         # tooling still writes it: all three OFAC files end with `\r\n\x1A`.
         # Left alone it parses as a final one-column row, so every sync reports
         # a malformed row it can do nothing about -- and a warning that fires
         # every single time is a warning nobody reads.
-        def trim(string) = string.delete_prefix("﻿").sub(/\r?\n?\x1A\s*\z/, "")
-
-        def warn_invalid_bytes
-          record(0, "payload contains bytes that are not valid #{table.encoding}; they were replaced with U+FFFD")
-        end
+        def trim(string) = string.sub(/\r?\n?\x1A\s*\z/, "")
 
         # Column names taken from the file's own first row, lowercased and
         # snake_cased so that `City/State/Province/ZIP/Postal Code` and

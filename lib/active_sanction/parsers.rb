@@ -27,6 +27,9 @@ module ActiveSanction
     #
     # `line` is the line number within the file, which is what makes a warning
     # actionable: a 5.6 MB CSV is only debuggable if the complaint says where.
+    # It is nil when the parser cannot say -- libxml2 reports no position for a
+    # record -- and a warning that cannot point at a line still says what went
+    # wrong rather than pointing at the wrong one.
     class Warning
       attr_reader :line, :message, :snippet
 
@@ -37,7 +40,9 @@ module ActiveSanction
         freeze
       end
 
-      def to_s = "line #{line}: #{message}#{" -- #{snippet.inspect}" if snippet}"
+      def to_s
+        "#{"line #{line}: " if line}#{message}#{" -- #{snippet.inspect}" if snippet}"
+      end
 
       def to_h = { line: line, message: message, snippet: snippet }
 
@@ -57,4 +62,7 @@ module ActiveSanction
 end
 
 require "active_sanction/parsers/delimited_table"
+require "active_sanction/parsers/xml_records"
+require "active_sanction/parsers/xml_records/backends/rexml"
+require "active_sanction/parsers/xml_records/backends/nokogiri"
 require "active_sanction/parsers/join"

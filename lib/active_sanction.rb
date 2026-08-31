@@ -17,6 +17,7 @@ require "active_sanction/payload_cache"
 require "active_sanction/parsers"
 require "active_sanction/sources"
 require "active_sanction/sources/ofac_sdn"
+require "active_sanction/sources/un_consolidated"
 
 module ActiveSanction
   class << self
