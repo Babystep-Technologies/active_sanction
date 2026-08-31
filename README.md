@@ -56,6 +56,27 @@ It checks what everything downstream of an adapter assumes and cannot check for 
 
 The group is `spec/support/shared_examples/sanction_source.rb`, with its options documented at the top. `spec/active_sanction/sources/conformance_spec.rb` holds it to being able to fail: each example there takes one rule out of an otherwise conforming adapter and checks that the contract notices.
 
+### Reading OFAC's free text
+
+The US SDN list publishes no date of birth, place of birth, nationality or passport column. All of it — 88,827 semicolon-delimited segments across 19,015 records — is prose in one `Remarks` field, written for a person reading a page:
+
+    DOB 10 Dec 1948; POB Egypt; nationality Egypt; Passport 123456 (Egypt) expires 12 Dec 2015
+
+`Sources::OfacSdn::RemarksParser` reads it, which is what gives the largest list in the world secondary identifiers to match on rather than names alone. Extraction is **additive**: `Entity#remarks` keeps the publisher's whole string whether the parser understood it or not, so a pattern that goes stale costs structure and never content. Silent data loss is the worst failure a compliance tool has, and a segment nobody could parse is still in front of the user in the government's own words.
+
+Because these are heuristics against text that changes without notice, every sync reports how much of it was read:
+
+```ruby
+source = ActiveSanction::Sources[:ofac_sdn].new
+source.sync
+source.remarks_coverage.to_s
+# => "recognized 86428 of 88827 segments (97.3%), 53429 extracted"
+source.remarks_coverage.top(3)
+# => [["Member of the", 615], ["ICTY indictee.", 45], ["all offices worldwide.", 43]]
+```
+
+`recognized` counts segments matched as prose carrying no fields — statutory citations, `Linked To:` notes — as well as those that produced a value, because "this carries nothing" and "we have never seen this" are different states and only the second is work. `top` ranks the shapes nobody has taught it yet, digits masked, by how many records they cost; that ranking is how the label table in `remarks_parser/vocabulary.rb` gets extended.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/active_sanction. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/active_sanction/blob/master/CODE_OF_CONDUCT.md).

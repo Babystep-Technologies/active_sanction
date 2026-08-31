@@ -5,6 +5,7 @@ require "active_sanction/name"
 require "active_sanction/address"
 require "active_sanction/identifier"
 require "active_sanction/sources/remarks"
+require "active_sanction/sources/ofac_sdn/remarks_parser"
 
 module ActiveSanction
   module Sources
@@ -39,6 +40,12 @@ module ActiveSanction
           gross_registered_tonnage: "GRT", vessel_flag: "Vessel flag", vessel_owner: "Vessel owner"
         }.freeze
 
+        # A name matches one already on the record when the letters and digits
+        # agree; OFAC's own punctuation does not have to. 24 of the 4,349
+        # inline aliases repeat an ALT.CSV row, and the rest are names the list
+        # publishes nowhere else.
+        INSIGNIFICANT = /[^[:alnum:]]+/
+
         attr_reader :row, :aliases, :addresses
 
         def initialize(row:, aliases: [], addresses: [])
@@ -54,7 +61,24 @@ module ActiveSanction
 
           Entity.new(source: :ofac_sdn, source_ref: row[:ent_num], type: type,
                      names: names, addresses: places, identifiers: identifiers,
-                     programs: programs, remarks: remarks)
+                     programs: programs, remarks: remarks, **from_remarks)
+        end
+
+        # The members no OFAC column feeds. De-duplicated because one entity's
+        # remark can report the same nationality twice -- "nationality Iran;
+        # alt. nationality Iran" -- and a record that claims one thing twice
+        # is not a record that claims it more strongly.
+        def from_remarks
+          { dates_of_birth: parsed_remarks.dates_of_birth.uniq,
+            nationalities: parsed_remarks.nationalities.uniq }
+        end
+
+        # OFAC's free text, read for the fields it has no columns for. Exposed
+        # rather than kept private because the adapter folds every record's
+        # into one coverage figure, which is how drift in a heuristic parser
+        # gets noticed at all.
+        def parsed_remarks
+          @parsed_remarks ||= RemarksParser.new(row[:remarks])
         end
 
         def type
@@ -75,20 +99,31 @@ module ActiveSanction
 
         # The primary name first, then every alias in the order OFAC filed it.
         # `alt_num` ordering is the closest thing these aliases have to a
-        # priority, so it is preserved rather than sorted away.
+        # priority, so it is preserved rather than sorted away. Last come the
+        # aliases that appear only inside the remark -- 4,325 names that are in
+        # no other column of any of the three files.
         def names
-          [Name.new(value: row[:sdn_name], kind: :primary)] + alias_names
+          published = [Name.new(value: row[:sdn_name], kind: :primary)] + alias_names
+          published + new_names(published, parsed_remarks.aliases)
         end
 
         def places
           addresses.filter_map { |address| place(address) }
         end
 
+        # The call sign, then every document number the remark named. Compared
+        # through Identifier's own equality, which already treats `AB-123 456`
+        # and `ab123456` as one document, so a number OFAC wrote twice does not
+        # become two.
+        def identifiers
+          (call_sign + parsed_remarks.identifiers).uniq
+        end
+
         # A vessel's call sign is a registered, near-unique string, which makes
         # it far more like a document number than like a name -- and an
         # Identifier is matchable where a line of remarks is not. Filed as
         # :other because it is not any of the document kinds the model names.
-        def identifiers
+        def call_sign
           return [] if row.null?(:call_sign)
 
           [Identifier.new(kind: :other, value: row[:call_sign], note: "call sign")]
@@ -109,6 +144,13 @@ module ActiveSanction
         end
 
         private
+
+        def new_names(published, candidates)
+          seen = published.map { |name| key(name) }
+          candidates.reject { |name| seen.include?(key(name)) }
+        end
+
+        def key(name) = name.value.upcase.gsub(INSIGNIFICANT, "")
 
         def alias_names
           aliases.filter_map do |alt|
