@@ -109,6 +109,12 @@ since `srb tc` reads `lib/` and not `spec/` -- RSpec defines its helpers with
 `def initialize(root:)` is enough to make `Object.new` a type error in the
 library.
 
+### Adding a source
+
+[`docs/adding_a_source.md`](docs/adding_a_source.md) is the end-to-end walkthrough: reading the publisher's file before writing anything, choosing the format toolkit, mapping its fields onto the canonical model, deriving a stable id for a list that publishes none, trimming a fixture, wiring up the conformance spec, and registering the adapter — from inside this gem or from an application that never forks it. It ends with a complete worked adapter, its fixture and its spec.
+
+There is no scaffold generator, deliberately. Roughly eight adapters at maturity do not repay one that has to be kept in step with `Sources::Base`, the conformance spec and the parser toolkits, and that goes stale silently when it is not; the document plus the closest existing adapter to copy does the same job with none of the upkeep.
+
 ### The adapter contract
 
 Every source adapter is held to one shared example group, `"a sanction source"`, which is what turns "can we add a new sanctions list?" into a checklist. A new adapter's spec names the contract and its fixture:
