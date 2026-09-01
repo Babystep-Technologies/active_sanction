@@ -1,5 +1,15 @@
 # frozen_string_literal: true
 
+require "sorbet-runtime"
+
+# The "tests" in `.checked(:tests)`. A signature on a path that runs per query
+# -- the normalizer, and the scorers as they land -- is declared that way so it
+# costs a host nothing per screening call; this is what turns those checks back
+# on for the one process that wants them. It has to run before the library is
+# loaded, because a signature is compiled on the first call to the method it
+# describes and the levels cannot be toggled afterwards.
+T::Private::RuntimeLevels.enable_checking_in_tests
+
 require "active_sanction"
 require "webmock/rspec"
 

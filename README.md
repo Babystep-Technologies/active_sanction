@@ -58,11 +58,13 @@ reaches an application.
 
 What that costs a host, and how to spend nothing at all:
 
-* Signatures on a path that runs per query, once the matcher lands (#32), are
-  declared `.checked(:tests)`: enforced by this suite and inert in production.
-  Nothing in the library runs per query today -- parsing runs once per sync --
-  so nothing carries it yet, and the rule is here because the scorers are the
-  next thing written.
+* Signatures on a path that runs per query are declared `.checked(:tests)`:
+  enforced by this suite and inert in production. The normalizer (#26) is the
+  first path that qualifies and carries it throughout; the scorers (#32) join
+  it as they land. `spec/spec_helper.rb` turns those checks on with
+  `T::Private::RuntimeLevels.enable_checking_in_tests`, which is what makes
+  them mean anything, and `spec/sorbet_runtime_spec.rb` holds them to being
+  inert in a host that configured nothing.
 * A host that wants none of it can turn every check off before requiring the
   gem, which is supported and tested:
 
@@ -313,6 +315,29 @@ The ActiveRecord adapter is held to it against a database built by rendering and
 Most of what it checks is a way of losing records quietly. A store that returns an empty snapshot for a source nobody synced, one that drops the third of four entities on the way back, one that reorders them, one that accumulates two writes of a list instead of replacing it — none of those raise, all of them return something that looks like a sanctions list, and the report they produce says the name you screened is clear. What it deliberately says nothing about is durability, concurrency and performance, which are the things the adapters genuinely differ on: that a file write is atomic, that a database write is one transaction, that the in-memory store is safe to screen from on many threads. Those are properties of one implementation, and each adapter's own spec has to make them.
 
 The group is `spec/support/shared_examples/storage_adapter.rb`, and `spec/active_sanction/storage/conformance_spec.rb` holds it to being able to fail: each example there takes one rule out of an otherwise conforming adapter and checks that the contract notices.
+
+### Normalizing a name for matching
+
+Screening compares folded strings, never published ones. `ActiveSanction::Normalizer` is where that fold happens — stage one of the matching pipeline, and the only place in the library a name is folded at all.
+
+```ruby
+form = ActiveSanction::Normalizer.call("O'Brien, Seán")
+form.original   # => "O'Brien, Seán"
+form.value      # => "o brien sean"
+form.tokens     # => ["o", "brien", "sean"]
+```
+
+Five stages, in order: Unicode NFKD, strip the combining marks it separated, casefold (`String#downcase(:fold)`, so `Straße` reaches `strasse`), punctuation to spaces, collapse whitespace. Plus one table for the Latin letters decomposition cannot reach — nothing decomposes `ø` into an `o`, so `Bjørn` would otherwise never meet `Bjorn`, and the same goes for `ł`, `đ`, `þ`, `æ`, `ı` and `ə`.
+
+Punctuation becomes a space rather than nothing, which is the conservative direction: `Al-Qaida` and `Al Qaida` are both `al qaida`, where closing the gap would have made each unreachable from the other. Both halves of the result travel together because both are needed — the scorers compare `value` and the index keys on `tokens`, while a hit is reported in `original`, in the government's own capitalization. A report that quotes the folded string is quoting this library rather than the list.
+
+**There is one code path, and that is the point.** A matcher whose index and query fold differently does not fail; it silently stops matching, on exactly the records the difference touches. If the indexer strips `'` and the query path does not, `O'Brien` becomes unreachable from `O'Brien`, the suite still passes, and the symptom is a sanctioned person reported clean. So both sides call `Normalizer.call`, folding is idempotent (`n(n(x)) == n(x)`), and the suite holds every name in every committed fixture to coming out of it unmarked, lowercase, punctuation-free and single-spaced.
+
+**Non-Latin script is not transliterated, and that is a known recall limitation.** Cyrillic, Arabic, Han, Kana and Hangul come out casefolded and stripped of marks, in their own script: `Путин` does not become `putin`, so a Cyrillic name matches a Cyrillic query and nothing else. What makes that survivable is that these lists publish a non-Latin name as an additional variant rather than instead of a Latin one — the UN's `ORIGINAL_SCRIPT` aliases and Canada's Cyrillic ones sit on records that carry a romanized name too, which is the one an English-language query finds. Romanization is a per-script problem with several competing standards for Cyrillic alone, and guessing at it costs precision everywhere; Double Metaphone (#30) covers the case this actually leaves open, which is one name romanized two ways.
+
+Two things it does handle that are easy to miss. Arabic vocalization marks are stripped, so one publisher's `مُحَمَّد` and another's `محمد` fold together, and a hamza-carrying alef folds onto a bare one. And the modifier letters a transliterator uses as apostrophes — the `ʻ` in `Sanʻa`, the `ʼ` in `Qurʼan` — are read as punctuation rather than as the letters Unicode calls them, since a mark that survives the fold is a token no query is ever typed with.
+
+Folding is memoized, because the same string is folded over and over: an index build folds every name once per index it feeds, aliases repeat across records, and a rescreening run folds the same book of subjects against every new snapshot. The cache is bounded and internally synchronized, so one web process can screen on many threads through the shared `Normalizer.call`. A caller that wants its own — a smaller one, or one it can discard after a batch — builds `ActiveSanction::Normalizer.new(cache_limit: 1_000)` and gets an identical fold.
 
 ## Contributing
 
