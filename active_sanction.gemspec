@@ -40,10 +40,10 @@ Gem::Specification.new do |spec|
   # `tapioca` -- stays in the Gemfile, where a host never sees it.
   #
   # It is not free at call time, so the rule is that a signature on a path
-  # which runs per query -- the scorers, when they land -- is declared
-  # `.checked(:tests)`: enforced by this gem's suite and inert in a host's
-  # process. Nothing in the library runs per query today, since parsing runs
-  # once per sync. A host that wants none of it at all can set
+  # which runs per query is declared `.checked(:tests)`: enforced by this
+  # gem's suite and inert in a host's process. The normalizer is the first
+  # such path and carries it throughout; the scorers join it as they land.
+  # A host that wants none of it at all can set
   # `T::Configuration.default_checked_level = :never` before requiring the gem,
   # which spec/sorbet_runtime_spec.rb holds us to.
   spec.add_dependency "sorbet-runtime", "~> 0.6"

@@ -59,13 +59,34 @@ RSpec.describe "Sorbet's runtime" do
     end
   end
 
+  # The other half of the rule the gemspec states: a signature on a path that
+  # runs per query is declared `.checked(:tests)`, so this suite enforces it --
+  # spec_helper turns those checks on -- and a host's process never pays for
+  # it. The normalizer is the first such path; the scorers (#32) join it.
+  describe "a per-query signature" do
+    it "is enforced here, which is what `:tests` means" do
+      expect { ActiveSanction::Normalizer::DEFAULT.cache.fetch(:ofac_sdn) { raise "not reached" } }
+        .to raise_error(TypeError, /Expected type String/)
+    end
+
+    it "is inert in a host that configured nothing at all" do
+      expect(run(<<~RUBY, configure: "")).to eq("belarus\n")
+        cache = ActiveSanction::Normalizer::DEFAULT.cache
+        puts cache.fetch(:a_key_of_the_wrong_type) { ActiveSanction::Normalizer::Form.new("Bélarus") }.value
+      RUBY
+    end
+  end
+
   # `-` is stdin, so the program never touches the filesystem; `lib` is on the
   # load path rather than the gem being installed, which is what makes this run
   # against the checkout.
-  def run(program)
+  #
+  # `configure:` is what the host does before requiring the gem. Empty is the
+  # ordinary host: every default left alone, nothing turned off.
+  def run(program, configure: "T::Configuration.default_checked_level = :never")
     preamble = <<~RUBY
       require "sorbet-runtime"
-      T::Configuration.default_checked_level = :never
+      #{configure}
       require "active_sanction"
     RUBY
     output, status = Open3.capture2e(RbConfig.ruby, "-I", File.expand_path("../lib", __dir__), "-",
