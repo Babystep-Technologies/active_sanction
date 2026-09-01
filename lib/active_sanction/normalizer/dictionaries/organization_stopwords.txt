@@ -1,0 +1,20 @@
+# Function words carried by organization names, stripped from those only.
+#
+# "Central Bank of the Russian Federation" and "Bank of Russia" are the same
+# institution, and the tokens they do not share should not be `of` and `the`.
+#
+# Individuals are left alone: a person's name has no function words, and the
+# tokens that look like them are the particles this list must not touch.
+#
+# `AL` is here because an organization name transliterated from Arabic often
+# carries the article, and it is also in particles.txt -- which wins. The
+# collision is real and the resolution is deliberate: `AL` stays in the
+# normalized name. Removing an article costs one token of noise, and stripping
+# `al` from "Al Rajhi Bank" or from any of the several hundred SDN entries
+# whose name begins with it costs the name's structure.
+
+THE
+AND
+OF
+FOR
+AL

@@ -24,6 +24,10 @@ RSpec.describe ActiveSanction::Configuration do
       expect(described_class.new.stale_after).to eq(86_400)
     end
 
+    it "normalizes against the shipped token dictionaries" do
+      expect(described_class.new.normalizer_dictionary).to be(ActiveSanction::Normalizer::Dictionary.default)
+    end
+
     it "logs nothing until an application hands it a logger" do
       expect(described_class.new.logger).to be_nil
     end
@@ -305,6 +309,47 @@ RSpec.describe ActiveSanction::Configuration do
     # of a run instead.
     it "does not resolve the keys, so an initializer may name a source not yet required" do
       expect { described_class.new.sources = %i[not_registered_yet] }.not_to raise_error
+    end
+  end
+
+  # The lists the normalizer strips per entity type (#27). A Hash adds to the
+  # shipped ones, which is what a host almost always wants; a Dictionary
+  # replaces them, which is the operation that has to be spelled out.
+  describe "#normalizer_dictionary=" do
+    it "takes a Hash of lists to add to the shipped ones" do
+      config = described_class.new
+      config.normalizer_dictionary = { legal_forms: %w[OYJ] }
+
+      expect(config.normalizer_dictionary.legal_forms)
+        .to eq(ActiveSanction::Normalizer::Dictionary.default.legal_forms + %w[OYJ])
+    end
+
+    it "takes string keys, since an initializer is not always written in symbols" do
+      config = described_class.new
+      config.normalizer_dictionary = { "particles" => %w[ben] }
+
+      expect(config.normalizer_dictionary.particles.last).to eq("ben")
+    end
+
+    it "takes a dictionary, which replaces the shipped lists outright" do
+      replacement = ActiveSanction::Normalizer::Dictionary.new(legal_forms: %w[LTD], honorifics: [],
+                                                               organization_stopwords: [], particles: [])
+      config = described_class.new
+      config.normalizer_dictionary = replacement
+
+      expect(config.normalizer_dictionary).to be(replacement)
+    end
+
+    # A typo in a list name would silently configure nothing, which is the
+    # class of failure the strip lists are dangerous enough to deserve.
+    it "names the lists it knows when handed one it does not" do
+      expect { described_class.new.normalizer_dictionary = { legal_form: %w[OYJ] } }
+        .to raise_error(ActiveSanction::ConfigurationError, /unknown normalizer dictionary list\(s\): legal_form/)
+    end
+
+    it "rejects anything that is neither a dictionary nor a Hash of lists" do
+      expect { described_class.new.normalizer_dictionary = %w[LTD] }
+        .to raise_error(ActiveSanction::ConfigurationError, /must be an ActiveSanction::Normalizer::Dictionary/)
     end
   end
 

@@ -176,10 +176,51 @@ RSpec.describe ActiveSanction::Normalizer::Form do
     end
   end
 
+  # The one stage that depends on something outside the string. What is on the
+  # lists, and the particles they may never touch, is Dictionary's spec; this
+  # is what the fold does with one.
+  describe "stage 6: the token dictionaries" do
+    let(:organizations) { ActiveSanction::Normalizer::Dictionary.default.stoplist(:organization) }
+
+    def strip(string, stoplist) = described_class.new(string, stoplist: stoplist).value
+
+    it "drops the tokens the stoplist names, wherever they appear" do
+      expect(strip("JSC Rosneft Oil Company", organizations)).to eq("rosneft oil")
+    end
+
+    it "drops nothing at all without one, which is what an untyped call gets" do
+      expect(strip("JSC Rosneft Oil Company", nil)).to eq("jsc rosneft oil company")
+    end
+
+    it "carries the type it folded for, since two folds of one string are two answers" do
+      expect([described_class.new("Rosneft", stoplist: organizations).type,
+              described_class.new("Rosneft").type]).to eq([:organization, nil])
+    end
+
+    # An organization called "The Company" is a poor name to screen on and a
+    # worse one to index as the empty string, which matches everything or
+    # nothing depending on which scorer sees it first.
+    it "keeps a name that is legal forms and function words and nothing else" do
+      expect(strip("The Company", organizations)).to eq("the company")
+    end
+
+    it "still freezes the tokens, which the index holds onto" do
+      expect(described_class.new("Rosneft Oil Company", stoplist: organizations).tokens).to be_frozen
+    end
+  end
+
   describe "equality" do
     it "compares by the original, since the value is a function of it" do
       form = described_class.new("Bélarus")
       expect(described_class.new("Bélarus")).to eq(form)
+    end
+
+    # `value` is a function of the original *and* the stoplist, which is what
+    # the second half of #== is for.
+    it "is not equal to the same name folded for a different entity type" do
+      stoplist = ActiveSanction::Normalizer::Dictionary.default.stoplist(:organization)
+      expect(described_class.new("Rosneft Oil Company", stoplist: stoplist))
+        .not_to eq(described_class.new("Rosneft Oil Company"))
     end
 
     it "is not equal to a differently written name that folds the same way" do
