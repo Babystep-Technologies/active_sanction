@@ -16,4 +16,14 @@ task :typecheck do
   sh "bundle", "exec", "srb", "tc"
 end
 
+namespace :benchmark do
+  # Not part of the default task: a benchmark measures the machine it runs on,
+  # so it answers a question rather than passing or failing. The accuracy and
+  # latency harnesses (#37) land beside this one.
+  desc "Time the edit-distance primitives (#28)"
+  task :similarity do
+    ruby "benchmark/similarity.rb"
+  end
+end
+
 task default: %i[spec rubocop typecheck]
