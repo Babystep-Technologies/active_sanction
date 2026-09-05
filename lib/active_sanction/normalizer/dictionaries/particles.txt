@@ -1,0 +1,35 @@
+# Particles that must survive normalization, whatever else a list says.
+#
+# These are the pieces of a name that look like noise to a stopword filter and
+# are not: the Arabic relational particles, the Slavic and European nobiliary
+# ones. Stripping `bin` from "Osama bin Laden" or `abd` from "Shaykh Umar Abd
+# Al Rahman" -- a real SDN entry -- does not make the name shorter, it makes it
+# a different name, and one that both misses the person it should hit and hits
+# people it should not.
+#
+# This list takes precedence over every strip list, including a host's own: an
+# entry containing any token named here is dropped from the strip lists rather
+# than applied. That is the entire reason the file exists, and it is why `AL`
+# can sit in organization_stopwords.txt and still reach the scorers.
+#
+# An entry only has an effect where it collides with something being stripped.
+# Adding a particle no strip list names changes nothing, and is harmless.
+
+# Arabic
+bin
+ibn
+bint
+abu
+abd
+al
+el
+
+# Dutch, German, Iberian and Italian
+van
+von
+de
+da
+del
+della
+di
+dos

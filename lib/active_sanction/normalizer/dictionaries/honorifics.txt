@@ -1,0 +1,30 @@
+# Titles of respect and rank, stripped from individual names only.
+#
+# A publisher records the title it was told; a caller screening a customer
+# almost never has one. "General Taganda" -- a UN alias for Bosco Ntaganda --
+# should be reachable from "Taganda", and "Hajji Abdallah" from "Abdallah".
+#
+# The list is deliberately short. A title that is also a given name costs far
+# more than it saves: `Amir` is a title in one record and a first name in the
+# next, so it is absent here, and so is `Major`.
+#
+# Anything here that collides with particles.txt is discarded, not applied.
+
+MR
+MRS
+MS
+DR
+PROF
+SIR
+
+HAJJI
+HAJJ
+SHAYKH
+SHEIKH
+SHAIKH
+MULLAH
+MAULAVI
+
+GENERAL
+COLONEL
+CAPT

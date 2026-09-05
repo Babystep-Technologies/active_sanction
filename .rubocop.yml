@@ -88,8 +88,14 @@ Metrics/MethodLength:
 #
 # 140 became 190 with #73: a reader is now two lines rather than one, because
 # the `sig` above it says what it returns.
+#
+# Configuration is the same shape for a different reason: it grows by a reader,
+# a writer and a validation for every setting the library gains, and a setting
+# whose invalid values raise a message worth reading costs more than three
+# lines. 190 became 210 when the normalizer dictionary (#27) became
+# configurable.
 Metrics/ClassLength:
-  Max: 190
+  Max: 210
 
 # The same rule for the one module that carries as much declaration as a class:
 # Sources::Definition is a reader and a writer for every declaration a source

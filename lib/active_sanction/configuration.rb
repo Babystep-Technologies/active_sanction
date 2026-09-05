@@ -4,6 +4,7 @@
 require "sorbet-runtime"
 
 require "active_sanction/error"
+require "active_sanction/normalizer"
 require "active_sanction/version"
 
 module ActiveSanction
@@ -145,6 +146,11 @@ module ActiveSanction
     sig { returns(Symbol) }
     attr_reader :xml_backend
 
+    # The token lists the normalizer strips per entity type. Defaults to the
+    # shipped ones; see #normalizer_dictionary= and Normalizer::Dictionary.
+    sig { returns(Normalizer::Dictionary) }
+    attr_reader :normalizer_dictionary
+
     # Anything Logger-shaped, which is what #logger= checks for and all this
     # library ever asks of it. Declaring `::Logger` would make a host's
     # wrapper, a Rails logger broadcast or a test spy a type error rather than
@@ -166,6 +172,7 @@ module ActiveSanction
       @stale_after = T.let(DEFAULT_STALE_AFTER, T.nilable(Numeric))
       @sources = T.let(DEFAULT_SOURCES, T.nilable(T::Array[Symbol]))
       @xml_backend = T.let(DEFAULT_XML_BACKEND, Symbol)
+      @normalizer_dictionary = T.let(Normalizer::Dictionary.default, Normalizer::Dictionary)
       @logger = T.let(nil, T.untyped)
     end
 
@@ -250,6 +257,27 @@ module ActiveSanction
       @xml_backend = name.to_sym
     end
 
+    # A Hash adds to the shipped lists, which is what a host almost always
+    # wants -- one more legal form its market uses, one more particle its names
+    # carry:
+    #
+    #   c.normalizer_dictionary = { legal_forms: %w[OYJ TBK] }
+    #
+    # A Normalizer::Dictionary replaces them outright, and has to spell out all
+    # four lists including the particles. Replacing is the rarer and more
+    # dangerous operation -- a set of lists that forgot to carry the preserve
+    # list over would strip `al` out of several hundred SDN names -- so it is
+    # the one that has to be written out in full.
+    #
+    # Set this at boot, before anything is folded. A dictionary changed later
+    # is honoured from the next call, but names folded under the old one are
+    # already in an index (#31) and were already screened against, and the two
+    # folds do not compare.
+    sig { params(value: T.untyped).void }
+    def normalizer_dictionary=(value)
+      @normalizer_dictionary = normalizer_dictionary!(value)
+    end
+
     # Anything Logger-shaped. The fetch layer says what it did at `info` --
     # which list was downloaded, which came back 304 -- because a sync that
     # transfers nothing looks identical to a sync that did not run, and an
@@ -308,6 +336,27 @@ module ActiveSanction
     end
 
     private
+
+    sig { params(value: T.untyped).returns(Normalizer::Dictionary) }
+    def normalizer_dictionary!(value)
+      return value if value.is_a?(Normalizer::Dictionary)
+
+      unless value.is_a?(Hash)
+        raise ConfigurationError,
+              "normalizer_dictionary must be an ActiveSanction::Normalizer::Dictionary, or a Hash of " \
+              "lists to add to the shipped ones, got #{value.class}"
+      end
+
+      lists = value.to_h { |list, entries| [list.to_s.to_sym, entries] }
+      unknown = lists.keys - Normalizer::Dictionary::LISTS
+      if unknown.any?
+        raise ConfigurationError,
+              "unknown normalizer dictionary list(s): #{unknown.join(", ")}. " \
+              "Expected any of #{Normalizer::Dictionary::LISTS.join(", ")}"
+      end
+
+      T.unsafe(Normalizer::Dictionary.default).merge(**lists)
+    end
 
     sig { params(name: Symbol, value: T.untyped).returns(String) }
     def directory!(name, value)

@@ -3,6 +3,8 @@
 
 require "sorbet-runtime"
 
+require "active_sanction/normalizer/dictionary/stoplist"
+
 module ActiveSanction
   class Normalizer
     # A name in both of the forms a screening decision needs: the string the
@@ -13,6 +15,10 @@ module ActiveSanction
     #   form.original   # => "O'Brien, Seán"
     #   form.value      # => "o brien sean"
     #   form.tokens     # => ["o", "brien", "sean"]
+    #
+    #   org = ActiveSanction::Normalizer.call("Rosneft Oil Company", type: :organization)
+    #   org.value       # => "rosneft oil"
+    #   org.type        # => :organization
     #
     # Both halves travel together because both are needed at different ends of
     # the same query. The scorers (#28, #29) compare `value`; the index (#31)
@@ -27,7 +33,9 @@ module ActiveSanction
     # ### The pipeline
     #
     # Five stages, applied in this order to indexed names and query names
-    # alike -- see Normalizer for why that sameness is the whole point:
+    # alike -- see Normalizer for why that sameness is the whole point -- and
+    # a sixth that runs only for a caller who said what kind of entity the
+    # name belongs to:
     #
     # 1. **Unicode NFKD.** Decomposes `é` into `e` + combining acute, and folds
     #    the compatibility forms a publisher's export tooling emits: full-width
@@ -54,6 +62,17 @@ module ActiveSanction
     # 5. **Collapse whitespace and strip**, which is what `tokens` is: the
     #    folded string split on whitespace, with `value` its single-spaced
     #    join.
+    # 6. **Drop the tokens that carry no identifying information**, given a
+    #    Stoplist: `LTD` and `COMPANY` from an organization, `SHAYKH` from a
+    #    person, nothing at all from either without one. Stage 6 is the only
+    #    one that depends on something outside the string, which is why it
+    #    arrives as an argument -- see Dictionary for what is on the lists and
+    #    for the particles they may never touch.
+    #
+    #    A name that folds away entirely keeps its unstripped tokens. An
+    #    organization called "The Company" is a poor name to screen on and a
+    #    worse one to index as the empty string, which matches everything or
+    #    nothing depending on which scorer sees it first.
     #
     # ### What it deliberately does not do
     #
@@ -135,17 +154,30 @@ module ActiveSanction
       sig { returns(T::Array[String]).checked(:tests) }
       attr_reader :tokens
 
+      # The entity type this name was folded for, or nil when the caller did
+      # not say. It is what decides stage 6, and it travels with the form
+      # because two folds of the same string under different types are two
+      # different answers -- which is also why `value` is part of #==.
+      sig { returns(T.nilable(Symbol)).checked(:tests) }
+      attr_reader :type
+
       # Untyped for the reason the rest of the model is: what arrives here is a
       # publisher's text as whatever the parser made of it. Anything that
       # responds to `to_s` works, which includes Name -- `Name#to_s` is its
       # value -- so an indexer can hand over the object it already has.
       #
+      # `stoplist` is stage 6, and comes from a Dictionary rather than from
+      # here: which tokens carry no information is a property of the entity
+      # type and of the lists in force, neither of which the string knows.
+      #
       # Building a Form directly skips the cache; Normalizer.call is the entry
-      # point everything in the library goes through.
-      sig { params(original: T.untyped).void.checked(:tests) }
-      def initialize(original)
+      # point everything in the library goes through, and the one that resolves
+      # a type into the stoplist for it.
+      sig { params(original: T.untyped, stoplist: T.nilable(Dictionary::Stoplist)).void.checked(:tests) }
+      def initialize(original, stoplist: nil)
         @original = T.let(-original.to_s, String)
-        @tokens = T.let(fold(@original), T::Array[String])
+        @type = T.let(stoplist&.type, T.nilable(Symbol))
+        @tokens = T.let(fold(@original, stoplist), T::Array[String])
         @value = T.let(-@tokens.join(" "), String)
         freeze
       end
@@ -165,22 +197,27 @@ module ActiveSanction
       # Class is part of the comparison to keep #== and #hash agreeing, which
       # is what Hash and Set rely on -- and the index is built out of both.
       #
-      # Two forms are equal when they came from the same original: `value` is a
-      # pure function of it, so comparing the pair adds nothing. Note that this
-      # makes two differently-written names that fold to the same string
-      # unequal *as forms* while comparing as identical *for matching*, which
-      # is the distinction the whole pipeline rests on.
+      # Two forms are equal when they came from the same original and folded
+      # to the same value. The second half is not redundant now that stage 6
+      # exists: `value` is a pure function of the original *and* the stoplist,
+      # so "Rosneft Oil Company" folded as an organization and the same string
+      # folded as nothing in particular are two different answers rather than
+      # one.
+      #
+      # Note that this makes two differently-written names that fold to the
+      # same string unequal *as forms* while comparing as identical *for
+      # matching*, which is the distinction the whole pipeline rests on.
       sig { params(other: T.untyped).returns(T::Boolean).checked(:tests) }
       def ==(other)
         return false unless other.instance_of?(self.class)
 
-        original == other.original
+        original == other.original && value == other.value
       end
       alias eql? ==
 
       sig { returns(Integer).checked(:tests) }
       def hash
-        [self.class, original].hash
+        [self.class, original, value].hash
       end
 
       sig { returns(String) }
@@ -190,17 +227,30 @@ module ActiveSanction
 
       private
 
-      # The five stages, in the order they have to run in: marks cannot be
-      # stripped before NFKD has separated them, and the transliteration table
-      # only carries the lowercase keys casefolding produces.
-      sig { params(string: String).returns(T::Array[String]).checked(:tests) }
-      def fold(string)
+      # The stages, in the order they have to run in: marks cannot be stripped
+      # before NFKD has separated them, the transliteration table only carries
+      # the lowercase keys casefolding produces, and the stoplist is written in
+      # the tokens the first five stages produce.
+      #
+      # Stripping every token is treated as stripping none. A name of nothing
+      # but legal forms is rare and real -- an organization called "The
+      # Company", a vessel whose only alias is its owner's suffix -- and the
+      # empty string is the one fold that cannot be scored at all.
+      sig do
+        params(string: String, stoplist: T.nilable(Dictionary::Stoplist))
+          .returns(T::Array[String]).checked(:tests)
+      end
+      def fold(string, stoplist)
         decomposed = utf8(string).unicode_normalize(:nfkd).gsub(MARKS, "")
         folded = decomposed.downcase(:fold).gsub(TRANSLITERABLE, TRANSLITERATIONS)
         # `&:-@` is String#-@, the deduplicating freeze: 46,000 names share
         # a few thousand distinct tokens between them, and the index holds
         # onto every one of them.
-        folded.gsub(PUNCTUATION, " ").split.map(&:-@).freeze
+        tokens = folded.gsub(PUNCTUATION, " ").split.map(&:-@).freeze
+        return tokens if stoplist.nil?
+
+        kept = stoplist.reject(tokens)
+        kept.empty? ? tokens : kept.freeze
       end
 
       # `unicode_normalize` raises on a string that is not valid UTF-8, and one

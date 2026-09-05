@@ -1,0 +1,72 @@
+# Corporate legal forms, stripped from organization names only.
+#
+# "Rosneft Oil Company" and "Rosneft" are the same company, and a scorer that
+# sees one token in common out of three will not say so. The legal form is the
+# part of an organization's name that carries no identifying information: it
+# says how the entity is incorporated, which every entity of its kind in that
+# country shares.
+#
+# Entries are written the way a publisher writes them and folded by the same
+# Normalizer::Form the names are folded by, so one entry covers every casing
+# and every accent: `LTD` matches `Ltd`, `ltd.` and `LTD.` with no other line
+# in this file. An entry that folds to several tokens is matched as a
+# contiguous phrase, which is what "PUBLIC JOINT STOCK COMPANY GAZPROM" needs
+# to become "gazprom" rather than "public joint stock gazprom".
+#
+# Folding does not join tokens, though, so an abbreviation written with stops
+# is a different entry from the same one without them: `L.L.C.` folds to three
+# tokens and `LLC` to one, and both are below.
+#
+# Anything here that collides with particles.txt is discarded, not applied.
+
+# English
+LLC
+L.L.C.
+LTD
+LIMITED
+INC
+INCORPORATED
+CORP
+CORPORATION
+CO
+COMPANY
+PLC
+
+# German and Nordic
+GMBH
+AG
+AB
+AS
+OY
+KG
+
+# Romance
+SA
+S.A.
+SARL
+SPA
+SRL
+
+# Low Countries
+BV
+NV
+
+# South and East Asia
+PTE
+PVT
+KK
+
+# Russian and post-Soviet, both the initialism and the phrase it stands for.
+# OFAC writes "PUBLIC JOINT STOCK COMPANY GAZPROM" as a primary name and
+# "PJSC GAZPROM" as an alias of the same entity.
+OOO
+ZAO
+OAO
+PAO
+JSC
+PJSC
+OJSC
+JOINT STOCK COMPANY
+OPEN JOINT STOCK COMPANY
+CLOSED JOINT STOCK COMPANY
+PUBLIC JOINT STOCK COMPANY

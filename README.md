@@ -339,6 +339,35 @@ Two things it does handle that are easy to miss. Arabic vocalization marks are s
 
 Folding is memoized, because the same string is folded over and over: an index build folds every name once per index it feeds, aliases repeat across records, and a rescreening run folds the same book of subjects against every new snapshot. The cache is bounded and internally synchronized, so one web process can screen on many threads through the shared `Normalizer.call`. A caller that wants its own — a smaller one, or one it can discard after a batch — builds `ActiveSanction::Normalizer.new(cache_limit: 1_000)` and gets an identical fold.
 
+### Dropping the tokens that identify nothing
+
+Telling `Normalizer.call` what kind of entity a name belongs to turns on a sixth stage: the token dictionaries, which drop the parts of a name that every entity of its kind shares.
+
+```ruby
+ActiveSanction::Normalizer.call("Public Joint Stock Company Gazprom", type: :organization).value  # => "gazprom"
+ActiveSanction::Normalizer.call("PJSC Gazprom", type: :organization).value                        # => "gazprom"
+ActiveSanction::Normalizer.call("Hajji Abdallah", type: :individual).value                        # => "abdallah"
+ActiveSanction::Normalizer.call("PJSC Gazprom").value                                             # => "pjsc gazprom"
+```
+
+"Rosneft Oil Company" and "Rosneft" are the same company, and a scorer comparing one token in three will not say so. `LTD`, `GMBH` and `OOO` say how an entity is incorporated rather than which entity it is — and OFAC publishes the same firm as "PUBLIC JOINT STOCK COMPANY GAZPROM", "PJSC GAZPROM" and "GAZPROM PAO" on the same record, which fold to one string here and to three without this stage.
+
+**The lists apply per entity type, and that is not tidiness.** `CO` is a legal form on a company and a syllable in a great many personal names; `AS` is a Norwegian company and an English word. Legal forms and function words are stripped from organizations, honorifics from individuals, and nothing at all from a vessel, an aircraft, or a caller who did not say. Passing no type is a different question rather than a worse answer — and both sides of a comparison have to ask the same one, since a query folded as an organization against an index folded as a bare string is the same silent mismatch one stage further down.
+
+**The preserve list wins, always.** `bin`, `ibn`, `bint`, `abu`, `abd`, `al`, `el`, `van`, `von`, `de`, `da`, `del`, `della`, `di` and `dos` look like noise to a stopword filter and are structural parts of the names they appear in: stripping `bin` from "Osama bin Laden", or `abd` from "Shaykh Umar Abd Al Rahman" — a real SDN entry — does not shorten the name, it changes it, and costs both a false negative and a false positive. No entry containing one of these is applied, whatever list it is on and whoever put it there. The collision is real and shipped: `AL` sits on the organization stopword list, strips nothing, and reaches the scorers in every name it belongs to.
+
+**The lists are data files, not constants.** They live in [`lib/active_sanction/normalizer/dictionaries/`](lib/active_sanction/normalizer/dictionaries) — one entry per line, `#` comments, four files — because what belongs on them is settled by reading government lists rather than by reading Ruby, and a contributor adding `OYJ` should be sending a one-line diff. Entries are written the way a publisher writes them and folded by the same `Form` the names are folded by, so `LTD` covers `Ltd` and `ltd.`, and an entry that folds to several tokens is matched as a contiguous phrase, wherever in the name it falls. Folding does not join tokens, though, so `LLC` and `L.L.C.` are separate entries and the file carries both.
+
+A host adds its own with a Hash, or replaces the shipped lists outright with a dictionary it builds — which has to spell out all four lists, including the particles, because a replacement that quietly dropped the preserve list would strip `al` out of several hundred SDN names without saying anything:
+
+```ruby
+ActiveSanction.configure do |c|
+  c.normalizer_dictionary = { legal_forms: %w[OYJ TBK], particles: %w[ben] }
+end
+```
+
+One deliberate refusal: a name whose every token is on a strip list keeps them all. An organization called "The Company" is a poor name to screen on and a worse one to index as the empty string, which matches everything or nothing depending on which scorer sees it first.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/active_sanction. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/active_sanction/blob/master/CODE_OF_CONDUCT.md).

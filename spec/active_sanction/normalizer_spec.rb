@@ -36,6 +36,15 @@ RSpec.describe ActiveSanction::Normalizer do
 
   def fixture_path(path) = File.expand_path("../fixtures/#{path}", __dir__)
 
+  # Every name one entity publishes, folded the way that entity's type says to
+  # fold it. This is what an index build does, and what the dictionaries (#27)
+  # are for: an alias set that collapses to one string is a set of names a
+  # scorer no longer has to be clever about.
+  define_method(:fixture_folds) do |id|
+    entity = fixture_entities.find { |candidate| candidate.id == id }
+    entity.names.map { |name| described_class.call(name, type: entity.type).value }
+  end
+
   # Whether the record a non-Latin name belongs to also carries a romanized
   # one. Found by name rather than by entity, since that is what the fold
   # sees.
@@ -79,6 +88,17 @@ RSpec.describe ActiveSanction::Normalizer do
       expect(described_class.call("Al-Qaida")).to be(described_class::DEFAULT.call("Al-Qaida"))
     end
 
+    # The same rule one stage down. A query folded as an organization against
+    # an index folded as a bare string is the same silent mismatch, and it is
+    # why the type travels with the call rather than with the normalizer.
+    it "folds a typed name the same way through the class, an instance and a Form" do
+      stoplist = ActiveSanction::Normalizer::Dictionary.default.stoplist(:organization)
+      folded = [described_class.call("PJSC Gazprom", type: :organization),
+                described_class.new.call("PJSC Gazprom", type: :organization),
+                ActiveSanction::Normalizer::Form.new("PJSC Gazprom", stoplist: stoplist)].map(&:value)
+      expect(folded.uniq).to eq(["gazprom"])
+    end
+
     it "gives an instance with its own cache the identical fold" do
       own = described_class.new(cache_limit: 1)
       expect(fixture_names.map { |name| own.call(name).value })
@@ -96,6 +116,14 @@ RSpec.describe ActiveSanction::Normalizer do
     it "holds for every name in every fixture" do
       once = fixture_names.map { |name| described_class.call(name).value }
       expect(once.map { |value| described_class.call(value).value }).to eq(once)
+    end
+
+    # A stripped token cannot come back to be stripped again, so the second
+    # pass has nothing left to do here either.
+    it "holds with the dictionaries applied" do
+      names = { "PUBLIC JOINT STOCK COMPANY GAZPROM" => :organization, "Hajji Abdallah" => :individual }
+      once = names.map { |name, type| [described_class.call(name, type: type).value, type] }
+      expect(once.map { |value, type| described_class.call(value, type: type).value }).to eq(once.map(&:first))
     end
   end
 
@@ -141,6 +169,70 @@ RSpec.describe ActiveSanction::Normalizer do
     it "finds a Latin name beside every non-Latin one the fixtures publish" do
       expect(fixture_names.grep_v(/\A[\p{Latin}\p{P}\s\d]+\z/).map { |name| latin_sibling?(name) })
         .to all(be(true))
+    end
+  end
+
+  # Stage 1b of the pipeline, reached by telling `call` what kind of entity the
+  # name belongs to. Dictionary holds what is on the lists and why; this is
+  # what the entry point does with them.
+  describe "the dictionaries" do
+    it "strips a legal form from an organization, and nothing at all from a name of no stated type" do
+      expect([described_class.call("Rosneft Oil Company", type: :organization).value,
+              described_class.call("Rosneft Oil Company").value])
+        .to eq(["rosneft oil", "rosneft oil company"])
+    end
+
+    # The acceptance criterion, on the government's own file: three ways of
+    # writing one company, one string for a scorer to compare.
+    it "folds an organization's published name and both its aliases onto one string" do
+      expect(fixture_folds("ofac_consolidated:30882").uniq).to eq(["china telecom"])
+    end
+
+    it "does the same for the initialism and the phrase OFAC spells it out as" do
+      expect(fixture_folds("ofac_consolidated:17250").uniq).to eq(["gazprom"])
+    end
+
+    # The other half of the criterion, on the same file: what the strip lists
+    # must not touch.
+    it "leaves the particles at the front of a real individual's aliases" do
+      expect(fixture_folds("ofac_consolidated:9640").map { |value| value.split.first }).to eq(%w[abu abu abou])
+    end
+
+    it "strips an honorific from an individual and leaves the same word alone on an organization" do
+      expect([described_class.call("General Taganda", type: :individual).value,
+              described_class.call("General Trading Co", type: :organization).value])
+        .to eq(["taganda", "general trading"])
+    end
+
+    it "caches per type, since one string folded two ways is two answers" do
+      normalizer = described_class.new
+      %i[organization individual].each { |type| normalizer.call("Company Ltd", type: type) }
+      expect(normalizer.cache.size).to eq(2)
+    end
+
+    it "shares one entry between a vessel and a bare string, since no list applies to either" do
+      normalizer = described_class.new
+      [{ type: :vessel }, {}].each { |options| normalizer.call("Ever Given", **options) }
+      expect(normalizer.cache.size).to eq(1)
+    end
+
+    it "raises on a type it does not know rather than quietly stripping nothing" do
+      expect { described_class.call("Rosneft", type: :corporation) }.to raise_error(ArgumentError, /unknown entity/)
+    end
+  end
+
+  describe "a host's own dictionary" do
+    after { ActiveSanction.reset_configuration! }
+
+    it "reaches the process-wide normalizer through the configuration" do
+      ActiveSanction.configure { |c| c.normalizer_dictionary = { legal_forms: %w[OYJ] } }
+      expect(described_class.call("Nokia Oyj", type: :organization).value).to eq("nokia")
+    end
+
+    it "leaves an instance that pinned its own dictionary alone" do
+      pinned = described_class.new(dictionary: ActiveSanction::Normalizer::Dictionary.default)
+      ActiveSanction.configure { |c| c.normalizer_dictionary = { legal_forms: %w[OYJ] } }
+      expect(pinned.call("Nokia Oyj", type: :organization).value).to eq("nokia oyj")
     end
   end
 
