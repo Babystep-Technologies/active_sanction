@@ -407,6 +407,75 @@ RSpec.describe ActiveSanction::Configuration do
     end
   end
 
+  describe "#screening_threshold" do
+    it "defaults to 75, where the scorer's own table separates a true match from a shared given name" do
+      expect(described_class.new.screening_threshold).to eq(75.0)
+    end
+
+    it "takes a number a host set" do
+      expect(described_class.new.tap { |c| c.screening_threshold = 85 }.screening_threshold).to eq(85.0)
+    end
+
+    # The mistake this catches is an 85 arriving where 0.85 was meant, which
+    # would reject every pair and read as "nothing matched".
+    it "rejects a threshold outside 0..100" do
+      expect { described_class.new.screening_threshold = 101 }
+        .to raise_error(ActiveSanction::ConfigurationError, /percentage, not a similarity/)
+    end
+
+    it "rejects a threshold that is not a number" do
+      expect { described_class.new.screening_threshold = "high" }
+        .to raise_error(ActiveSanction::ConfigurationError, /must be a number/)
+    end
+  end
+
+  describe "#screening_limit" do
+    it "defaults to a review queue rather than a report" do
+      expect(described_class.new.screening_limit).to eq(10)
+    end
+
+    it "takes a number a host set" do
+      expect(described_class.new.tap { |c| c.screening_limit = 50 }.screening_limit).to eq(50)
+    end
+
+    # A screening call that can return nothing reports every customer clear.
+    it "rejects a limit of zero" do
+      expect { described_class.new.screening_limit = 0 }
+        .to raise_error(ActiveSanction::ConfigurationError, /at least 1/)
+    end
+
+    it "rejects a limit that is not a whole number" do
+      expect { described_class.new.screening_limit = "ten" }
+        .to raise_error(ActiveSanction::ConfigurationError, /whole number/)
+    end
+  end
+
+  describe "#storage" do
+    it "defaults to gzipped JSON under storage_dir, so screening needs nothing provisioned" do
+      config = described_class.new.tap { |c| c.storage_dir = "/srv/lists" }
+
+      expect(config.storage).to be_a(ActiveSanction::Storage::FileSystem)
+    end
+
+    it "builds the default store once and holds it" do
+      config = described_class.new.tap { |c| c.storage_dir = "/srv/lists" }
+      built = config.storage
+
+      expect(config.storage).to be(built)
+    end
+
+    it "takes a store a host supplied" do
+      memory = ActiveSanction::Storage::Memory.new
+
+      expect(described_class.new.tap { |c| c.storage = memory }.storage).to be(memory)
+    end
+
+    it "rejects anything that is not held to the storage contract" do
+      expect { described_class.new.storage = { ofac_sdn: [] } }
+        .to raise_error(ActiveSanction::ConfigurationError, /must be an ActiveSanction::Storage::Base/)
+    end
+  end
+
   describe "ActiveSanction.configure" do
     it "yields the global configuration" do
       ActiveSanction.configure { |c| c.user_agent = "my-app/1.0 (compliance@example.com)" }

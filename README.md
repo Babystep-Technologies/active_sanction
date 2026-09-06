@@ -458,6 +458,83 @@ The five shares are measured one at a time, cheapest-to-tighten first, and every
 It is applied to the whole score rather than to the name, which matters: a subject carrying the right passport number needs forty points less of a name than one carrying nothing.
 
 
+### Screening a name
+
+`ActiveSanction.screen` is the whole pipeline behind one call: fold the query once, retrieve the names worth comparing, score each with reasons, then filter, rank, cap and stamp.
+
+```ruby
+results = ActiveSanction.screen(
+  name:          "Vladimir Putin",
+  type:          :individual,
+  date_of_birth: "1952-10-07",
+  countries:     %w[RU],
+  sources:       %i[ofac_sdn un_consolidated],   # default: every synced list
+  threshold:     75,
+  limit:         10
+)
+
+hit = results.first
+hit.score            # => 97.3
+hit.entity           # => Entity
+hit.matched_name     # => the specific Name that produced the score
+hit.source           # => :ofac_sdn
+hit.explanation      # => [Reason, ...], summing to the score
+hit.snapshot_id      # => "sha256:9f86d081884c7d65..."
+hit.matcher_version  # => "1"
+hit.screened_at      # => 2026-09-06 11:04:02 UTC
+```
+
+An empty array is the ordinary answer — most customers are not on a sanctions list — and everything that could make it a lie rather than a fact raises instead. A store nobody has synced raises `Matcher::NotSynced`; a query naming a list the matcher does not hold raises `Storage::MissingSnapshot` rather than quietly covering two of the three lists it was asked for. Screening against a list that is not there returns a clean report, and a clean report is the most expensive thing this library can get wrong.
+
+`date_of_birth:` and `dates_of_birth:`, `country:`, `countries:` and `nationalities:`, `identifier:` and `identifiers:` all mean the same thing. A caller with one date writes the singular and a caller with three writes the plural, and neither should have to remember which this library prefers.
+
+**One result per entity, in the alias that won.** An entity is retrieved once for every one of its names the query looks like, and its score is the best of those names, so each is scored once and reported once. Results are ordered by score descending and ties by entity id — ties are not a corner case on these lists, and which of two identically scored records is listed first has to be the same answer in a year's time.
+
+#### Every result is a reproducibility stamp
+
+`MatchResult` is the most permanent object in the gem: it is what ends up in a customer's audit record, read by people who have neither this process nor this version of the gem. So it serializes to a documented shape, `MatchResult.from_h` rebuilds it losslessly from that shape, and every field that could have changed the answer travels with it.
+
+```ruby
+JSON.generate(hit.to_h)                                  # into an audit record
+ActiveSanction::MatchResult.from_h(JSON.parse(json))     # == hit, years later
+```
+
+Four fields make a past decision re-derivable, and each of them is a way the same query could score differently today:
+
+| Field | What it pins down |
+|---|---|
+| `snapshot_id` | the checksum of the exact list version that answered. Publishers overwrite their files in place, so "the OFAC list" is not a thing that can be cited; a checksum is |
+| `matcher_version` | which matching pipeline scored it — deliberately not the gem version, which moves for a new source adapter or a documentation release |
+| `weights` | what each signal was worth. A host that retunes `dob_conflict` changes what every past decision would score today |
+| `query` | what was screened, and under what threshold. A hit at 78 means one thing under a threshold of 75 and cannot have existed under 85 |
+
+`backend` is the fifth, and it is what makes the seam real: a hosted backend answers the same call against data somebody else keeps fresh, and an audit record has to say which one answered. The score itself is never stored beside its reasons — it is the sum of them, re-derived on construction, and a `score:` that disagrees with the explanation it arrives with is refused rather than laundered into a record.
+
+#### Holding a matcher, and screening from many threads
+
+`ActiveSanction.screen` is sugar over one shared `Matcher`, built from the configured store on first use. A server can hold its own instead, which is what a process needing two configurations at once — a pinned list version for an audit re-run beside the current one for live traffic — has to do:
+
+```ruby
+MATCHER = ActiveSanction::Matcher.build(store, sources: %i[ofac_sdn])
+
+MATCHER.screen(name: "Vladimir Putin")
+MATCHER.screen_all(customers.map { |c| { name: c.name, dob: c.born_on } })   # one array of results per query
+```
+
+A matcher holds an index, the checksum of every list in it, the weights it scores with and the candidate cap it retrieves with. All of it is fixed at construction and the object is frozen, so `screen` allocates locals and touches nothing shared — many threads screen through one matcher without a lock.
+
+**Nothing on the query path reads configuration**, which is a stronger statement than thread safety and the one that matters for an audit: a threshold, a weight or a candidate cap changed halfway through a batch cannot produce a run that is half one set of numbers and half another, because the numbers were read once — into the `Query`, and into the matcher.
+
+A sync does not update a matcher. It builds a new one and the application swaps its reference, so requests in flight finish against one consistent list version:
+
+```ruby
+ActiveSanction.reload!                              # after a sync, for the shared one
+MATCHER = ActiveSanction::Matcher.build(store)      # for one held by the application
+```
+
+Batch screening stamps the whole call with one `screened_at`, because a rescreening of a customer book against a new list version is one event in an audit trail rather than ten thousand a microsecond apart. Results come back index-aligned rather than keyed by name — a book of customers contains the same name twice often enough, and a Hash would silently screen one of them and report both.
+
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/active_sanction. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/active_sanction/blob/master/CODE_OF_CONDUCT.md).

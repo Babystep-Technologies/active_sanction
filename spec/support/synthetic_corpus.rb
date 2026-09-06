@@ -118,6 +118,22 @@ module SyntheticCorpus
     @indexes[count] ||= ActiveSanction::Index.build(build(count))
   end
 
+  # The same corpus in a store, which is what the whole screening path starts
+  # from: Matcher.build reads a snapshot and stamps its checksum onto every
+  # result, and an index built straight from entities never has one.
+  def store(count)
+    @stores ||= {}
+    @stores[count] ||= ActiveSanction::Storage::Memory.new.tap do |memory|
+      memory.write_snapshot(ActiveSanction::Snapshot.new(source: :ofac_sdn, entities: build(count)))
+    end
+  end
+
+  # A matcher over that store, kept for the same reason the index is.
+  def matcher(count)
+    @matchers ||= {}
+    @matchers[count] ||= ActiveSanction::Matcher.build(store(count))
+  end
+
   def entity(ordinal, random)
     type = TYPES.fetch(random.rand(TYPES.size))
     primary = primary_name(type, ordinal, random)

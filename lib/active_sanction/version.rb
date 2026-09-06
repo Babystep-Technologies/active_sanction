@@ -3,4 +3,17 @@
 
 module ActiveSanction
   VERSION = "0.1.0"
+
+  # Which matching pipeline scored a decision, stamped onto every MatchResult
+  # and bumped whenever a change to the normalizer, the index, the similarity
+  # algorithms or the scorer could move a score.
+  #
+  # Deliberately not VERSION. The gem version moves for a new source adapter,
+  # a storage fix, a documentation release -- none of which change what a name
+  # scores -- and an auditor asking "would this screening come out the same
+  # today?" needs the answer to that question rather than a release number
+  # that also answers several others. Its companions on the record are the
+  # weights and the snapshot checksum; between the three, a past decision is
+  # re-derivable.
+  MATCHER_VERSION = "1"
 end

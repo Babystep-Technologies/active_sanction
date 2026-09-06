@@ -22,11 +22,11 @@ module ActiveSanction
   #     c.user_agent = "my-app/1.0 (compliance@example.com)"
   #   end
   #
-  # The fetch layer's settings live here, plus which sources a sync runs;
-  # storage and matcher thresholds join them as those milestones land. Every
-  # value has a working default, so an application that configures nothing
-  # still runs -- the point of `configure` is that a caller *can* identify
-  # itself, not that it must recite the whole schema.
+  # The fetch layer's settings live here, plus which sources a sync runs,
+  # where they are stored, and the thresholds a screening call defaults to.
+  # Every value has a working default, so an application that configures
+  # nothing still runs -- the point of `configure` is that a caller *can*
+  # identify itself, not that it must recite the whole schema.
   class Configuration
     extend T::Sig
 
@@ -116,6 +116,31 @@ module ActiveSanction
     # Scorer::NameScore, and `rake benchmark:scorer`.
     DEFAULT_CANDIDATE_LIMIT = T.let(200, Integer)
 
+    # The lowest score a screening call reports, on the scorer's 0..100 scale.
+    #
+    # 75 is where the scorer's own table separates the two things it has to
+    # separate. An inverted name blends to 90.4 and a company named by half
+    # its words to 84.2 -- both true matches, both reported. `kim jong un`
+    # against `kim yong chol` blends to 54.8, and a query of one common given
+    # name against a full listed name lands in the high seventies with nothing
+    # but the name agreeing, which is why the identifiers exist and why this
+    # is a floor rather than a verdict.
+    #
+    # It is also most of what a screening call costs. Everything a threshold
+    # turns off is a comparison that could not have changed the answer -- see
+    # Scorer::NameScore -- so 75 is roughly a third of the work of screening
+    # with no threshold at all, and returns the same scores.
+    DEFAULT_SCREENING_THRESHOLD = T.let(75.0, Float)
+
+    # How many results a screening call returns, highest score first.
+    #
+    # Ten is a review queue rather than a report: a human clears alerts one at
+    # a time, and a call that returned every name over the threshold would
+    # bury the one that matters under the fifty that share a given name. A
+    # caller writing an investigation tool rather than an onboarding check
+    # raises it per query.
+    DEFAULT_SCREENING_LIMIT = T.let(10, Integer)
+
     # Which lists a sync runs, by key. nil means every registered source,
     # which is what an application that has not thought about it should get:
     # requiring an explicit list would mean a gem adding a jurisdiction had no
@@ -167,6 +192,14 @@ module ActiveSanction
     sig { returns(Integer) }
     attr_reader :candidate_limit
 
+    # See DEFAULT_SCREENING_THRESHOLD. A per-query `threshold:` overrides it.
+    sig { returns(Float) }
+    attr_reader :screening_threshold
+
+    # See DEFAULT_SCREENING_LIMIT. A per-query `limit:` overrides it.
+    sig { returns(Integer) }
+    attr_reader :screening_limit
+
     # The token lists the normalizer strips per entity type. Defaults to the
     # shipped ones; see #normalizer_dictionary= and Normalizer::Dictionary.
     sig { returns(Normalizer::Dictionary) }
@@ -198,6 +231,8 @@ module ActiveSanction
       @sources = T.let(DEFAULT_SOURCES, T.nilable(T::Array[Symbol]))
       @xml_backend = T.let(DEFAULT_XML_BACKEND, Symbol)
       @candidate_limit = T.let(DEFAULT_CANDIDATE_LIMIT, Integer)
+      @screening_threshold = T.let(DEFAULT_SCREENING_THRESHOLD, Float)
+      @screening_limit = T.let(DEFAULT_SCREENING_LIMIT, Integer)
       @normalizer_dictionary = T.let(Normalizer::Dictionary.default, Normalizer::Dictionary)
       @scorer_weights = T.let(Scorer::Weights.default, Scorer::Weights)
       @logger = T.let(nil, T.untyped)
@@ -342,6 +377,69 @@ module ActiveSanction
       rescue ArgumentError => e
         raise ConfigurationError, "scorer_weights: #{e.message}"
       end
+    end
+
+    # The lowest score a screening call reports, unless a query names its own.
+    # Refused outside 0..100 by the scorer's own check, which is what catches
+    # a similarity on the 0..1 scale arriving where a percentage was meant.
+    sig { params(value: T.untyped).void }
+    def screening_threshold=(value)
+      number = begin
+        Float(value)
+      rescue TypeError, ArgumentError
+        raise ConfigurationError, "screening_threshold must be a number between 0 and 100, got #{value.inspect}"
+      end
+      unless number.between?(0.0, 100.0)
+        raise ConfigurationError,
+              "screening_threshold must be between 0 and 100, got #{value.inspect} -- " \
+              "a screening score is a percentage, not a similarity on a 0..1 scale"
+      end
+
+      @screening_threshold = number
+    end
+
+    # How many results a screening call returns. Zero is refused for the
+    # reason `candidate_limit` refuses it: a screening call that can return
+    # nothing reports every customer clear.
+    sig { params(value: T.untyped).void }
+    def screening_limit=(value)
+      integer = begin
+        Integer(value)
+      rescue TypeError, ArgumentError
+        raise ConfigurationError, "screening_limit must be a whole number of results, got #{value.inspect}"
+      end
+      raise ConfigurationError, "screening_limit must be at least 1, got #{integer}" unless integer.positive?
+
+      @screening_limit = integer
+    end
+
+    # Where synced lists are read from and written to. Defaults to gzipped
+    # JSON under `storage_dir`, which is what makes this library screen a name
+    # without an application having provisioned anything first.
+    #
+    #   c.storage = ActiveSanction::Storage::Memory.new
+    #
+    # Built on first use rather than at boot, because constructing it touches
+    # the filesystem and a process that never screens should not pay for a
+    # directory it will not read. Set `storage_dir` before anything reads
+    # this, for the same reason the dictionary and the weights are set at boot:
+    # a default store built from the old directory goes on reading it.
+    sig { returns(Storage::Base) }
+    def storage
+      @storage ||= T.let(Storage::FileSystem.new(root: storage_dir), T.nilable(Storage::Base))
+    end
+
+    # A Storage::Base subclass, which is the contract the whole query path is
+    # written against -- see Storage::Base, and the conformance group an
+    # adapter that is not this is held to.
+    sig { params(value: T.untyped).void }
+    def storage=(value)
+      unless value.is_a?(Storage::Base)
+        raise ConfigurationError,
+              "storage must be an ActiveSanction::Storage::Base subclass, got #{value.class}"
+      end
+
+      @storage = value
     end
 
     # Anything Logger-shaped. The fetch layer says what it did at `info` --
