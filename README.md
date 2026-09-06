@@ -2,161 +2,295 @@
 
 [![CI](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/ci.yml/badge.svg)](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/ci.yml)
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/active_sanction`. To experiment with that code, run `bin/console` for an interactive prompt.
+Screen a name against government sanctions lists, in Ruby, in your own process.
 
-TODO: Delete this and the text above, and describe your gem
+ActiveSanction fetches the lists a jurisdiction publishes, parses each of them into one record model, stores them where you tell it to, and scores a name against them with an account of every point it awarded. The lists live on your disk or in your database, screening runs in your process, and no name you screen leaves it.
+
+```ruby
+ActiveSanction.sync!
+
+ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: "1952-10-07")
+# => [#<MatchResult score=97.3 source=:ofac_sdn matched_name="PUTIN, Vladimir Vladimirovich">]
+```
+
+## A screening aid, not legal advice
+
+**This library is a screening aid. It is not legal advice, and it is not a compliance program.**
+
+**Verify every hit against the official published list before acting on it.** What this gem produces is one library's reading of a government file. The government's own published list is the record that counts, and a report generated here has no standing of its own.
+
+**A clean result is not a legal clearance.** No name matcher finds everything. A spelling this version does not reach, a jurisdiction this gem does not yet read, a designation published an hour after your last sync — each of them returns an empty array, and an empty array means *nothing over the threshold in the lists we currently hold*. It does not mean *not sanctioned*. [`benchmark/results/accuracy.md`](benchmark/results/accuracy.md) names every record this version misses and every one it wrongly alerts on, because a user deciding whether to rely on this is entitled to see them.
+
+**You remain responsible for your own compliance obligations.** Which lists to screen, at what threshold, how often, what to do with a hit, and what your regulator expects of you are decisions this library cannot make and does not make. A false negative here can mean a sanctions violation, and the liability for one stays with you.
+
+## The gem, and the service
+
+**The gem is complete on its own.** Every supported list is fetchable, parseable and screenable locally, forever, with no account and no key. Nothing is withheld to make anything else more attractive: the matching engine, every adapter, the weights, the dictionaries and the measured accuracy of all of it are in this repository, and they are the whole of what we run.
+
+**A commercial hosted service exists, and what it sells is operations rather than capability** — data kept fresh through upstream breakage, an availability guarantee, continuous monitoring of a book of business, and a retained audit trail. Upgrading is one configuration line ([#56](https://github.com/Babystep-Technologies/active_sanction/issues/56)). Not upgrading costs no capability; it costs the work of running the sync yourself, and noticing when a publisher changes its format.
+
+## What it does
+
+- **Fetches.** Conditional GET on ETag and Last-Modified, bounded redirects, retries with backoff, a checksum-verified cache of the raw payloads, and a User-Agent that identifies you to the publisher.
+- **Parses.** Four lists today, into one `Entity`: names and aliases with their kind and quality, dates of birth as `PartialDate` (year-only, approximate and ranged dates are all real on these lists), addresses, document numbers, nationalities, programs — and the publisher's own text kept verbatim in `remarks` whether the parser understood it or not.
+- **Stores.** One checksummed `Snapshot` per source, in gzipped JSON on disk, in your application's database, in memory, or in a store you write. Nothing on the query path names a concrete store.
+- **Screens.** Fold the name, retrieve candidates from an inverted index, score each with four string algorithms and a phonetic pass, adjust on dates of birth, nationalities and document numbers, and report the reasons — which sum to the score exactly.
+- **Diffs.** What changed between two syncs, so a book of business is re-screened against the handful of records that moved rather than against the whole list.
+- **Stamps.** Every result carries the snapshot checksum, the matcher version, the weights and the query, so a screening decision made today can be re-derived in three years by somebody who has neither this process nor this version of the gem.
+
+## What it does not do
+
+- **It does not decide anything.** A score is evidence for a human. The threshold at which a score becomes an alert, and what happens to that alert, are policy your compliance function owns.
+- **It is not a case management system.** No alert queue, no dispositions, no audit store. It produces the record; keeping it is your application's job.
+- **It screens names against lists, and nothing more.** No politically-exposed-person data, no adverse media, no beneficial ownership, no OFAC 50 Percent Rule resolution — a subsidiary that is sanctioned only by virtue of its owners is not on any of these files and will not be found here.
+- **Four lists ship: two US, one UN, one Canada.** The EU ([#39](https://github.com/Babystep-Technologies/active_sanction/issues/39)), the UK ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are not yet read. If your obligations cover a jurisdiction in that list, this gem does not cover them.
+- **Non-Latin script is not transliterated.** `Путин` does not fold to `putin`; a Cyrillic name matches a Cyrillic query and nothing else. What makes it survivable is that these publishers ship a romanized name alongside the original — see [Normalizing a name for matching](#normalizing-a-name-for-matching) for what that does and does not leave open.
+- **It does not monitor.** It syncs when you tell it to. Nothing here notices overnight that a publisher changed its format ([#68](https://github.com/Babystep-Technologies/active_sanction/issues/68), [#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)) or wakes anybody when it does.
+- **There is no CLI.** It is a library, called from an initializer, a rake task or a job.
 
 ## Installation
 
-Add this line to your application's Gemfile:
-
 ```ruby
-gem 'active_sanction'
+gem "active_sanction"
 ```
-
-And then execute:
 
     $ bundle install
 
-Or install it yourself as:
+or
 
     $ gem install active_sanction
 
-## Usage
+Ruby 3.1 or newer. The dependencies are `csv`, `rexml` and `sorbet-runtime` — all pure Ruby, so nothing here builds a native extension or asks a deployment to. Nokogiri is supported as an XML backend and is deliberately not a dependency; see `xml_backend` under [Configuration](#configuration).
 
-TODO: Write usage instructions here
+## Quickstart
 
-## Development
+**Configure.** One setting is worth setting; everything else has a working default.
 
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```ruby
+# config/initializers/active_sanction.rb
+ActiveSanction.configure do |c|
+  c.user_agent = "acme-bank/1.0 (compliance@acme.example)"
+end
+```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+OFAC answers a request with no User-Agent with a 403, so this can never be blank — and a publisher that needs to reach whoever is hammering its endpoint can otherwise only reach this repository. Identify yourself.
 
-### Tests and linting
+**Sync.** Download every configured list and store it.
 
-`bundle exec rake` runs the RSpec suite, then RuboCop, then `srb tc`; all three must pass.
+```ruby
+report = ActiveSanction.sync!
+puts report
+```
 
-The suite is hermetic. `spec_helper.rb` calls `WebMock.disable_net_connect!(allow_localhost: true)`, so an un-stubbed HTTP call raises `WebMock::NetConnectNotAllowedError` instead of quietly reaching the internet. Parser specs run against committed fixtures — a suite that can reach a government server stops proving anything about our parsing and starts proving that the server is up.
+```
+4 sources in 13.08s: 4 updated
+  ofac_sdn           updated    19321 records  just fetched   9.94s
+  ofac_consolidated  updated      481 records  just fetched   1.68s
+  un_consolidated    updated     1011 records  just fetched   0.91s
+  canada_sema        updated     5690 records  just fetched   0.55s
+```
 
-Specs that genuinely need a real endpoint are tagged `:live`. They are excluded from the default run, and `WebMock` is re-enabled around each one:
+The first run downloads each list in full. Later ones ask every publisher whether anything has changed and usually download nothing at all, so a sync scheduled hourly costs a handful of conditional requests on most days. Snapshots land in `~/.active_sanction` unless you name a store. A source that fails does not stop the others and **keeps the list it already had**; `report.failed?` and `report.exit_code` are what a cron job alerts on. See [Syncing every list, and what happens when one is down](#syncing-every-list-and-what-happens-when-one-is-down).
 
-    $ bundle exec rspec --tag live
+**Screen.**
 
-### Benchmarks
+```ruby
+results = ActiveSanction.screen(
+  name:          "Vladimir Putin",
+  type:          :individual,
+  date_of_birth: "1952-10-07",
+  countries:     %w[RU]
+)
 
-`benchmark/` holds the measurements that answer a design question rather than
-pass or fail, so they are not part of `rake`:
+hit = results.first
+hit.score                       # => 97.3
+hit.source                      # => :ofac_sdn
+hit.matched_name.value          # => "PUTIN, Vladimir Vladimirovich"
+hit.explanation.map(&:to_s)
+# => ["+76.3 name: matched primary name \"PUTIN, Vladimir Vladimirovich\"",
+#     "+15.0 dob: date of birth 1952-10-07 matches",
+#     "+6.0 nationality: RU matches"]
 
-    $ bundle exec rake benchmark:similarity          # the matching algorithms
-    $ bundle exec rake benchmark:index               # index build, memory, query latency
-    $ bundle exec rake benchmark:scorer              # scoring latency, and what a threshold buys
-    $ bundle exec rake benchmark:accuracy            # precision, recall and F1 against the labeled set
-    $ bundle exec rake benchmark:latency             # what a whole screening call costs
-    $ RUBYOPT=--yjit bundle exec rake benchmark:similarity
+JSON.generate(hit.to_h)         # into your audit record
+```
 
-Each timed one prints the Ruby and JIT it ran under, because that is most of
-what the numbers mean.
+An empty array is the ordinary answer — most people are not on a sanctions list. Everything that could make an empty array a lie rather than a fact raises instead: screening a store nobody has synced raises `Matcher::NotSynced`, and naming a list the matcher does not hold raises `Storage::MissingSnapshot` rather than quietly screening two lists when you asked for three.
 
-**`benchmark:accuracy` is the exception, and it is committed.** It measures the
-library rather than the machine — the same fixtures and the same seeded corpus
-give the same numbers on any laptop — so it writes its report to
-[`benchmark/results/accuracy.md`](benchmark/results/accuracy.md), which is in
-the repository. A diff in that file is a change in what this library finds,
-which is the one thing about match quality that is otherwise invisible in a
-code review: a weight nudged by two points does not look like anything in a
-patch, and it is exactly what moves a name from found to missed. Run it when
-you change the normalizer, the index, the similarity algorithms, the scorer or
-the weights, and commit what comes out.
+**Keep it fresh.** Sync on a schedule, and drop the shared matcher so the next screening call answers from what was just synced.
 
-The labeled set behind it is [`benchmark/fixtures/labeled_set.yml`](benchmark/fixtures/labeled_set.yml):
-87 queries written against the real published records the source fixtures
-hold, each one labeled with what it is supposed to find and what kind of damage
-it is doing to the name — a transliteration, an inverted order, a missing
-patronymic, a typo, a legal form spelled out — plus the names that must *not*
-alert. The file's header says where each record comes from and why every
-invented one is invented.
+```ruby
+# lib/tasks/sanctions.rake
+task sync_sanctions: :environment do
+  report = ActiveSanction.sync!    # calls ActiveSanction.reload! itself when anything changed
+  warn report.to_s
+  exit report.exit_code            # 1 if any source failed
+end
+```
 
-Both harnesses hide the labeled records inside a synthetic corpus the size and
-shape of the real lists, because precision measured against thirty records is
-a number about the fixture. To run either against a real synced corpus
-instead:
+Then re-screen your book of business against what actually moved, rather than against the whole list:
 
-    $ BACKGROUND=store bundle exec rake benchmark:accuracy
+```ruby
+diff = ActiveSanction.diff(:ofac_sdn, from: last_nights_snapshot)
+diff.changed    # => [Entity], the additions and amendments to re-screen against
+diff.removed    # => [Entity], delistings — the alerts you can now close
+```
 
-### Static typing
+That is the whole of the working library. Everything below is either a fact about the data you should know before relying on it, or an account of how one of those five calls works.
 
-Every file in `lib/` is `# typed: strict`, and new files are born that way: a
-signature written beside the code costs a line, and one retrofitted a milestone
-later costs an afternoon of reading the code back.
+## The lists
 
-    $ bundle exec srb tc      # or `bundle exec rake`, which runs it last
+| Key | Jurisdiction | Authority | Records | Format | How often it moves |
+|---|---|---|---|---|---|
+| `ofac_sdn` | US | Treasury / OFAC | ~19,300 | three CSVs, joined | Irregular, often several times a month |
+| `ofac_consolidated` | US | Treasury / OFAC | ~481 | three CSVs, joined | Irregular, much less often than the SDN list |
+| `un_consolidated` | UN | UN Security Council | ~1,010 | one XML file | As the Council amends a regime |
+| `canada_sema` | CA | Global Affairs Canada | ~5,690 | one XML file | As the regulations are amended |
 
-`sorbet-runtime` is a dependency of the gem, because the signatures are inline
-`sig` blocks and inline `sig` blocks are ordinary method calls. It is pure Ruby
-and compiles nothing, so it clears the same bar the gemspec sets for Nokogiri.
-The static half -- `sorbet` and `tapioca` -- is in the Gemfile and never
-reaches an application.
+Record counts are as of the fixtures this gem was written against; the live files move. No publisher commits to a schedule, and none of them announce a change out of band, which is why every fetch here is conditional: asking daily costs one request per file on the days nothing happened. Sync on your own risk appetite rather than on a publisher's calendar.
 
-What that costs a host, and how to spend nothing at all:
+### Known data limitations, per source
 
-* Signatures on a path that runs per query are declared `.checked(:tests)`:
-  enforced by this suite and inert in production. The normalizer (#26) is the
-  first path that qualifies and carries it throughout; the scorers (#32) join
-  it as they land. `spec/spec_helper.rb` turns those checks on with
-  `T::Private::RuntimeLevels.enable_checking_in_tests`, which is what makes
-  them mean anything, and `spec/sorbet_runtime_spec.rb` holds them to being
-  inert in a host that configured nothing.
-* A host that wants none of it can turn every check off before requiring the
-  gem, which is supported and tested:
+These are the facts a screening policy has to be built on. They are properties of what the government publishes, not of this parser, and none of them can be fixed downstream.
 
-  ```ruby
-  T::Configuration.default_checked_level = :never
-  require "active_sanction"
-  ```
+**Both OFAC lists — every secondary identifier is free text.** The SDN CSVs have no column for date of birth, place of birth, nationality or passport number. All of it — 88,827 semicolon-delimited segments across 19,015 records — is prose in one `Remarks` field, written for a person reading a page. `Sources::Ofac::RemarksParser` reads it heuristically and currently recognizes **97.3%** of those segments. Extraction is additive: a segment nobody has taught it yet costs structure and never content, because `Entity#remarks` keeps the publisher's whole string either way. `source.remarks_coverage` reports the number for the file you actually fetched, and it is worth watching — a drop in it is a publisher changing how it writes.
 
-**What the types are for, and where they deliberately stop.** The canonical
-model is declared: `Entity` states that `dates_of_birth` is an array of
-`PartialDate`, so an adapter handing over the string a publisher wrote is a
-type error rather than a bug found three layers downstream. The runtime half of
-a signature is shallow -- it sees the Array and not what is in it -- so the
-adapter conformance group goes on asserting the element types per fixture,
-which is what covers an adapter written outside this repository.
-Everything a publisher wrote is `T.untyped`
-on the way in, because the value objects already coerce it and raise
-`ArgumentError` with messages written for whoever has to fix the record, and a
-type error would say less. Three places are `T.untyped` on purpose and say why
-in a comment where they sit: the source registry (duck-typed on `.key` and
-`.new`, which is what makes a bank's internal watchlist a first-class source),
-`XmlRecords::Backends` (same, for a backend registered from outside), and
-`Snapshot#entities` (the storage conformance group builds a snapshot of
-half-deserialized hashes on purpose, to prove it catches a store that hands
-them back).
+**`ofac_consolidated` — sub-list attribution is derived, and is exact for 478 of 481 records.** OFAC ships six lists (SSI, CMIC, NS-PLC, NS-MBS, CAPTA, FSE) in one file with no column saying which is which, so the program code is what `OfacConsolidated.lists` maps. The three records it does not get exactly right are all `RUSSIA-EO14024` — Gazprom, Transneft and Rosselkhozbank are on both SSI and NS-MBS and come out marked SSI only. A hit is still a hit; which of two US lists it names may be incomplete.
 
-**Consumers who typecheck their own code** need nothing from us but the gem:
+**`un_consolidated` — place of birth, gender, title and designation are not structured.** They have no home in the canonical model, so they are appended to `remarks` rather than dropped. They are readable and they are not scored on.
 
-    $ bundle exec tapioca gem active_sanction
+**`canada_sema` — the weakest list for corroborating a name match, by some distance.** Global Affairs publishes no nationality, no address, no place of birth and no document number for any of the 5,690 records, and a date of birth for a minority of them. An individual is a surname, given names and a free-text alias field, so there is nothing in a Canadian record to make a name match decisive the way an OFAC passport number usually does. **A clean Canadian result is weaker evidence than a clean OFAC one**, and the measured recall says so: 0.880 against the UN's 1.000.
 
-reads the inline signatures through `sorbet-runtime` and writes an RBI that
-says what this version actually declares. No `rbi/active_sanction.rbi` is
-shipped, deliberately -- a hand-maintained copy of the signatures would be a
-second source of truth, and a signature that lies is worse than none.
+Three further consequences of the same file:
 
-**The RBIs under `sorbet/`** are the checker's working files: generated
-definitions for the gems `lib/` reaches, plus one hand-written shim for the
-Rails generator surface (railties is not in this bundle and is not worth
-pulling a web stack in to describe four methods). They are excluded from the
-packaged gem. Regenerate one with `bin/tapioca gem <name>`; a gem that only
-ever runs the suite or the linter is excluded in `sorbet/tapioca/config.yml`,
-since `srb tc` reads `lib/` and not `spec/` -- RSpec defines its helpers with
-`def` inside blocks, which Sorbet reads as methods on `Object`, and one spec's
-`def initialize(root:)` is enough to make `Object.new` a type error in the
-library.
+* **The ids are ours.** Canada publishes no identifier of any kind, only a citation — which regulation, which schedule, which item — and item numbers get renumbered whenever a schedule is amended. `CanadaSema::SourceRef` hashes the citation *and the name*, which means correcting a typo in a published name re-ids that record and reports in a diff as a delisting plus a listing. Churn in a diff is a nuisance; one id covering two different people would be a screening failure.
+* **Aliases are one comma-joined string with no declared separator, and no kinds.** They are split on semicolons and never on commas, because `Завод "Дагдизель", АО` would otherwise yield a bare Russian legal form as an alias. That costs recall on roughly 300 records whose primary name is published anyway.
+* **`Country-Pays` is not a nationality** and is not read as one. It names the regulation a person is listed under, so it is mapped to `programs`.
 
-### Adding a source
+**All four — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name for matching](#normalizing-a-name-for-matching), and [One name transliterated two ways is the case this does not solve](#one-name-transliterated-two-ways-is-the-case-this-does-not-solve).
+
+## Reading a score
+
+A score is a number from 0 to 100, and it is **the sum of the reasons on the result** — rounded once, with no arithmetic anywhere in this library that can move one without the other. `hit.explanation` is the thing to read; the number is a summary of it.
+
+The default threshold is **75**, and it is measured rather than chosen. Against 87 labeled queries — real published records queried the way a customer record spells them, plus the common names and near misses that must not alert — F1 peaks at exactly the number this gem ships:
+
+```
+threshold  precision  recall      F1   found  missed  false alerts  noise/query
+       60      0.831   0.970   0.895      64       2            13          6.7
+       75      0.899   0.939   0.919      62       4             7          1.7   <- best F1
+       85      0.963   0.788   0.867      52      14             2          1.2
+```
+
+**What each choice costs.** Raising it to 85 removes five false alerts and stops returning ten listed records. Lowering it to 60 finds two more and costs six false alerts and roughly four times the noise per query. F1 weighs those two errors equally and a sanctions screen does not — a false positive costs an analyst minutes, a false negative is a sanctioned counterparty onboarded — so **75 is a floor to tune down from, not a ceiling**. `threshold:` is per query, and what lowering it costs is the noise column above rather than something to be found out in production.
+
+**Do not band by score alone.** A 97 that is all name similarity and a 82 with a passport number matching are different findings, and the score does not distinguish them. Read `hit.explanation`:
+
+```ruby
+hit.explanation.any? { |r| r.factor == :identifier }   # a document number matched — near-decisive
+hit.explanation.any? { |r| r.factor == :dob }          # a date of birth agreed
+```
+
+**The largest improvement available to you is supplying more of the query.** An exact document number is worth +40, a full date of birth +15, a nationality +6. A subject carrying the right passport number needs forty points less of a name than one carrying nothing, so a screening call that passes only a name is leaving most of this library's discrimination on the table — and it is discrimination against the false positives, not against the hits.
+
+**Absent is never conflict.** Every adjustment fires only when *both* sides carry the field; a missing date of birth produces no reason at all rather than a small penalty. Treating absence as disagreement would systematically under-score exactly the jurisdictions that publish least — Canada above all — and hide real hits below a threshold.
+
+Recall is not uniform across the lists, and an averaged number would hide it:
+
+```
+source                 queries  recall   found
+canada_sema                 25   0.880   22 of 25
+un_consolidated             20   1.000   20 of 20
+ofac_sdn                    15   0.933   14 of 15
+```
+
+[`benchmark/results/accuracy.md`](benchmark/results/accuracy.md) is regenerated by `rake benchmark:accuracy` and committed. It names every miss and every false alert at the default threshold, breaks recall down by what the query did to the name — transliteration, inverted order, typo, dropped token, legal form — and shows what each secondary identifier bought. It is the honest answer to "how good is this?", and it is in the repository rather than in a marketing page.
+
+The whole argument, including why the blend is a weighted mean rather than a maximum and where the weights come from, is in [Scoring a candidate, with reasons](#scoring-a-candidate-with-reasons).
+
+## Where the lists live
+
+Storage is an interface with five methods, and **nothing on the query path names a concrete store**. Pick one at boot:
+
+| Adapter | Use it when | Costs |
+|---|---|---|
+| `Storage::FileSystem` *(default)* | You want to provision nothing. Gzipped JSON under `~/.active_sanction`; commits with one atomic rename, so a killed sync leaves the previous list intact | One writer per source at a time, within one filesystem |
+| `Storage::ActiveRecord` | You already have a database, want an indexed prefilter before scoring, and want readers on other machines | A migration, and ActiveRecord — which is *not* a dependency of this gem and loads only if the host loaded it first |
+| `Storage::Memory` | A process that syncs and screens without owning a directory — a job, a CI run, a container with no volume | A full download on every boot |
+| Your own | Anything else — S3, a shared cache, an air-gapped drop | Five methods, held to the shared `"a storage adapter"` example group |
+
+```ruby
+ActiveSanction.configure { |c| c.storage_dir = "/srv/lists" }             # the default, elsewhere
+ActiveSanction.configure { |c| c.storage = ActiveSanction::Storage::ActiveRecord.new }
+```
+
+```console
+$ rails generate active_sanction:install    # for the ActiveRecord adapter
+$ rails db:migrate
+```
+
+Every adapter refuses to return anything partial: a snapshot's checksum is re-derived from the records that came back, so a truncated file, a hand-edited row or a dropped record raises `Storage::CorruptSnapshot` rather than screening a customer against a list that is quietly missing people. A source nobody has synced reads back as `nil` and never as an empty list. The details are in [Storing what a sync produced](#storing-what-a-sync-produced) and the three sections after it.
+
+## Performance
+
+Numbers from `rake benchmark:latency` and `rake benchmark:index` on the machine they were last run on, against a corpus the size of the real lists — 47,051 indexed names over 27,000 entities. Your own are one command away; these are here so you can size a deployment before installing anything.
+
+| | |
+|---|---|
+| Building the matcher | **3.84 s**, 49 MB resident. Paid once at boot, not per query |
+| Screening, p50 | **14.8 ms** at the default threshold of 75 |
+| Screening, p95 / p99 | 47.9 ms / 85.7 ms |
+| Screening with no threshold | 51.4 ms p50 — a threshold is roughly two thirds of the cost, and changes no score |
+| YJIT | Roughly halves the scoring cost. `RUBYOPT=--yjit` |
+| A sync where nothing changed | One conditional request per file, no download and no parse |
+| A full OFAC SDN sync | Three files downloaded, joined across 19,321 entities, and 88,827 remarks segments parsed. The expensive half is the parse, which is exactly what a 304 skips |
+
+```
+threshold       mean       p50       p95       p99   slowest
+        0     54.7 ms   51.4 ms  100.6 ms  128.6 ms  140.3 ms
+       75     18.2 ms   14.8 ms   47.9 ms   85.7 ms   91.5 ms
+       85     11.7 ms   10.2 ms   22.7 ms   39.1 ms   40.2 ms
+```
+
+A matcher is immutable once built, so many threads screen through one without a lock, and a sync builds a new one rather than mutating the old — requests in flight finish against one consistent list version. See [Holding a matcher, and screening from many threads](#holding-a-matcher-and-screening-from-many-threads).
+
+Every early exit in the scorer is a bound on what a pair *could* reach, never an approximation of what it did reach, so **a result at or above the threshold is exactly the result the same call without a threshold returns**. `rake benchmark:scorer` fails loudly if a threshold ever changes a score.
+
+## Configuration
+
+Everything has a working default; `ActiveSanction.configure` exists so that a caller *can* identify itself, not so that one must recite the schema.
+
+| Setting | Default | What it is |
+|---|---|---|
+| `user_agent` | `active_sanction/<version> (+<repo url>)` | Sent on every request. Cannot be blank — OFAC 403s without one. Set it to your own contact address |
+| `open_timeout` / `read_timeout` | `10` / `60` seconds | Read timeout is per-read, so it does not cap how long a large download may take overall |
+| `max_redirects` | `5` | OFAC's download URLs redirect to blob storage |
+| `max_retries` / `retry_backoff` | `2` / `1.0` s | Three attempts total for a transient failure |
+| `cache_dir` | `$XDG_CACHE_HOME/active_sanction` | Cache validators and raw payloads. Recoverable by fetching again; safe to delete |
+| `storage_dir` | `~/.active_sanction` | Parsed snapshots, for the filesystem store. **The system of record** — publishers overwrite their files in place, so the list version a past decision was screened against exists only here |
+| `storage` | `Storage::FileSystem` over `storage_dir` | Any `Storage::Base` |
+| `retain_payloads` | `3` | Raw payloads kept per source, for re-parsing and diffing a suspicious file |
+| `stale_after` | `86_400` s | What `stale?` measures against. Does not cap how long a cached copy may be *used* — that is your policy |
+| `sources` | `nil`, meaning every registered source | `c.sources = %i[ofac_sdn un_consolidated]` |
+| `sync_concurrency` | `1` | How many *publishers* are fetched from at once, never how hard any one of them is asked |
+| `xml_backend` | `:rexml` | `:nokogiri` for a host already parsing OFAC's 126 MB advanced XML. The default is stdlib so that every installation parses identically — a checksum has to mean the same thing everywhere |
+| `candidate_limit` | `200` | Names the index hands the scorer per query |
+| `screening_threshold` | `75.0` | See [Reading a score](#reading-a-score). Overridden per query with `threshold:` |
+| `screening_limit` | `10` | Results returned, highest first. A review queue, not a report |
+| `normalizer_dictionary` | The four shipped token lists | See [Dropping the tokens that identify nothing](#dropping-the-tokens-that-identify-nothing) |
+| `scorer_weights` | `Scorer::Weights.default` | What each signal is worth. Changing one changes what every past decision would score today, which is why `weights` travels on every `MatchResult` |
+| `logger` | `nil` | Anything Logger-shaped |
+
+A bad value raises `ConfigurationError` at the point it is set, rather than producing a puzzling failure during a sync three hours later.
+
+## Adding a source
 
 [`docs/adding_a_source.md`](docs/adding_a_source.md) is the end-to-end walkthrough: reading the publisher's file before writing anything, choosing the format toolkit, mapping its fields onto the canonical model, deriving a stable id for a list that publishes none, trimming a fixture, wiring up the conformance spec, and registering the adapter — from inside this gem or from an application that never forks it. It ends with a complete worked adapter, its fixture and its spec.
 
+A source registered from outside this gem is a first-class source: a bank's internal watchlist is screened, stored, diffed and stamped exactly as OFAC's is.
+
 There is no scaffold generator, deliberately. Roughly eight adapters at maturity do not repay one that has to be kept in step with `Sources::Base`, the conformance spec and the parser toolkits, and that goes stale silently when it is not; the document plus the closest existing adapter to copy does the same job with none of the upkeep.
+
+## How it works
 
 ### The adapter contract
 
@@ -557,37 +691,11 @@ It is applied to the whole score rather than to the name, which matters: a subje
 
 #### What 75 is set from
 
-The default was a guess until `rake benchmark:accuracy` measured it. Against 87 labeled queries — real published records queried the way a customer record spells them, plus the common names and near misses that must not alert — F1 peaks at exactly the number this library ships:
+The default was a guess until `rake benchmark:accuracy` measured it. Against 87 labeled queries — real published records queried the way a customer record spells them, plus the common names and near misses that must not alert — F1 peaks at exactly the number this library ships, and [Reading a score](#reading-a-score) is what each choice around it costs.
 
-```
-threshold  precision  recall      F1   found  missed  false alerts  noise/query
-       60      0.831   0.970   0.895      64       2            13          6.7
-       75      0.899   0.939   0.919      62       4             7          1.7   <- best F1
-       85      0.963   0.788   0.867      52      14             2          1.2
-```
+That the two agree is the whole argument for the number, and it is worth being clear about what it is not: F1 weighs a miss and a false alert equally and a sanctions screen does not. The default sits at the peak rather than above it, and `threshold:` stays per query for the host that has to be more careful still.
 
-Raising it to 85 removes five false alerts and stops returning ten listed records. Lowering it to 60 finds two more and costs six false alerts and five times the noise. F1 weighs those two errors equally and a sanctions screen does not — a false positive costs an analyst minutes, a false negative is a sanctioned counterparty onboarded — so the default sits at the peak rather than above it, and `threshold:` is per query for the host that has to be more careful still. What lowering it costs is the noise column rather than something to be discovered in production.
-
-The same report breaks recall down by list, which is the number an averaged one would hide:
-
-```
-source                 queries  recall   found
-canada_sema                 25   0.880   22 of 25
-un_consolidated             20   1.000   20 of 20
-ofac_sdn                    15   0.933   14 of 15
-```
-
-Canada is measurably worse and it is not the matching's fault: the list publishes no alias kinds, packs several aliases into one comma-joined string and gives a date of birth for a minority of its records, so there is less to match against. That is a fact about coverage a compliance team has to know, and [the committed report](benchmark/results/accuracy.md) names every record this version misses and every one it wrongly alerts on.
-
-`rake benchmark:latency` is the other half — a whole screening call against 47,000 indexed names, at the median and in the tail:
-
-```
-threshold       mean       p50       p95       p99   slowest
-        0     54.7 ms   51.4 ms  100.6 ms  128.6 ms  140.3 ms
-       75     18.2 ms   14.8 ms   47.9 ms   85.7 ms   91.5 ms
-       85     11.7 ms   10.2 ms   22.7 ms   39.1 ms   40.2 ms
-```
-
+The same report breaks recall down by list, which is the number an averaged one would hide — Canada at 0.880 against the UN's 1.000. That is measurably worse and it is not the matching's fault: the list publishes no alias kinds, packs several aliases into one comma-joined string and gives a date of birth for a minority of its records, so there is less to match against. [The committed report](benchmark/results/accuracy.md) names every record this version misses and every one it wrongly alerts on, and `rake benchmark:latency` is the other half — see [Performance](#performance).
 
 ### Screening a name
 
@@ -666,15 +774,158 @@ MATCHER = ActiveSanction::Matcher.build(store)      # for one held by the applic
 Batch screening stamps the whole call with one `screened_at`, because a rescreening of a customer book against a new list version is one event in an audit trail rather than ten thousand a microsecond apart. Results come back index-aligned rather than keyed by name — a book of customers contains the same name twice often enough, and a Hash would silently screen one of them and report both.
 
 
+## Development
+
+After checking out the repo, run `bin/setup` to install dependencies, and `bin/console` for a prompt with the library loaded.
+
+`bundle exec rake install` installs the gem locally. A release is: bump `VERSION` in [`lib/active_sanction/version.rb`](lib/active_sanction/version.rb), move the `Unreleased` section of [`CHANGELOG.md`](CHANGELOG.md) under the new version with its date, then `bundle exec rake release`, which tags, pushes and publishes to [rubygems.org](https://rubygems.org). `MATCHER_VERSION` in the same file is bumped on a different occasion and for a different reason — whenever a change to the normalizer, the index, the similarity algorithms or the scorer could move a score — because an auditor asking "would this screening come out the same today?" needs the answer to that question rather than a release number that also answers several others.
+
+### Tests and linting
+
+`bundle exec rake` runs the RSpec suite, then RuboCop, then `srb tc`; all three must pass.
+
+The suite is hermetic. `spec_helper.rb` calls `WebMock.disable_net_connect!(allow_localhost: true)`, so an un-stubbed HTTP call raises `WebMock::NetConnectNotAllowedError` instead of quietly reaching the internet. Parser specs run against committed fixtures — a suite that can reach a government server stops proving anything about our parsing and starts proving that the server is up.
+
+Specs that genuinely need a real endpoint are tagged `:live`. They are excluded from the default run, and `WebMock` is re-enabled around each one:
+
+    $ bundle exec rspec --tag live
+
+### Benchmarks
+
+`benchmark/` holds the measurements that answer a design question rather than
+pass or fail, so they are not part of `rake`:
+
+    $ bundle exec rake benchmark:similarity          # the matching algorithms
+    $ bundle exec rake benchmark:index               # index build, memory, query latency
+    $ bundle exec rake benchmark:scorer              # scoring latency, and what a threshold buys
+    $ bundle exec rake benchmark:accuracy            # precision, recall and F1 against the labeled set
+    $ bundle exec rake benchmark:latency             # what a whole screening call costs
+    $ RUBYOPT=--yjit bundle exec rake benchmark:similarity
+
+Each timed one prints the Ruby and JIT it ran under, because that is most of
+what the numbers mean.
+
+**`benchmark:accuracy` is the exception, and it is committed.** It measures the
+library rather than the machine — the same fixtures and the same seeded corpus
+give the same numbers on any laptop — so it writes its report to
+[`benchmark/results/accuracy.md`](benchmark/results/accuracy.md), which is in
+the repository. A diff in that file is a change in what this library finds,
+which is the one thing about match quality that is otherwise invisible in a
+code review: a weight nudged by two points does not look like anything in a
+patch, and it is exactly what moves a name from found to missed. Run it when
+you change the normalizer, the index, the similarity algorithms, the scorer or
+the weights, and commit what comes out.
+
+The labeled set behind it is [`benchmark/fixtures/labeled_set.yml`](benchmark/fixtures/labeled_set.yml):
+87 queries written against the real published records the source fixtures
+hold, each one labeled with what it is supposed to find and what kind of damage
+it is doing to the name — a transliteration, an inverted order, a missing
+patronymic, a typo, a legal form spelled out — plus the names that must *not*
+alert. The file's header says where each record comes from and why every
+invented one is invented.
+
+Both harnesses hide the labeled records inside a synthetic corpus the size and
+shape of the real lists, because precision measured against thirty records is
+a number about the fixture. To run either against a real synced corpus
+instead:
+
+    $ BACKGROUND=store bundle exec rake benchmark:accuracy
+
+### API documentation
+
+    $ bundle exec rake doc          # renders doc/
+    $ bundle exec yard stats --list-undoc
+
+Every public module, class, method and attribute in `lib/` carries a comment, and `rake doc` renders them. Types are not written twice: `yard-sorbet` reads the inline `sig` blocks and turns them into `@param` and `@return`, so the signature the checker reads is the signature the documentation shows. Hand-written type tags would be a second source of truth for something already declared — the same argument that keeps a checked-in RBI out of this gem, one section down.
+
+What is deliberately left undocumented is internal constants: column names, regex fragments, the `MEMBERS` lists the value objects serialize through. They are named for the code that reads them and a comment restating a name is noise.
+
+### Static typing
+
+Every file in `lib/` is `# typed: strict`, and new files are born that way: a
+signature written beside the code costs a line, and one retrofitted a milestone
+later costs an afternoon of reading the code back.
+
+    $ bundle exec srb tc      # or `bundle exec rake`, which runs it last
+
+`sorbet-runtime` is a dependency of the gem, because the signatures are inline
+`sig` blocks and inline `sig` blocks are ordinary method calls. It is pure Ruby
+and compiles nothing, so it clears the same bar the gemspec sets for Nokogiri.
+The static half -- `sorbet` and `tapioca` -- is in the Gemfile and never
+reaches an application.
+
+What that costs a host, and how to spend nothing at all:
+
+* Signatures on a path that runs per query are declared `.checked(:tests)`:
+  enforced by this suite and inert in production. The normalizer (#26) is the
+  first path that qualifies and carries it throughout; the scorers (#32) join
+  it as they land. `spec/spec_helper.rb` turns those checks on with
+  `T::Private::RuntimeLevels.enable_checking_in_tests`, which is what makes
+  them mean anything, and `spec/sorbet_runtime_spec.rb` holds them to being
+  inert in a host that configured nothing.
+* A host that wants none of it can turn every check off before requiring the
+  gem, which is supported and tested:
+
+  ```ruby
+  T::Configuration.default_checked_level = :never
+  require "active_sanction"
+  ```
+
+**What the types are for, and where they deliberately stop.** The canonical
+model is declared: `Entity` states that `dates_of_birth` is an array of
+`PartialDate`, so an adapter handing over the string a publisher wrote is a
+type error rather than a bug found three layers downstream. The runtime half of
+a signature is shallow -- it sees the Array and not what is in it -- so the
+adapter conformance group goes on asserting the element types per fixture,
+which is what covers an adapter written outside this repository.
+Everything a publisher wrote is `T.untyped`
+on the way in, because the value objects already coerce it and raise
+`ArgumentError` with messages written for whoever has to fix the record, and a
+type error would say less. Three places are `T.untyped` on purpose and say why
+in a comment where they sit: the source registry (duck-typed on `.key` and
+`.new`, which is what makes a bank's internal watchlist a first-class source),
+`XmlRecords::Backends` (same, for a backend registered from outside), and
+`Snapshot#entities` (the storage conformance group builds a snapshot of
+half-deserialized hashes on purpose, to prove it catches a store that hands
+them back).
+
+**Consumers who typecheck their own code** need nothing from us but the gem:
+
+    $ bundle exec tapioca gem active_sanction
+
+reads the inline signatures through `sorbet-runtime` and writes an RBI that
+says what this version actually declares. No `rbi/active_sanction.rbi` is
+shipped, deliberately -- a hand-maintained copy of the signatures would be a
+second source of truth, and a signature that lies is worse than none.
+
+**The RBIs under `sorbet/`** are the checker's working files: generated
+definitions for the gems `lib/` reaches, plus one hand-written shim for the
+Rails generator surface (railties is not in this bundle and is not worth
+pulling a web stack in to describe four methods). They are excluded from the
+packaged gem. Regenerate one with `bin/tapioca gem <name>`; a gem that only
+ever runs the suite or the linter is excluded in `sorbet/tapioca/config.yml`,
+since `srb tc` reads `lib/` and not `spec/` -- RSpec defines its helpers with
+`def` inside blocks, which Sorbet reads as methods on `Object`, and one spec's
+`def initialize(root:)` is enough to make `Object.new` a type error in the
+library.
+
+
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/active_sanction. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/active_sanction/blob/master/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome at https://github.com/Babystep-Technologies/active_sanction.
 
+The most useful contribution is a new list. [`docs/adding_a_source.md`](docs/adding_a_source.md) is written for exactly that, and the shared conformance group means a new adapter is held to the same checklist the shipped ones are. The EU ([#39](https://github.com/Babystep-Technologies/active_sanction/issues/39)), the UK ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are open and unclaimed.
+
+The second most useful is a name this version gets wrong. A missed record or a false alert belongs in [`benchmark/fixtures/labeled_set.yml`](benchmark/fixtures/labeled_set.yml) with what it is supposed to find, whether or not the matching is changed in the same pull request — a case nobody has written down is a case that regresses silently.
+
+`bundle exec rake` runs the suite, RuboCop and Sorbet; all three must pass. If you change the normalizer, the index, the similarity algorithms, the scorer or the weights, run `bundle exec rake benchmark:accuracy` and commit the report it rewrites: a weight nudged by two points does not look like anything in a patch and is exactly what moves a name from found to missed.
+
+This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+Available as open source under the terms of the [MIT License](LICENSE.txt).
 
 ## Code of Conduct
 
-Everyone interacting in the ActiveSanction project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/active_sanction/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the ActiveSanction project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).

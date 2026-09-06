@@ -21,6 +21,9 @@ module ActiveSanction
     # TLS failure.
     class ConnectionError < Error; end
 
+    # The redirect chain exceeded `max_redirects` without reaching a body. A
+    # cap rather than an unbounded follow, because a publisher misconfiguring
+    # a redirect should cost one request too many and not a crawl.
     class TooManyRedirects < Error; end
 
     # A redirect chain that returns to a URL already visited. It would trip the

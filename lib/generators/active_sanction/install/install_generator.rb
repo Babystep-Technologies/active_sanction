@@ -7,6 +7,9 @@ require "rails/generators"
 require "rails/generators/active_record"
 
 module ActiveSanction
+  # Rails generators, loaded only by Rails' own generator lookup. Nothing here
+  # is required by `require "active_sanction"`, which is what keeps Rails and
+  # ActiveRecord out of this gem's runtime dependencies.
   module Generators
     # The migration that creates the tables Storage::ActiveRecord reads and
     # writes:
