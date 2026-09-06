@@ -26,7 +26,7 @@ module ActiveSanction
   # - the inverted index (#31) keys on it, so that a query for `GADDAFI`
   #   reaches a record spelled `QADHAFI` at all, which no amount of comparing
   #   would help with if the record is never fetched; and
-  # - the scorer (#32) reads it as a bonus on a pair it is already comparing.
+  # - the scorer (#32) reads it as one share of the blend it scores a pair on.
   #
   # -- and it is also why it cannot be blended with the other four. A shared
   # key is evidence, at the strength #32 decides. It is never a match on its

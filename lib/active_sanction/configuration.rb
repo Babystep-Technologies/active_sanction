@@ -5,6 +5,7 @@ require "sorbet-runtime"
 
 require "active_sanction/error"
 require "active_sanction/normalizer"
+require "active_sanction/scorer/weights"
 require "active_sanction/version"
 
 module ActiveSanction
@@ -101,13 +102,18 @@ module ActiveSanction
 
     # How many names the index (#31) hands the scorer per query.
     #
-    # 200 is where the recall curve flattens on this corpus and where the
-    # query budget lands: the scorers cost roughly 50 us per name across the
-    # four of them, so 200 names is about 10 ms of comparison, and a
+    # 200 is where the recall curve flattens on this corpus, and a
     # deliberately damaged query still finds its own name inside the first
     # handful. Raising it buys precision nothing -- the scorer already sees
     # everything that could clear a threshold -- and spends milliseconds a
     # service does not have.
+    #
+    # What it costs is the scorer's cost, and that depends on the threshold
+    # rather than on this number alone: 200 candidates is roughly 16 ms of
+    # comparison under YJIT at a threshold of 75 and roughly 46 ms with no
+    # threshold at all, because the early exits are what stop the expensive
+    # comparisons running on candidates that cannot clear. See
+    # Scorer::NameScore, and `rake benchmark:scorer`.
     DEFAULT_CANDIDATE_LIMIT = T.let(200, Integer)
 
     # Which lists a sync runs, by key. nil means every registered source,
@@ -166,6 +172,10 @@ module ActiveSanction
     sig { returns(Normalizer::Dictionary) }
     attr_reader :normalizer_dictionary
 
+    # What each signal the scorer reads is worth. See #scorer_weights=.
+    sig { returns(Scorer::Weights) }
+    attr_reader :scorer_weights
+
     # Anything Logger-shaped, which is what #logger= checks for and all this
     # library ever asks of it. Declaring `::Logger` would make a host's
     # wrapper, a Rails logger broadcast or a test spy a type error rather than
@@ -189,6 +199,7 @@ module ActiveSanction
       @xml_backend = T.let(DEFAULT_XML_BACKEND, Symbol)
       @candidate_limit = T.let(DEFAULT_CANDIDATE_LIMIT, Integer)
       @normalizer_dictionary = T.let(Normalizer::Dictionary.default, Normalizer::Dictionary)
+      @scorer_weights = T.let(Scorer::Weights.default, Scorer::Weights)
       @logger = T.let(nil, T.untyped)
     end
 
@@ -308,6 +319,29 @@ module ActiveSanction
     sig { params(value: T.untyped).void }
     def normalizer_dictionary=(value)
       @normalizer_dictionary = normalizer_dictionary!(value)
+    end
+
+    # A Hash replaces the numbers it names and leaves the rest, which is what
+    # a host tuning one signal wants:
+    #
+    #   c.scorer_weights = { dob_conflict: -20.0, identifier_match: 50.0 }
+    #
+    # A Scorer::Weights is taken as it stands. Unlike the normalizer's
+    # dictionaries there is no partial-replacement hazard here -- a number
+    # left out is the shipped one, and the five name shares are checked to sum
+    # to 1 whichever way they arrived.
+    #
+    # Set this at boot. Changing it later is honoured from the next call, and
+    # every score already recorded was made under the old numbers; a stored
+    # screening decision has to say which set it used, which is what #33's
+    # reproducibility stamp is for.
+    sig { params(value: T.untyped).void }
+    def scorer_weights=(value)
+      @scorer_weights = begin
+        Scorer::Weights.build(value)
+      rescue ArgumentError => e
+        raise ConfigurationError, "scorer_weights: #{e.message}"
+      end
     end
 
     # Anything Logger-shaped. The fetch layer says what it did at `info` --

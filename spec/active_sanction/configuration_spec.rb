@@ -63,6 +63,36 @@ RSpec.describe ActiveSanction::Configuration do
     end
   end
 
+  describe "#scorer_weights" do
+    it "defaults to the shipped numbers" do
+      expect(described_class.new.scorer_weights).to be(ActiveSanction::Scorer::Weights.default)
+    end
+
+    it "replaces only the numbers a Hash names" do
+      config = described_class.new.tap { |c| c.scorer_weights = { dob_conflict: -20.0 } }
+
+      expect(config.scorer_weights).to have_attributes(dob_conflict: -20.0, identifier_match: 40.0)
+    end
+
+    it "takes a Weights outright" do
+      weights = ActiveSanction::Scorer::Weights.new(dob_exact: 20.0)
+
+      expect(described_class.new.tap { |c| c.scorer_weights = weights }.scorer_weights).to be(weights)
+    end
+
+    # A misconfigured installation, not a malformed record -- which is the
+    # whole distinction ConfigurationError draws.
+    it "raises a ConfigurationError for shares that do not sum to 1" do
+      expect { described_class.new.scorer_weights = { token_set: 0.9 } }
+        .to raise_error(ActiveSanction::ConfigurationError, /must sum to 1\.0/)
+    end
+
+    it "raises a ConfigurationError for a weight it does not have" do
+      expect { described_class.new.scorer_weights = { vibes: 1.0 } }
+        .to raise_error(ActiveSanction::ConfigurationError, /unknown weight/)
+    end
+  end
+
   describe "#cache_dir" do
     it "defaults under the XDG cache directory" do
       expect(described_class.new.cache_dir).to eq(File.join(Dir.home, ".cache", "active_sanction"))

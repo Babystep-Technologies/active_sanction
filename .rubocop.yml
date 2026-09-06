@@ -102,10 +102,11 @@ Metrics/MethodLength:
 # a writer and a validation for every setting the library gains, and a setting
 # whose invalid values raise a message worth reading costs more than three
 # lines. 190 became 210 when the normalizer dictionary (#27) became
-# configurable, and 210 became 225 when the index (#31) added its candidate
-# cap -- the same three lines per setting, one more time.
+# configurable, 210 became 225 when the index (#31) added its candidate cap,
+# and 225 became 235 for the scorer's weights (#32) -- the same three lines
+# per setting, each time.
 Metrics/ClassLength:
-  Max: 225
+  Max: 235
   Exclude:
     # See the note on Metrics/CyclomaticComplexity below.
     - "lib/active_sanction/phonetics/double_metaphone.rb"
