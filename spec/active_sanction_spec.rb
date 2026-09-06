@@ -66,6 +66,52 @@ RSpec.describe ActiveSanction do
     end
   end
 
+  describe ".sync!" do
+    def un(entities = [FakeSyncSource.entity(:un_consolidated)])
+      FakeSyncSource.new(:un_consolidated, entities: entities)
+    end
+
+    before { described_class.configure { |c| c.storage = synced(putin) } }
+
+    it "fetches, parses and stores the sources it is given" do
+      described_class.sync!(un)
+
+      expect(described_class.storage.read_snapshot(:un_consolidated).record_count).to eq(1)
+    end
+
+    it "returns what each source did" do
+      expect(described_class.sync!(un).first).to have_attributes(source: :un_consolidated, status: :updated)
+    end
+
+    # A matcher is built once and never updated, so the sugar over the shared
+    # one has to drop it when a list changes or a process goes on screening
+    # against the version it booted with.
+    it "drops the shared matcher when a list changed" do
+      described_class.screen("Vladimir Putin")
+      described_class.sync!(un)
+
+      expect(described_class.screen("Vladimir Putin").map(&:source)).to eq(%i[ofac_sdn un_consolidated])
+    end
+
+    # The whole point of the run: it reports a failure rather than raising one.
+    it "captures a failing source rather than raising" do
+      failing = FakeSyncSource.new(:un_consolidated, error: ActiveSanction::Error.new("503"))
+
+      expect(described_class.sync!(failing)).to have_attributes(failed?: true, exit_code: 1)
+    end
+
+    it "calls the block with each result as that source finishes" do
+      seen = []
+      described_class.sync!(un) { |result| seen << result.source }
+
+      expect(seen).to eq(%i[un_consolidated])
+    end
+
+    it "passes its options to the run" do
+      expect(described_class.sync!(un, force: true, concurrency: 2).first.status).to eq(:updated)
+    end
+  end
+
   describe ".matcher" do
     before { described_class.configure { |c| c.storage = synced(putin) } }
 

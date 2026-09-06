@@ -45,6 +45,31 @@ RSpec.describe ActiveSanction::Configuration do
     end
   end
 
+  describe "#sync_concurrency=" do
+    # These are government file servers with nobody waiting on the result, and
+    # a library that opens four connections to Treasury by default is one that
+    # gets a jurisdiction's operators asking who we are.
+    it "fetches from one publisher at a time by default" do
+      expect(described_class.new.sync_concurrency).to eq(1)
+    end
+
+    it "takes a whole number of publishers" do
+      expect(described_class.new.tap { |config| config.sync_concurrency = 3 }.sync_concurrency).to eq(3)
+    end
+
+    # A sync that runs no sources is a typo, and one is what sequential is
+    # spelled as.
+    it "refuses a concurrency of zero" do
+      expect { described_class.new.sync_concurrency = 0 }
+        .to raise_error(ActiveSanction::ConfigurationError, /at least 1/)
+    end
+
+    it "refuses a concurrency that is not a number" do
+      expect { described_class.new.sync_concurrency = "all of them" }
+        .to raise_error(ActiveSanction::ConfigurationError, /whole number of sources/)
+    end
+  end
+
   describe "#candidate_limit=" do
     it "takes a whole number of names" do
       expect(described_class.new.tap { |config| config.candidate_limit = 50 }.candidate_limit).to eq(50)
