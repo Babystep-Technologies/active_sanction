@@ -37,6 +37,30 @@ RSpec.describe ActiveSanction::Configuration do
     it "keeps three raw payloads per source" do
       expect(described_class.new.retain_payloads).to eq(3)
     end
+
+    # Where the recall curve flattens and the query budget lands -- see
+    # Index::POSTINGS_BUDGET for the measurement both numbers come from.
+    it "hands the scorer two hundred candidate names per query" do
+      expect(described_class.new.candidate_limit).to eq(200)
+    end
+  end
+
+  describe "#candidate_limit=" do
+    it "takes a whole number of names" do
+      expect(described_class.new.tap { |config| config.candidate_limit = 50 }.candidate_limit).to eq(50)
+    end
+
+    # An index that returns nothing screens nobody, and a configuration that
+    # turns screening off silently has to be a typo rather than a setting.
+    it "refuses a limit of zero" do
+      expect { described_class.new.candidate_limit = 0 }
+        .to raise_error(ActiveSanction::ConfigurationError, /at least 1/)
+    end
+
+    it "refuses a limit that is not a number" do
+      expect { described_class.new.candidate_limit = "lots" }
+        .to raise_error(ActiveSanction::ConfigurationError, /whole number of names/)
+    end
   end
 
   describe "#cache_dir" do

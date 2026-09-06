@@ -99,6 +99,17 @@ module ActiveSanction
     # See Parsers::XmlRecords::Backends for the contract a backend implements.
     DEFAULT_XML_BACKEND = T.let(:rexml, Symbol)
 
+    # How many names the index (#31) hands the scorer per query.
+    #
+    # 200 is where the recall curve flattens on this corpus and where the
+    # query budget lands: the scorers cost roughly 50 us per name across the
+    # four of them, so 200 names is about 10 ms of comparison, and a
+    # deliberately damaged query still finds its own name inside the first
+    # handful. Raising it buys precision nothing -- the scorer already sees
+    # everything that could clear a threshold -- and spends milliseconds a
+    # service does not have.
+    DEFAULT_CANDIDATE_LIMIT = T.let(200, Integer)
+
     # Which lists a sync runs, by key. nil means every registered source,
     # which is what an application that has not thought about it should get:
     # requiring an explicit list would mean a gem adding a jurisdiction had no
@@ -146,6 +157,10 @@ module ActiveSanction
     sig { returns(Symbol) }
     attr_reader :xml_backend
 
+    # See DEFAULT_CANDIDATE_LIMIT. A per-query `limit:` overrides it.
+    sig { returns(Integer) }
+    attr_reader :candidate_limit
+
     # The token lists the normalizer strips per entity type. Defaults to the
     # shipped ones; see #normalizer_dictionary= and Normalizer::Dictionary.
     sig { returns(Normalizer::Dictionary) }
@@ -172,6 +187,7 @@ module ActiveSanction
       @stale_after = T.let(DEFAULT_STALE_AFTER, T.nilable(Numeric))
       @sources = T.let(DEFAULT_SOURCES, T.nilable(T::Array[Symbol]))
       @xml_backend = T.let(DEFAULT_XML_BACKEND, Symbol)
+      @candidate_limit = T.let(DEFAULT_CANDIDATE_LIMIT, Integer)
       @normalizer_dictionary = T.let(Normalizer::Dictionary.default, Normalizer::Dictionary)
       @logger = T.let(nil, T.untyped)
     end
@@ -255,6 +271,22 @@ module ActiveSanction
       raise ConfigurationError, "xml_backend cannot be blank" if name.empty?
 
       @xml_backend = name.to_sym
+    end
+
+    # Raising this trades milliseconds for recall and lowering it does the
+    # reverse, which is why it is a number a host can set rather than a
+    # constant. Zero is refused: an index that returns nothing screens nobody,
+    # and a configuration that turns screening off has to be a typo.
+    sig { params(value: T.untyped).void }
+    def candidate_limit=(value)
+      integer = begin
+        Integer(value)
+      rescue TypeError, ArgumentError
+        raise ConfigurationError, "candidate_limit must be a whole number of names, got #{value.inspect}"
+      end
+      raise ConfigurationError, "candidate_limit must be at least 1, got #{integer}" unless integer.positive?
+
+      @candidate_limit = integer
     end
 
     # A Hash adds to the shipped lists, which is what a host almost always

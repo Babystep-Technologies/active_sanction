@@ -72,6 +72,9 @@ Metrics/AbcSize:
   Max: 28
   Exclude:
     - "lib/active_sanction/entity.rb"
+    # Configuration#initialize is the same shape as a value object's: one
+    # `T.let` per setting the library has, and nothing else.
+    - "lib/active_sanction/configuration.rb"
     - "lib/active_sanction/storage/active_record/reader.rb"
     - "lib/active_sanction/storage/active_record/writer.rb"
     # A transcription rather than a design -- see the note on
@@ -99,9 +102,10 @@ Metrics/MethodLength:
 # a writer and a validation for every setting the library gains, and a setting
 # whose invalid values raise a message worth reading costs more than three
 # lines. 190 became 210 when the normalizer dictionary (#27) became
-# configurable.
+# configurable, and 210 became 225 when the index (#31) added its candidate
+# cap -- the same three lines per setting, one more time.
 Metrics/ClassLength:
-  Max: 210
+  Max: 225
   Exclude:
     # See the note on Metrics/CyclomaticComplexity below.
     - "lib/active_sanction/phonetics/double_metaphone.rb"
