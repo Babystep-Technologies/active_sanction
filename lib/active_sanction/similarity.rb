@@ -46,6 +46,10 @@ module ActiveSanction
   # No single column is the score. #32 blends them, and rows three and four
   # are why it has to.
   #
+  # Stage 3c is next door, in Phonetics, and not in here: Double Metaphone
+  # answers what a name *sounds* like with a key rather than a number, and a
+  # key cannot be blended with four scores or held to the contract below.
+  #
   # ### Why pure Ruby
   #
   # `fuzzy_string_match` and the other C extensions are faster per call, and
