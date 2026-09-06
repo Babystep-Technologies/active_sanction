@@ -30,6 +30,7 @@ require "active_sanction/query"
 require "active_sanction/match_result"
 require "active_sanction/matcher"
 require "active_sanction/sync"
+require "active_sanction/diff"
 require "active_sanction/sources/ofac_sdn"
 require "active_sanction/sources/ofac_consolidated"
 require "active_sanction/sources/un_consolidated"
@@ -140,6 +141,24 @@ module ActiveSanction
       reload! if report.updated.any?
       report
     end
+
+    # What changed between two snapshots of one source:
+    #
+    #   diff = ActiveSanction.diff(:ofac_sdn, from: last_months_snapshot, to: todays_snapshot)
+    #   diff = ActiveSanction.diff(:ofac_sdn, from: last_months_snapshot)  # `to:` is what is stored now
+    #
+    #   diff.added     # => [Entity], newly listed
+    #   diff.removed   # => [Entity], delisted
+    #   diff.modified  # => [Diff::Change], amended, with the fields that moved
+    #   diff.changed   # => [Entity], what to re-screen a book of business against
+    #
+    # So that re-screening runs against the eleven records that moved rather
+    # than against the whole list. A first sync -- `from: nil` -- is a baseline
+    # rather than a list of additions, and an amended record reports as one
+    # modification rather than as a delisting and a new listing. See Diff,
+    # which is where all of that is documented.
+    sig { params(source: T.untyped, options: T.untyped).returns(Diff) }
+    def diff(source = nil, **options) = T.unsafe(Diff).call(source, **options)
 
     # Screens a list of names, returning one array of results per query, in
     # the order they were given. See Matcher#screen_all.

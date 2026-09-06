@@ -365,6 +365,40 @@ That table is `report.to_s`, but the report is an object rather than console out
 
 Sync is a capability of the local backend rather than of every backend — a hosted one does not sync, because data freshness is exactly what its user is paying somebody else to handle — which is why the report is a serializable object and why nothing in it writes to `$stdout`.
 
+### Noticing what changed between two syncs
+
+Screening is not a one-time event. A customer cleared last month may be listed today, and the obligation is to notice. Re-running an entire book of business against an entire list every night is how most services answer that, and it is why most services answer it weekly instead.
+
+```ruby
+diff = ActiveSanction.diff(:ofac_sdn, from: last_months_snapshot, to: todays_snapshot)
+diff = ActiveSanction.diff(:ofac_sdn, from: last_months_snapshot)  # `to:` is what is stored now
+
+diff.added      # => [Entity], newly listed
+diff.removed    # => [Entity], delisted
+diff.modified   # => [Diff::Change], amended, with the fields that moved
+diff.changed    # => [Entity], what to re-screen the book against
+diff.churn      # => 0.001104, the fraction of the previous list that moved
+```
+
+```
+ofac_sdn: 19015 -> 19023 records, 12 added, 4 removed, 5 modified (0.1% of the previous list)
+  + ofac_sdn:41234  IVANOV, Ivan Ivanovich  [SDGT]
+  - ofac_sdn:2674   ABBAS, Abu  [SDGT]
+  ~ ofac_sdn:36     names +1, programs +1
+```
+
+That table is `diff.to_s`; `Diff#to_h` is the same thing JSON-ready, carrying both snapshots' checksums so a diff says which pair of list versions produced it. There is no `.from_h` — a diff is derived rather than stored, and those two checksums are what makes it reproducible. Keep them and the diff can always be computed again; keep the diff and you have a copy of an answer nobody can check.
+
+**Delistings matter as much as listings.** They are the half that a re-screen against new records only would miss: a delisting is what lets a customer back through the door, and a service that never notices one goes on blocking somebody the government stopped sanctioning in March. `diff.changed` is deliberately the additions and the amendments — the records to screen a book *against* — while `diff.removed` is a different job done with the same diff, which is clearing the alerts that are already open.
+
+**An amendment is not a delisting plus a listing.** Governments amend far more records than they publish or withdraw: a passport number is corrected, an alias is added, a program is amended. The two snapshots are joined by entity id, so those report as one `Diff::Change` carrying the fields that moved, rather than as a removal and an addition — which would put a delisting in front of an analyst that never happened. That rests entirely on ids being stable between syncs, which is why the adapter conformance group asserts id stability and why the Canada adapter hashes a citation *and* a name into its synthetic one. Ids that move would make every sync look like a full replacement.
+
+**A first sync is a baseline, not 19,015 new listings.** With no previous snapshot there is nothing to compare, and reporting the whole list as added would be false: those records were not listed today, they were listed over twenty years and we are only now looking. So a diff with no `from` reports `baseline?`, three empty lists, and nothing to re-screen — because the right response to a first sync is a deliberate full screening run rather than one driven by a diff that is really a list.
+
+**Order is not a change, and neither is a reordered alias.** Two snapshots of the same file compare equal whatever order the publisher emitted it in, and the collection fields inside a record — names, addresses, identifiers, dates of birth, nationalities, programs — are compared by membership rather than by position. The one thing that is never decided for the host is which amendments are too small to bother re-screening: a corrected passport number and a reworded remark reach the scorer by different paths, and a library that filtered them would be choosing which sanctions hits it is willing to miss.
+
+**Nothing here reads OFAC's `/changes/latest`.** OFAC serves a delta feed of its own, and a diff has to describe the two list versions *we hold* — a run that skipped a day, or held a stale list because a fetch failed, is not on either end of the publisher's delta. Cross-checking a computed diff against that feed is worth doing, since it is how a parser regression that quietly drops records gets caught, but it belongs in the OFAC adapter as one publisher's answer rather than in the general shape of a diff.
+
 ### Normalizing a name for matching
 
 Screening compares folded strings, never published ones. `ActiveSanction::Normalizer` is where that fold happens — stage one of the matching pipeline, and the only place in the library a name is folded at all.
