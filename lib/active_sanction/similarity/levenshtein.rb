@@ -34,6 +34,14 @@ module ActiveSanction
     # what makes the measure symmetric and keeps it in 0..1: the distance can
     # never exceed the longer length, and it equals it exactly when the two
     # share nothing.
+    #
+    # ### What else runs on it
+    #
+    # Both token ratios. TokenSort is one call to this on a pair of names
+    # whose tokens have been put in alphabetical order, and TokenSet is three
+    # on a pair that has been split into what they share and what they do not,
+    # so half of stage 3 is this file with the strings rearranged first. See
+    # TokenSort for why the rearranging is not done on top of Jaro-Winkler.
     module Levenshtein
       extend T::Sig
 

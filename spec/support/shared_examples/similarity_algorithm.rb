@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# The contract both edit-distance primitives keep, written once.
+# The contract all four similarity algorithms keep, written once.
 #
 #   RSpec.describe ActiveSanction::Similarity::JaroWinkler do
 #     it_behaves_like "a similarity algorithm"
@@ -65,7 +65,7 @@ RSpec.shared_examples "a similarity algorithm" do
     end
 
     # Not a special case worth much on its own -- Form#empty? exists so that
-    # the index never puts one of these in front of a scorer -- but the two
+    # the index never puts one of these in front of a scorer -- but all four
     # algorithms have to agree, and "identical" is the only defensible answer.
     it "scores two empty strings 1.0, as identical" do
       expect(described_class.call("", "")).to eq(1.0)
@@ -99,12 +99,16 @@ RSpec.shared_examples "a similarity algorithm" do
       end
     end
 
+    # Two different companies with no token in common, which is what it takes
+    # to be scored below 0.99 by all four: a name whose tokens are a subset of
+    # another's -- "gazprom" inside "gazprom neft" -- is a perfect match to
+    # TokenSet at any length, and no threshold rejects it.
     it "reports a score below it as 0.0 rather than computing it" do
-      expect(described_class.call("gazprom", "gazprom neft", threshold: 0.99)).to eq(0.0)
+      expect(described_class.call("gazprom neft", "gazprombank", threshold: 0.99)).to eq(0.0)
     end
 
     it "leaves the same pair scoring well above zero without one" do
-      expect(described_class.call("gazprom", "gazprom neft")).to be > 0.5
+      expect(described_class.call("gazprom neft", "gazprombank")).to be > 0.5
     end
 
     # 0..100 is the scale the scorer and every compliance report use, so an
@@ -141,8 +145,11 @@ RSpec.shared_examples "a similarity algorithm" do
       expect(described_class.ceiling(7, 7)).to eq(1.0)
     end
 
-    it "rules a perfect score out when they are not" do
-      expect(described_class.ceiling(7, 8)).to be < 1.0
-    end
+    # How *tight* the bound is belongs to each algorithm and is specified with
+    # it. Three of them rule a perfect score out from a length difference
+    # alone; TokenSet cannot, because a name whose tokens are a subset of
+    # another's scores 1.0 however much longer the other one is, and a bound
+    # that claimed otherwise would discard true matches on the strength of a
+    # length. Only the safety property above is common to all four.
   end
 end

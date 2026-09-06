@@ -86,6 +86,10 @@ RSpec.describe ActiveSanction::Similarity::Levenshtein do
       expect(described_class.ceiling(10, 11)).to be > 0.85
     end
 
+    it "rules a perfect score out when the lengths differ at all" do
+      expect(described_class.ceiling(7, 8)).to be < 1.0
+    end
+
     # Equal lengths, so the length check cannot reject the pair and every one
     # of the million cells is on the table. What stops it is the other half of
     # the exit: row minima never decrease, so once a row's smallest value is

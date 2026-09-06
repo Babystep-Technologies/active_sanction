@@ -20,7 +20,7 @@ namespace :benchmark do
   # Not part of the default task: a benchmark measures the machine it runs on,
   # so it answers a question rather than passing or failing. The accuracy and
   # latency harnesses (#37) land beside this one.
-  desc "Time the edit-distance primitives (#28)"
+  desc "Time the similarity algorithms (#28, #29)"
   task :similarity do
     ruby "benchmark/similarity.rb"
   end

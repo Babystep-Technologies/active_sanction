@@ -28,7 +28,7 @@ module ActiveSanction
     # pipeline. It rewards `SMITH` against `SMITHSON`, and it has nothing at
     # all to say about `ABBAS, Abu` against `Abu Abbas`, which shares no
     # prefix and is the single most common query shape against these lists.
-    # The token ratios (#29) are what answer that, on top of this.
+    # TokenSort and TokenSet are what answer that.
     module JaroWinkler
       extend T::Sig
 

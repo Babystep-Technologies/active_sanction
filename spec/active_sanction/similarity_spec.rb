@@ -50,9 +50,30 @@ RSpec.describe ActiveSanction::Similarity do
     end
   end
 
-  # Both algorithms reach the outside world through the same two helpers, so
-  # the repair above is worth confirming end to end rather than in isolation.
-  [ActiveSanction::Similarity::JaroWinkler, ActiveSanction::Similarity::Levenshtein].each do |algorithm|
+  describe ".tokens" do
+    it "splits a folded value on whitespace" do
+      expect(described_class.tokens("abbas abu")).to eq(%w[abbas abu])
+    end
+
+    # The path that matters: a Form has already split its value once, and the
+    # index (#31) will be handing the scorer a few hundred candidates that
+    # each carry several names.
+    it "takes an array of tokens as it stands" do
+      expect(described_class.tokens(%w[abbas abu])).to eq(%w[abbas abu])
+    end
+
+    # `String#split` raises on invalid UTF-8, which would make one stray byte
+    # in a government file the end of an index build.
+    it "scrubs invalid bytes rather than raising, the way .codepoints does" do
+      expect(described_class.tokens((+"gaz\xFFprom neft").force_encoding(Encoding::UTF_8)))
+        .to eq(["gaz\uFFFDprom", "neft"])
+    end
+  end
+
+  # All four algorithms reach the outside world through these helpers, so the
+  # repair above is worth confirming end to end rather than in isolation.
+  [ActiveSanction::Similarity::JaroWinkler, ActiveSanction::Similarity::Levenshtein,
+   ActiveSanction::Similarity::TokenSort, ActiveSanction::Similarity::TokenSet].each do |algorithm|
     it "lets #{algorithm} score a name with a stray byte in it" do
       broken = (+"gaz\xFFprom").force_encoding(Encoding::UTF_8)
       expect(algorithm.call(broken, "gazprom")).to be_within(0.2).of(0.9)
