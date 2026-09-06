@@ -329,6 +329,42 @@ Most of what it checks is a way of losing records quietly. A store that returns 
 
 The group is `spec/support/shared_examples/storage_adapter.rb`, and `spec/active_sanction/storage/conformance_spec.rb` holds it to being able to fail: each example there takes one rule out of an otherwise conforming adapter and checks that the contract notices.
 
+### Syncing every list, and what happens when one is down
+
+One source at a time is `Sources[:ofac_sdn].new.sync`, which fetches, parses and checksums, and deliberately rescues nothing. `ActiveSanction.sync!` is the layer above it — what a *run* does, which is a different set of decisions.
+
+```ruby
+report = ActiveSanction.sync!                   # every configured source
+report = ActiveSanction.sync!(:ofac_sdn)        # one
+report = ActiveSanction.sync!(force: true)      # bypass conditional GET
+report = ActiveSanction.sync!(concurrency: 3)   # fetch from three publishers at once
+
+report.failed?                  # => true
+report[:ofac_sdn].status        # => :updated
+report[:un_consolidated].error  # => "Net::ReadTimeout: execution expired"
+exit report.exit_code           # 1 if any source failed, so cron and CI can alert
+```
+
+**One source failing must not abort the others.** Government endpoints go down, change format without notice, and occasionally serve half a file. If a UN outage stopped OFAC from syncing, the library would fail exactly when it is most needed — during an incident, which is when lists move. So every source runs inside its own rescue, and the run ends with a summary rather than an exception. `StandardError` and not `Exception`: an `Interrupt` is somebody stopping this run on purpose, and swallowing it to go on downloading three more lists is not isolation, it is a job that will not die.
+
+**A failed source keeps its previous snapshot.** Nothing clears a stored list on failure — not a 500, not a parse error, not a publisher that started serving HTML where XML used to be. Screening against yesterday's OFAC list produces a report with a known, visible age on it; screening against an empty list produces a clean report for every customer, which is the most expensive thing this library can get wrong. That trade is only safe while the age is visible, so every result carries the record count and age of the list that source is *still* being screened against:
+
+```
+4 sources in 13.08s: 1 updated, 2 unchanged, 1 failed
+  ofac_sdn           updated    19015 records  just fetched   12.41s
+  ofac_consolidated  unchanged   1203 records  2h old          0.28s
+  canada_sema        unchanged    684 records  2h old          0.19s
+  un_consolidated    failed       612 records  3d old          1.11s  Net::ReadTimeout: execution expired
+```
+
+That table is `report.to_s`, but the report is an object rather than console output: it is what a host application alerts on, and `Sync::Report#to_h` round-trips through JSON so noticing a source that has been quietly failing since Tuesday does not mean scraping a log. `report.unscreenable` is the louder case underneath a failure — a source that kept its previous list is stale, one with nothing stored is not screened at all.
+
+**Unchanged sources cost nothing.** A publisher that answers 304 is never parsed and never stored: the whole saving of conditional GET is that the parse — the expensive half for OFAC's three-file join — is skipped along with the download. A source whose bytes changed but whose parsed *content* hashes to what is already stored is also reported unchanged and not rewritten, since a publisher regenerating an identical file with a new timestamp is not a new list version, and rewriting tens of megabytes to say so would churn the checksum every audit record cites. The exception is a source with nothing readable stored: a conditional request asks the publisher whether the copy we hold is current, so a missing or corrupt snapshot is fetched in full rather than left to a 304 that would report it unchanged.
+
+**Parallel fetching is polite by construction.** `concurrency:` bounds how many *publishers* are fetched from at once, never how hard any one of them is asked: sources are grouped by the host they download from and each group runs in order, because two of the built-in adapters are the same Treasury file server. It defaults to 1.
+
+Sync is a capability of the local backend rather than of every backend — a hosted one does not sync, because data freshness is exactly what its user is paying somebody else to handle — which is why the report is a serializable object and why nothing in it writes to `$stdout`.
+
 ### Normalizing a name for matching
 
 Screening compares folded strings, never published ones. `ActiveSanction::Normalizer` is where that fold happens — stage one of the matching pipeline, and the only place in the library a name is folded at all.

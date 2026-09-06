@@ -88,6 +88,10 @@ Metrics/MethodLength:
   Exclude:
     # See the note on Metrics/CyclomaticComplexity below.
     - "lib/active_sanction/phonetics/double_metaphone.rb"
+    # Configuration#initialize for the reason Metrics/AbcSize excludes it: one
+    # `T.let` per setting the library has, and nothing else. It passed 18 lines
+    # when sync orchestration (#34) added `sync_concurrency`.
+    - "lib/active_sanction/configuration.rb"
 
 # Value objects run long by construction: every field costs a keyword argument,
 # a reader, a validation, a #to_h key and a line of documentation. Splitting one
@@ -106,9 +110,11 @@ Metrics/MethodLength:
 # and 225 became 235 for the scorer's weights (#32) -- the same three lines
 # per setting, each time. 235 became 275 for the public screening API (#33),
 # which added three: the store lists are read from, and the threshold and
-# result limit a screening call defaults to.
+# result limit a screening call defaults to. 275 became 295 for sync
+# orchestration (#34), which added `sync_concurrency` and the shared validation
+# a per-run `concurrency:` is held to.
 Metrics/ClassLength:
-  Max: 275
+  Max: 295
   Exclude:
     # See the note on Metrics/CyclomaticComplexity below.
     - "lib/active_sanction/phonetics/double_metaphone.rb"

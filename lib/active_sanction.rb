@@ -29,6 +29,7 @@ require "active_sanction/scorer"
 require "active_sanction/query"
 require "active_sanction/match_result"
 require "active_sanction/matcher"
+require "active_sanction/sync"
 require "active_sanction/sources/ofac_sdn"
 require "active_sanction/sources/ofac_consolidated"
 require "active_sanction/sources/un_consolidated"
@@ -106,6 +107,39 @@ module ActiveSanction
     # Sugar over .matcher, which is where everything this does is documented.
     sig { params(query: T.untyped, overrides: T.untyped).returns(T::Array[MatchResult]) }
     def screen(query = nil, **overrides) = matcher.screen(query, **overrides)
+
+    # Fetches, parses and stores every configured list, and returns what each
+    # one did:
+    #
+    #   report = ActiveSanction.sync!                   # every configured source
+    #   report = ActiveSanction.sync!(:ofac_sdn)        # one
+    #   report = ActiveSanction.sync!(force: true)      # bypass conditional GET
+    #   report = ActiveSanction.sync!(concurrency: 3)   # fetch three publishers at once
+    #
+    #   report.failed?                                  # => false
+    #   report[:ofac_sdn].status                        # => :updated
+    #   exit report.exit_code                           # 1 if any source failed
+    #
+    # A failing source does not raise and does not stop the others: it is
+    # captured into the report and **its previous snapshot is kept**, because
+    # yesterday's list with a visible age is safer than no list. See Sync,
+    # which is where all of that is documented, and Sync::Report.
+    #
+    # The block, if given, is called with each Sync::Result as that source
+    # finishes -- the progress hook for a run that takes minutes.
+    #
+    # Drops the shared matcher when any list changed, so the next screening
+    # call is answered by what was just synced. A process holding its own
+    # matcher rebuilds it instead; see .matcher.
+    sig do
+      params(sources: T.untyped, options: T.untyped,
+             block: T.nilable(T.proc.params(result: Sync::Result).void)).returns(Sync::Report)
+    end
+    def sync!(*sources, **options, &block)
+      report = T.unsafe(Sync).new(sources: sources, **options).call(&block)
+      reload! if report.updated.any?
+      report
+    end
 
     # Screens a list of names, returning one array of results per query, in
     # the order they were given. See Matcher#screen_all.

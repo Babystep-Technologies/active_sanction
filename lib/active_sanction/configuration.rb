@@ -82,6 +82,16 @@ module ActiveSanction
     # its own retention storage, not a bigger number here.
     DEFAULT_RETAIN_PAYLOADS = T.let(3, Integer)
 
+    # How many publishers a sync fetches from at once. One, because these are
+    # government file servers with nobody waiting on the result, and a library
+    # that opens four connections to Treasury by default is a library that gets
+    # a jurisdiction's operators asking who we are. Raising it fetches from
+    # more publishers at a time and never harder from any one of them -- Sync
+    # groups sources by the host they download from and runs each group in
+    # order -- so the number is a bound on how many governments are being asked
+    # at once, not on how fast any one of them is asked.
+    DEFAULT_SYNC_CONCURRENCY = T.let(1, Integer)
+
     # The launch lists change roughly daily at most, so a source last confirmed
     # within a day is not worth asking about again when a caller is only trying
     # to decide whether a sync is due. This is what #stale? measures against;
@@ -188,6 +198,10 @@ module ActiveSanction
     sig { returns(Symbol) }
     attr_reader :xml_backend
 
+    # See DEFAULT_SYNC_CONCURRENCY. A per-run `concurrency:` overrides it.
+    sig { returns(Integer) }
+    attr_reader :sync_concurrency
+
     # See DEFAULT_CANDIDATE_LIMIT. A per-query `limit:` overrides it.
     sig { returns(Integer) }
     attr_reader :candidate_limit
@@ -230,6 +244,7 @@ module ActiveSanction
       @stale_after = T.let(DEFAULT_STALE_AFTER, T.nilable(Numeric))
       @sources = T.let(DEFAULT_SOURCES, T.nilable(T::Array[Symbol]))
       @xml_backend = T.let(DEFAULT_XML_BACKEND, Symbol)
+      @sync_concurrency = T.let(DEFAULT_SYNC_CONCURRENCY, Integer)
       @candidate_limit = T.let(DEFAULT_CANDIDATE_LIMIT, Integer)
       @screening_threshold = T.let(DEFAULT_SCREENING_THRESHOLD, Float)
       @screening_limit = T.let(DEFAULT_SCREENING_LIMIT, Integer)
@@ -317,6 +332,11 @@ module ActiveSanction
       raise ConfigurationError, "xml_backend cannot be blank" if name.empty?
 
       @xml_backend = name.to_sym
+    end
+
+    sig { params(value: T.untyped).void }
+    def sync_concurrency=(value)
+      @sync_concurrency = self.class.sync_concurrency!(value)
     end
 
     # Raising this trades milliseconds for recall and lowering it does the
@@ -479,6 +499,22 @@ module ActiveSanction
         raise ConfigurationError, "retain_payloads must be a whole number of payloads, got #{value.inspect}"
       end
       raise ConfigurationError, "retain_payloads must be at least 1, got #{integer}" unless integer.positive?
+
+      integer
+    end
+
+    # Shared by Sync, so a run given an explicit `concurrency:` fails the same
+    # way as a misconfigured global. Zero is refused rather than read as "no
+    # parallelism": a sync that runs no sources is a typo, and one is what
+    # sequential is spelled as.
+    sig { params(value: T.untyped).returns(Integer) }
+    def self.sync_concurrency!(value)
+      integer = begin
+        Integer(value)
+      rescue TypeError, ArgumentError
+        raise ConfigurationError, "sync_concurrency must be a whole number of sources, got #{value.inspect}"
+      end
+      raise ConfigurationError, "sync_concurrency must be at least 1, got #{integer}" unless integer.positive?
 
       integer
     end
