@@ -104,9 +104,11 @@ Metrics/MethodLength:
 # lines. 190 became 210 when the normalizer dictionary (#27) became
 # configurable, 210 became 225 when the index (#31) added its candidate cap,
 # and 225 became 235 for the scorer's weights (#32) -- the same three lines
-# per setting, each time.
+# per setting, each time. 235 became 275 for the public screening API (#33),
+# which added three: the store lists are read from, and the threshold and
+# result limit a screening call defaults to.
 Metrics/ClassLength:
-  Max: 235
+  Max: 275
   Exclude:
     # See the note on Metrics/CyclomaticComplexity below.
     - "lib/active_sanction/phonetics/double_metaphone.rb"
