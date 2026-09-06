@@ -47,7 +47,8 @@ Specs that genuinely need a real endpoint are tagged `:live`. They are excluded 
 `benchmark/` holds the measurements that answer a design question rather than
 pass or fail, so they are not part of `rake`:
 
-    $ bundle exec rake benchmark:similarity          # the edit-distance primitives
+    $ bundle exec rake benchmark:similarity          # the matching algorithms
+    $ bundle exec rake benchmark:index               # index build, memory, query latency
     $ RUBYOPT=--yjit bundle exec rake benchmark:similarity
 
 Each one prints the Ruby and JIT it ran under, because that is most of what

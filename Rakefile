@@ -24,6 +24,11 @@ namespace :benchmark do
   task :similarity do
     ruby "benchmark/similarity.rb"
   end
+
+  desc "Time and size the index, and sweep its postings budget (#31)"
+  task :index do
+    ruby "benchmark/index.rb"
+  end
 end
 
 task default: %i[spec rubocop typecheck]
