@@ -50,10 +50,38 @@ pass or fail, so they are not part of `rake`:
     $ bundle exec rake benchmark:similarity          # the matching algorithms
     $ bundle exec rake benchmark:index               # index build, memory, query latency
     $ bundle exec rake benchmark:scorer              # scoring latency, and what a threshold buys
+    $ bundle exec rake benchmark:accuracy            # precision, recall and F1 against the labeled set
+    $ bundle exec rake benchmark:latency             # what a whole screening call costs
     $ RUBYOPT=--yjit bundle exec rake benchmark:similarity
 
-Each one prints the Ruby and JIT it ran under, because that is most of what
-the numbers mean.
+Each timed one prints the Ruby and JIT it ran under, because that is most of
+what the numbers mean.
+
+**`benchmark:accuracy` is the exception, and it is committed.** It measures the
+library rather than the machine — the same fixtures and the same seeded corpus
+give the same numbers on any laptop — so it writes its report to
+[`benchmark/results/accuracy.md`](benchmark/results/accuracy.md), which is in
+the repository. A diff in that file is a change in what this library finds,
+which is the one thing about match quality that is otherwise invisible in a
+code review: a weight nudged by two points does not look like anything in a
+patch, and it is exactly what moves a name from found to missed. Run it when
+you change the normalizer, the index, the similarity algorithms, the scorer or
+the weights, and commit what comes out.
+
+The labeled set behind it is [`benchmark/fixtures/labeled_set.yml`](benchmark/fixtures/labeled_set.yml):
+87 queries written against the real published records the source fixtures
+hold, each one labeled with what it is supposed to find and what kind of damage
+it is doing to the name — a transliteration, an inverted order, a missing
+patronymic, a typo, a legal form spelled out — plus the names that must *not*
+alert. The file's header says where each record comes from and why every
+invented one is invented.
+
+Both harnesses hide the labeled records inside a synthetic corpus the size and
+shape of the real lists, because precision measured against thirty records is
+a number about the fixture. To run either against a real synced corpus
+instead:
+
+    $ BACKGROUND=store bundle exec rake benchmark:accuracy
 
 ### Static typing
 
@@ -526,6 +554,39 @@ threshold       no jit      yjit    results per query
 The five shares are measured one at a time, cheapest-to-tighten first, and everything still unmeasured is worth at most its own weight — so the moment `total + remaining` falls under the cutoff, the rest is not computed. What *is* computed is computed with a threshold of its own, derived from the weights left to come, which is what lets Levenshtein turn it into an edit budget and stop its rows early. Every exit is a bound on what a pair can reach and never an approximation of what it did reach, so a result at or above the threshold is exactly the result the same call without one returns. `bundle exec rake benchmark:scorer` prints the sweep and fails loudly if a threshold ever changes a score.
 
 It is applied to the whole score rather than to the name, which matters: a subject carrying the right passport number needs forty points less of a name than one carrying nothing.
+
+#### What 75 is set from
+
+The default was a guess until `rake benchmark:accuracy` measured it. Against 87 labeled queries — real published records queried the way a customer record spells them, plus the common names and near misses that must not alert — F1 peaks at exactly the number this library ships:
+
+```
+threshold  precision  recall      F1   found  missed  false alerts  noise/query
+       60      0.831   0.970   0.895      64       2            13          6.7
+       75      0.899   0.939   0.919      62       4             7          1.7   <- best F1
+       85      0.963   0.788   0.867      52      14             2          1.2
+```
+
+Raising it to 85 removes five false alerts and stops returning ten listed records. Lowering it to 60 finds two more and costs six false alerts and five times the noise. F1 weighs those two errors equally and a sanctions screen does not — a false positive costs an analyst minutes, a false negative is a sanctioned counterparty onboarded — so the default sits at the peak rather than above it, and `threshold:` is per query for the host that has to be more careful still. What lowering it costs is the noise column rather than something to be discovered in production.
+
+The same report breaks recall down by list, which is the number an averaged one would hide:
+
+```
+source                 queries  recall   found
+canada_sema                 25   0.880   22 of 25
+un_consolidated             20   1.000   20 of 20
+ofac_sdn                    15   0.933   14 of 15
+```
+
+Canada is measurably worse and it is not the matching's fault: the list publishes no alias kinds, packs several aliases into one comma-joined string and gives a date of birth for a minority of its records, so there is less to match against. That is a fact about coverage a compliance team has to know, and [the committed report](benchmark/results/accuracy.md) names every record this version misses and every one it wrongly alerts on.
+
+`rake benchmark:latency` is the other half — a whole screening call against 47,000 indexed names, at the median and in the tail:
+
+```
+threshold       mean       p50       p95       p99   slowest
+        0     54.7 ms   51.4 ms  100.6 ms  128.6 ms  140.3 ms
+       75     18.2 ms   14.8 ms   47.9 ms   85.7 ms   91.5 ms
+       85     11.7 ms   10.2 ms   22.7 ms   39.1 ms   40.2 ms
+```
 
 
 ### Screening a name

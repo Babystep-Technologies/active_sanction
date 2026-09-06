@@ -18,8 +18,12 @@ end
 
 namespace :benchmark do
   # Not part of the default task: a benchmark measures the machine it runs on,
-  # so it answers a question rather than passing or failing. The accuracy and
-  # latency harnesses (#37) land beside this one.
+  # so it answers a question rather than passing or failing.
+  #
+  # `accuracy` is the exception to that rule and is deliberately kept in the
+  # same place anyway. It measures the library rather than the machine, and it
+  # writes benchmark/results/accuracy.md, which is committed -- so it is run
+  # when the matching changes, and the diff is read in review.
   desc "Time the similarity algorithms (#28, #29)"
   task :similarity do
     ruby "benchmark/similarity.rb"
@@ -33,6 +37,16 @@ namespace :benchmark do
   desc "Time the scorer, and sweep its threshold (#32)"
   task :scorer do
     ruby "benchmark/scorer.rb"
+  end
+
+  desc "Measure precision, recall and F1 against the labeled set, and rewrite the committed report (#37)"
+  task :accuracy do
+    ruby "benchmark/accuracy.rb"
+  end
+
+  desc "Time a whole screening call, against a corpus the size of the real lists (#37)"
+  task :latency do
+    ruby "benchmark/latency.rb"
   end
 end
 
