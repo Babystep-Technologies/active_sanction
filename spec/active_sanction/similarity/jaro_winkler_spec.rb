@@ -71,12 +71,16 @@ RSpec.describe ActiveSanction::Similarity::JaroWinkler do
     end
   end
 
-  # Recorded rather than lamented: this is the number the token ratios (#29)
-  # have to beat, and the reason the scorer (#32) cannot be built out of
-  # character-level comparison alone.
-  describe "what it is not good at, which is why #29 exists" do
+  # Recorded when this algorithm landed as the number the token ratios had to
+  # beat, and kept here now that they have: it is the reason the scorer (#32)
+  # cannot be built out of character-level comparison alone.
+  describe "what it is not good at, which is why the token ratios exist" do
     it "misses an inverted name at the threshold this industry screens on" do
       expect(score("abbas abu", "abu abbas")).to be < 0.85
+    end
+
+    it "leaves that pair to the token sort ratio, which scores it exactly" do
+      expect(ActiveSanction::Similarity::TokenSort.call("abbas abu", "abu abbas")).to eq(1.0)
     end
   end
 
@@ -101,6 +105,13 @@ RSpec.describe ActiveSanction::Similarity::JaroWinkler do
 
     it "keeps a pair whose lengths merely differ" do
       expect(described_class.ceiling(9, 12)).to be > 0.85
+    end
+
+    # Loose, but not so loose as to be useless: a character the other string
+    # does not have costs something no matter where it falls, so one length
+    # difference is enough to rule a perfect score out.
+    it "rules a perfect score out when the lengths differ at all" do
+      expect(described_class.ceiling(7, 8)).to be < 1.0
     end
 
     # The matching window widens with the longer string, so this pair is on

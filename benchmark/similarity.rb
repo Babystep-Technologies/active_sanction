@@ -1,15 +1,23 @@
 # frozen_string_literal: true
 
-# What the edit-distance primitives (#28) cost, and what the early exits save.
+# What the similarity algorithms (#28, #29) cost, and what the early exits
+# save.
 #
 #     bundle exec rake benchmark:similarity
 #
-# The number that matters is the last section's: the index (#31) hands the
-# scorer a few hundred candidates, the scorer runs both algorithms over every
-# name each candidate has, and the whole query is meant to fit in ~10 ms. This
-# says how much of that budget the primitives take, which is the question that
-# decided against a C extension -- see Similarity for the rest of that
-# argument.
+# The number that matters is the per-query section's: the index (#31) hands
+# the scorer a few hundred candidates, the scorer runs all four algorithms
+# over every name each candidate has, and the whole query is meant to fit in
+# ~10 ms. This says how much of that budget the comparison takes, which is the
+# question that decided against a C extension -- see Similarity for the rest
+# of that argument.
+#
+# The token ratios are rearrangements with Levenshtein run over the result, so
+# what they cost is one Levenshtein call for the sort ratio and three for the
+# set ratio, plus the sorting and the set arithmetic. What is worth watching
+# is the last section: a threshold buys the set ratio almost nothing, because
+# a name that is a subset of another scores 1.0 at any length and no bound can
+# rule that out in advance.
 #
 # Timings are the best of three passes rather than an average: the fastest run
 # is the one least disturbed by whatever else the machine was doing. The JIT
@@ -23,6 +31,12 @@ require_relative "../lib/active_sanction"
 module SimilarityBenchmark
   JW = ActiveSanction::Similarity::JaroWinkler
   LEV = ActiveSanction::Similarity::Levenshtein
+  SORT = ActiveSanction::Similarity::TokenSort
+  SET = ActiveSanction::Similarity::TokenSet
+
+  # The four the scorer (#32) blends, in the order they cost.
+  ALGORITHMS = [["jaro_winkler", JW], ["levenshtein", LEV],
+                ["token_sort", SORT], ["token_set", SET]].freeze
 
   # Folded names, in the form Normalizer leaves them, and in the proportions
   # these lists actually publish: mostly people, a good number of companies
@@ -83,36 +97,50 @@ module SimilarityBenchmark
 
   def per_comparison
     puts "\nOne comparison, over #{PAIRS.size} name pairs"
-    report("jaro_winkler", time { PAIRS.each { |left, right| JW.call(left, right) } }, PAIRS.size)
-    report("levenshtein", time { PAIRS.each { |left, right| LEV.call(left, right) } }, PAIRS.size)
+    ALGORITHMS.each do |name, algorithm|
+      report(name, time { PAIRS.each { |left, right| algorithm.call(left, right) } }, PAIRS.size)
+    end
   end
 
-  # The shape #31 hands over: one query, a few hundred candidates, both
-  # algorithms on each. The scorer adds the token ratios (#29) and a phonetic
-  # comparison (#30) on top of this.
+  # The shape #31 hands over: one query, a few hundred candidates, all four
+  # algorithms on each. The scorer adds a phonetic comparison (#30) on top of
+  # this.
+  #
+  # The token ratios are handed tokens rather than strings, which is what a
+  # Form carries and what the index will be passing: splitting 500 candidate
+  # names again per query is work the fold already did.
   def per_query
     candidates = (NAMES * 13).first(500)
     query = "muhammad al zawahiri"
+    tokens = candidates.map(&:split)
+    query_tokens = query.split
     puts "\nOne query against #{candidates.size} candidates"
     [0.0, 0.85].each do |cutoff|
-      seconds = time do
-        candidates.each do |name|
-          JW.call(query, name, threshold: cutoff)
-          LEV.call(query, name, threshold: cutoff)
-        end
-      end
+      seconds = time { query(query, query_tokens, candidates, tokens, cutoff) }
       printf("  %<label>-44s %<ms>25.2f ms/query\n",
-             label: "both algorithms, threshold #{cutoff}", ms: seconds * 1000)
+             label: "all four algorithms, threshold #{cutoff}", ms: seconds * 1000)
+    end
+  end
+
+  def query(query, query_tokens, candidates, tokens, cutoff)
+    candidates.each_with_index do |name, index|
+      JW.call(query, name, threshold: cutoff)
+      LEV.call(query, name, threshold: cutoff)
+      SORT.call(query_tokens, tokens.fetch(index), threshold: cutoff)
+      SET.call(query_tokens, tokens.fetch(index), threshold: cutoff)
     end
   end
 
   # The acceptance criterion: the early exit has to be visible, not merely
   # present. On mismatched lengths Levenshtein's bound is tight enough to skip
-  # the matrix outright; Jaro-Winkler's is loosened by the prefix bonus, which
-  # is a bound on what the algorithm can produce rather than a tuning choice.
+  # the matrix outright, and the token sort ratio inherits that bound exactly;
+  # Jaro-Winkler's is loosened by the prefix bonus, and the token set ratio
+  # has none at all. All four are bounds on what the algorithm can produce
+  # rather than tuning choices, which is why the last of them is 1.0 and says
+  # so.
   def early_exit
     puts "\nThe early exit, over #{MISMATCHED.size} length-mismatched pairs"
-    [["jaro_winkler", JW], ["levenshtein", LEV]].each do |name, algorithm|
+    ALGORITHMS.each do |name, algorithm|
       full = time { MISMATCHED.each { |left, right| algorithm.call(left, right) } }
       capped = time { MISMATCHED.each { |left, right| algorithm.call(left, right, threshold: 0.85) } }
       report("#{name}, no threshold", full, MISMATCHED.size)
