@@ -1,0 +1,292 @@
+# ISO 3166-1 countries and territories, and the other names sanctions lists
+# write them under.
+#
+# One country per line, fields separated by `|`:
+#
+#     <alpha-2>|<alpha-3>|<ISO name>|<alias>|<alias>...
+#
+# Every field on a line resolves to that line's alpha-2 code, so `RU`, `RUS`,
+# `Russian Federation` and `Russia` are one answer. Fields are folded by the
+# same Normalizer::Form a name is folded by, which is why no line here spells
+# a casing, an accent or a punctuation mark: `Cote d'Ivoire` and `CÔTE
+# D'IVOIRE` both reach the `Côte d'Ivoire` below.
+#
+# ### Why the aliases are not optional
+#
+# The ISO name is frequently not what a publisher writes. The UN files
+# `NATIONALITY/VALUE` as free text and OFAC writes nationality into a remarks
+# sentence, so the corpus carries `Iran`, `Syria`, `North Korea` and `Russia`
+# far more often than it carries `Iran, Islamic Republic of` or `Korea,
+# Democratic People's Republic of`. A table with only the ISO names would
+# resolve almost nothing this library actually meets, and an unresolved
+# country is a nationality signal the scorer has to discard.
+#
+# Word order is part of that. Folding does not reorder tokens, so
+# `Korea, Democratic People's Republic of` and `Democratic People's Republic
+# of Korea` are two different strings and both have to be written down.
+#
+# ### What is deliberately not here
+#
+# **Demonyms.** `Russian`, `Egyptian` and `Syrian` are what a person is, not
+# where a country is, and the lists publish the country. Adding them would
+# also put `Chad` and `Chadian` a letter apart from several personal names.
+#
+# **Historical states, except where a list still uses one.** `USSR` and
+# `Soviet Union` are on RU because sanctions records written in the 1990s
+# still say so; `Zaire` is on CD and `Burma` on MM for the same reason.
+#
+# ### Collisions
+#
+# The first line that claims a spelling keeps it, so order in this file
+# decides a tie. There are none among the fields below, and the suite holds
+# the file to that -- a future addition that collides with an existing name
+# fails rather than silently changing what an existing country resolves to.
+AD|AND|Andorra
+AE|ARE|United Arab Emirates|UAE
+AF|AFG|Afghanistan
+AG|ATG|Antigua and Barbuda
+AI|AIA|Anguilla
+AL|ALB|Albania
+AM|ARM|Armenia
+AO|AGO|Angola
+AQ|ATA|Antarctica
+AR|ARG|Argentina
+AS|ASM|American Samoa
+AT|AUT|Austria
+AU|AUS|Australia
+AW|ABW|Aruba
+AX|ALA|Åland Islands
+AZ|AZE|Azerbaijan
+BA|BIH|Bosnia and Herzegovina
+BB|BRB|Barbados
+BD|BGD|Bangladesh
+BE|BEL|Belgium
+BF|BFA|Burkina Faso
+BG|BGR|Bulgaria
+BH|BHR|Bahrain
+BI|BDI|Burundi
+BJ|BEN|Benin
+BL|BLM|Saint Barthélemy
+BM|BMU|Bermuda
+BN|BRN|Brunei Darussalam|Brunei
+BO|BOL|Bolivia, Plurinational State of|Bolivia|Plurinational State of Bolivia
+BQ|BES|Bonaire, Sint Eustatius and Saba
+BR|BRA|Brazil
+BS|BHS|Bahamas|The Bahamas
+BT|BTN|Bhutan
+BV|BVT|Bouvet Island
+BW|BWA|Botswana
+BY|BLR|Belarus|Byelorussia
+BZ|BLZ|Belize
+CA|CAN|Canada
+CC|CCK|Cocos (Keeling) Islands|Keeling Islands
+CD|COD|Congo, Democratic Republic of the|Democratic Republic of the Congo|DR Congo|Zaire
+CF|CAF|Central African Republic
+CG|COG|Congo|Republic of the Congo|Congo-Brazzaville
+CH|CHE|Switzerland
+CI|CIV|Côte d'Ivoire|Ivory Coast
+CK|COK|Cook Islands
+CL|CHL|Chile
+CM|CMR|Cameroon
+CN|CHN|China|People's Republic of China
+CO|COL|Colombia
+CR|CRI|Costa Rica
+CU|CUB|Cuba
+CV|CPV|Cabo Verde|Cape Verde
+CW|CUW|Curaçao
+CX|CXR|Christmas Island
+CY|CYP|Cyprus
+CZ|CZE|Czechia|Czech Republic
+DE|DEU|Germany|Federal Republic of Germany
+DJ|DJI|Djibouti
+DK|DNK|Denmark
+DM|DMA|Dominica
+DO|DOM|Dominican Republic
+DZ|DZA|Algeria
+EC|ECU|Ecuador
+EE|EST|Estonia
+EG|EGY|Egypt|Arab Republic of Egypt
+EH|ESH|Western Sahara
+ER|ERI|Eritrea
+ES|ESP|Spain
+ET|ETH|Ethiopia
+FI|FIN|Finland
+FJ|FJI|Fiji
+FK|FLK|Falkland Islands|Malvinas
+FM|FSM|Micronesia, Federated States of|Micronesia|Federated States of Micronesia
+FO|FRO|Faroe Islands
+FR|FRA|France
+GA|GAB|Gabon
+GB|GBR|United Kingdom|United Kingdom of Great Britain and Northern Ireland|Great Britain|England|Scotland|Wales|Northern Ireland
+GD|GRD|Grenada
+GE|GEO|Georgia
+GF|GUF|French Guiana
+GG|GGY|Guernsey
+GH|GHA|Ghana
+GI|GIB|Gibraltar
+GL|GRL|Greenland
+GM|GMB|Gambia|The Gambia
+GN|GIN|Guinea
+GP|GLP|Guadeloupe
+GQ|GNQ|Equatorial Guinea
+GR|GRC|Greece
+GS|SGS|South Georgia and the South Sandwich Islands
+GT|GTM|Guatemala
+GU|GUM|Guam
+GW|GNB|Guinea-Bissau
+GY|GUY|Guyana
+HK|HKG|Hong Kong
+HM|HMD|Heard Island and McDonald Islands
+HN|HND|Honduras
+HR|HRV|Croatia
+HT|HTI|Haiti
+HU|HUN|Hungary
+ID|IDN|Indonesia
+IE|IRL|Ireland
+IL|ISR|Israel
+IM|IMN|Isle of Man
+IN|IND|India
+IO|IOT|British Indian Ocean Territory
+IQ|IRQ|Iraq|Republic of Iraq
+IR|IRN|Iran, Islamic Republic of|Iran|Islamic Republic of Iran
+IS|ISL|Iceland
+IT|ITA|Italy
+JE|JEY|Jersey
+JM|JAM|Jamaica
+JO|JOR|Jordan
+JP|JPN|Japan
+KE|KEN|Kenya
+KG|KGZ|Kyrgyzstan
+KH|KHM|Cambodia
+KI|KIR|Kiribati
+KM|COM|Comoros
+KN|KNA|Saint Kitts and Nevis
+KP|PRK|Korea, Democratic People's Republic of|Democratic People's Republic of Korea|North Korea|DPRK
+KR|KOR|Korea, Republic of|Republic of Korea|South Korea
+KW|KWT|Kuwait
+KY|CYM|Cayman Islands
+KZ|KAZ|Kazakhstan
+LA|LAO|Lao People's Democratic Republic|Laos
+LB|LBN|Lebanon
+LC|LCA|Saint Lucia
+LI|LIE|Liechtenstein
+LK|LKA|Sri Lanka
+LR|LBR|Liberia
+LS|LSO|Lesotho
+LT|LTU|Lithuania
+LU|LUX|Luxembourg
+LV|LVA|Latvia
+LY|LBY|Libya|Libyan Arab Jamahiriya
+MA|MAR|Morocco
+MC|MCO|Monaco
+MD|MDA|Moldova, Republic of|Moldova|Republic of Moldova
+ME|MNE|Montenegro
+MF|MAF|Saint Martin
+MG|MDG|Madagascar
+MH|MHL|Marshall Islands
+MK|MKD|North Macedonia|Macedonia|Republic of North Macedonia|The former Yugoslav Republic of Macedonia
+ML|MLI|Mali
+MM|MMR|Myanmar|Burma
+MN|MNG|Mongolia
+MO|MAC|Macao|Macau
+MP|MNP|Northern Mariana Islands
+MQ|MTQ|Martinique
+MR|MRT|Mauritania
+MS|MSR|Montserrat
+MT|MLT|Malta
+MU|MUS|Mauritius
+MV|MDV|Maldives
+MW|MWI|Malawi
+MX|MEX|Mexico
+MY|MYS|Malaysia
+MZ|MOZ|Mozambique
+NA|NAM|Namibia
+NC|NCL|New Caledonia
+NE|NER|Niger
+NF|NFK|Norfolk Island
+NG|NGA|Nigeria
+NI|NIC|Nicaragua
+NL|NLD|Netherlands|The Netherlands|Holland
+NO|NOR|Norway
+NP|NPL|Nepal
+NR|NRU|Nauru
+NU|NIU|Niue
+NZ|NZL|New Zealand
+OM|OMN|Oman
+PA|PAN|Panama
+PE|PER|Peru
+PF|PYF|French Polynesia
+PG|PNG|Papua New Guinea
+PH|PHL|Philippines
+PK|PAK|Pakistan
+PL|POL|Poland
+PM|SPM|Saint Pierre and Miquelon
+PN|PCN|Pitcairn
+PR|PRI|Puerto Rico
+PS|PSE|Palestine, State of|Palestine|State of Palestine|Palestinian Territory|Occupied Palestinian Territory
+PT|PRT|Portugal
+PW|PLW|Palau
+PY|PRY|Paraguay
+QA|QAT|Qatar
+RE|REU|Réunion
+RO|ROU|Romania
+RS|SRB|Serbia
+RU|RUS|Russian Federation|Russia|USSR|Soviet Union
+RW|RWA|Rwanda
+SA|SAU|Saudi Arabia
+SB|SLB|Solomon Islands
+SC|SYC|Seychelles
+SD|SDN|Sudan
+SE|SWE|Sweden
+SG|SGP|Singapore
+SH|SHN|Saint Helena, Ascension and Tristan da Cunha|Saint Helena
+SI|SVN|Slovenia
+SJ|SJM|Svalbard and Jan Mayen
+SK|SVK|Slovakia
+SL|SLE|Sierra Leone
+SM|SMR|San Marino
+SN|SEN|Senegal
+SO|SOM|Somalia
+SR|SUR|Suriname
+SS|SSD|South Sudan
+ST|STP|Sao Tome and Principe
+SV|SLV|El Salvador
+SX|SXM|Sint Maarten
+SY|SYR|Syrian Arab Republic|Syria
+SZ|SWZ|Eswatini|Swaziland
+TC|TCA|Turks and Caicos Islands
+TD|TCD|Chad
+TF|ATF|French Southern Territories
+TG|TGO|Togo
+TH|THA|Thailand
+TJ|TJK|Tajikistan
+TK|TKL|Tokelau
+TL|TLS|Timor-Leste|East Timor
+TM|TKM|Turkmenistan
+TN|TUN|Tunisia
+TO|TON|Tonga
+TR|TUR|Türkiye|Turkey
+TT|TTO|Trinidad and Tobago
+TV|TUV|Tuvalu
+TW|TWN|Taiwan, Province of China|Taiwan
+TZ|TZA|Tanzania, United Republic of|Tanzania|United Republic of Tanzania
+UA|UKR|Ukraine
+UG|UGA|Uganda
+UM|UMI|United States Minor Outlying Islands
+US|USA|United States|United States of America|America
+UY|URY|Uruguay
+UZ|UZB|Uzbekistan
+VA|VAT|Holy See|Vatican City|Vatican
+VC|VCT|Saint Vincent and the Grenadines
+VE|VEN|Venezuela, Bolivarian Republic of|Venezuela|Bolivarian Republic of Venezuela
+VG|VGB|Virgin Islands, British|British Virgin Islands
+VI|VIR|Virgin Islands, U.S.|United States Virgin Islands
+VN|VNM|Viet Nam|Vietnam
+VU|VUT|Vanuatu
+WF|WLF|Wallis and Futuna
+WS|WSM|Samoa
+YE|YEM|Yemen
+YT|MYT|Mayotte
+ZA|ZAF|South Africa
+ZM|ZMB|Zambia
+ZW|ZWE|Zimbabwe

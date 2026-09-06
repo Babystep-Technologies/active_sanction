@@ -29,6 +29,11 @@ namespace :benchmark do
   task :index do
     ruby "benchmark/index.rb"
   end
+
+  desc "Time the scorer, and sweep its threshold (#32)"
+  task :scorer do
+    ruby "benchmark/scorer.rb"
+  end
 end
 
 task default: %i[spec rubocop typecheck]

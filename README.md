@@ -49,6 +49,7 @@ pass or fail, so they are not part of `rake`:
 
     $ bundle exec rake benchmark:similarity          # the matching algorithms
     $ bundle exec rake benchmark:index               # index build, memory, query latency
+    $ bundle exec rake benchmark:scorer              # scoring latency, and what a threshold buys
     $ RUBYOPT=--yjit bundle exec rake benchmark:similarity
 
 Each one prints the Ruby and JIT it ran under, because that is most of what
@@ -379,6 +380,83 @@ end
 ```
 
 One deliberate refusal: a name whose every token is on a strip list keeps them all. An organization called "The Company" is a poor name to screen on and a worse one to index as the empty string, which matches everything or nothing depending on which scorer sees it first.
+
+### Scoring a candidate, with reasons
+
+`ActiveSanction::Scorer` is stage four: it turns a candidate into a number between 0 and 100 and the account of how it got there.
+
+```ruby
+subject = ActiveSanction::Scorer::Subject.new(
+  name:           "Vladimir Putin",
+  type:           :individual,
+  dates_of_birth: "1952-10-07",
+  nationalities:  %w[RU]
+)
+
+result = ActiveSanction::Scorer.call(subject, entity, threshold: 75)
+
+result.score        # => 97.3
+result.name.value   # => "PUTIN, Vladimir Vladimirovich"
+result.explanation.map(&:to_s)
+# => ["+76.3 name: matched primary name \"PUTIN, Vladimir Vladimirovich\"",
+#     "+15.0 dob: date of birth 1952-10-07 matches",
+#     "+6.0 nationality: RU matches"]
+```
+
+**The score is the explanation.** It is not stored beside the reasons, it is the sum of them, rounded once — there is no arithmetic anywhere in the library that can move one without the other. A compliance officer has to answer "why did this score 87?" to an examiner, and a number that merely travels alongside a list of reasons is one that can come apart from them in a later release and be quietly wrong for a year. So the explanation is never empty, it always adds up, and where the 0..100 clamp moves the total off the sum that correction is itself a reason.
+
+**An entity's score is the best of its names.** OFAC ships 20,147 aliases against 19,321 primary names and the UN publishes as many as a dozen spellings of one person, so averaging over an entity's names would punish the records that describe themselves most thoroughly, and reading only the primary name would miss most of what these lists are for. Every name is scored, the best wins, and the winner is on the result — a report has to be able to say which spelling produced the hit. The UN's `QUALITY=Low` aliases are penalized before the maximum rather than after it, so a good name scoring 85 beats a low-quality one scoring 90.
+
+**Four algorithms and a phonetic pass, blended by documented weights.** `token_set` carries the largest share at 0.45, because a 1.0 from it means every word of the shorter name appears in the longer one — the shape of nearly every honest partial query. The character algorithms are the brake: they are what keep `kim jong un` and `kim yong chol` apart, where sorting loses the information that two names were already written in the same order. Every number lives in `ActiveSanction::Scorer::Weights` with the reason it is what it is, and a host can change any of them.
+
+```ruby
+ActiveSanction.configure { |c| c.scorer_weights = { dob_conflict: -20.0 } }
+```
+
+The blend is a weighted mean rather than the weighted maximum the well-known Python ratio uses, and that is a choice with a cost. A maximum would score the query `Mohammed` against `MOHAMMED AL-ZAWAHIRI` in the nineties, and on a corpus where a quarter of the individuals share a handful of given names that is not tolerance, it is an alert queue nobody can work through. A mean puts the same pair in the high seventies — still high, because the caller's whole query really is on the record — and what pulls it apart from a real match is not the name at all.
+
+#### Secondary identifiers are what make it a screening tool
+
+Name similarity alone puts thousands of people on a list of a few hundred. The passport number, the date of birth and the nationality are the corrective, and they are the fields a compliance officer already has in a customer record.
+
+| Signal | Default |
+|---|---|
+| Passport / national ID exact match | **+40** — near-decisive; two people share a name, not a passport number |
+| Date of birth, exact full date | +15 |
+| Date of birth, year-only overlap | +6 |
+| Date of birth, genuine conflict | **−35** |
+| Nationality agreement | +6 |
+| Nationality conflict | −12 |
+| UN `QUALITY=Low` alias | −10 |
+| Entity type mismatch | filtered out entirely, at any name similarity |
+
+**Absent is not conflict, and it is the rule everything obeys.** Most records lack most identifiers: Canada publishes no aliases and frequently no date of birth, OFAC's dates are prose in a remarks field, and the UN grades what it has and says nothing about what it does not. Every adjustment fires only when *both* sides carry the field — a missing field produces no reason at all, not a small penalty. Treating absence as disagreement would systematically under-score the jurisdictions that publish least and hide real hits behind a threshold, which is the quietest way to build a screening tool that does not screen.
+
+The same rule governs a country nobody can resolve. Nationality is the one identifier published as prose, so a query of `RU` meets a record of `Russian Federation` and a query of `Iran` meets `Iran, Islamic Republic of`; compared as strings those are disagreements, and a penalty on them would land on exactly the records where the caller supplied the most information. `ActiveSanction::Country` resolves both sides against a shipped ISO 3166-1 table — codes, ISO names and the aliases a list actually writes, in [`lib/active_sanction/countries.txt`](lib/active_sanction/countries.txt) — and a value it does not recognize is treated as absent rather than as a contradiction. A conflict needs both sides resolved.
+
+An entity type mismatch is a filter rather than a penalty. `NORTHERN STAR` is a ship and a person, vessels and aircraft are about 10% of the SDN list, and there is no score at which a compliance officer wants a ship in a list of people.
+
+#### One name transliterated two ways is the case this does not solve
+
+`QADHAFI, Muammar` against `Muammar Gaddafi` scores 58.8, and raising the phonetic share does not fix it — pushing that share from 0.05 to 0.15 moves the pair to 66.8, still under any threshold worth setting, while lifting every common-name near-miss by the same few points. It buys nothing and costs precision, so it is not done.
+
+What covers the case is upstream. These lists publish the variants themselves — OFAC's Qadhafi record carries `QADHAFI`, `QADAFI`, `GADAFI` and `KADAFI` among others — the index keys on Double Metaphone so a query for one spelling retrieves a record filed under another, and the scorer takes the maximum over an entity's names, so the query is scored against the alias it is actually a spelling of. The residue is a record carrying one spelling and one only, queried with a different one. That is a real limitation, and the honest mitigation is the identifier fields rather than a bigger number in the weights.
+
+#### `threshold:` is how a screening call fits in its budget
+
+Scoring is nearly all of what a screening call costs, and a threshold is what makes it affordable — without changing a single score:
+
+```
+threshold       no jit      yjit    results per query
+        0     105.6 ms   46.3 ms                184.0
+       75      37.5 ms   16.3 ms                 31.4
+       85      24.0 ms   10.5 ms                 10.6
+```
+
+The five shares are measured one at a time, cheapest-to-tighten first, and everything still unmeasured is worth at most its own weight — so the moment `total + remaining` falls under the cutoff, the rest is not computed. What *is* computed is computed with a threshold of its own, derived from the weights left to come, which is what lets Levenshtein turn it into an edit budget and stop its rows early. Every exit is a bound on what a pair can reach and never an approximation of what it did reach, so a result at or above the threshold is exactly the result the same call without one returns. `bundle exec rake benchmark:scorer` prints the sweep and fails loudly if a threshold ever changes a score.
+
+It is applied to the whole score rather than to the name, which matters: a subject carrying the right passport number needs forty points less of a name than one carrying nothing.
+
 
 ## Contributing
 
