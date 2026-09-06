@@ -1,0 +1,649 @@
+# The labeled set the accuracy harness scores itself against (#37).
+#
+# Every threshold in this library is a number somebody has to defend, and a
+# number is only defensible against cases somebody wrote down first. This file
+# is that writing-down: the queries, what each one is supposed to find, and
+# why it is in here.
+#
+# ### Where the listed records come from
+#
+# Not from this file. The records queried against are the ones the three
+# committed source fixtures hold, parsed by the real adapters:
+#
+#     spec/fixtures/ofac_sdn/{SDN,ALT,ADD}.CSV   7 records
+#     spec/fixtures/un_consolidated/consolidated.xml   7 records
+#     spec/fixtures/canada_sema/sema.xml        16 records
+#
+# Those are real published records, lifted verbatim from the lists when the
+# parser specs were written, and each adapter's spec documents which quirk
+# each one was kept for. Going through the adapters rather than through a
+# hand-written copy is deliberate: what a query has to survive is the record
+# *as this library produces it*, aliases split the way the adapter splits them
+# and dates read the way the remarks parser reads them. A corpus transcribed
+# by hand would measure the transcription.
+#
+# It is also what makes the per-source breakdown mean something. Canada
+# publishes no alias kinds, packs several aliases into one comma-joined
+# string, and gives a date of birth for a minority of records; OFAC publishes
+# four aliases for one man and hides his date of birth in prose. Those are the
+# differences the per-source recall table is measuring, and they are real
+# rather than modeled.
+#
+# ### `expect` names a record by its published primary name
+#
+# Not by id. OFAC's ids are its own numbers, the UN's are its own, and
+# Canada publishes none at all -- our adapter hashes a citation and a name into
+# a synthetic one, which is stable but unreadable, and nobody reviewing this
+# file could tell whether `canada_sema:bc24578986084211` is the right man. The
+# loader resolves the name to exactly one record and aborts if it resolves to
+# none or to several.
+#
+# `expect: none` is a query that must produce no alert at all: a common name
+# that happens to share tokens with a listed one, or a near-miss written to
+# sit just outside what a screening tool should call.
+#
+# ### `variation` says what the query is testing
+#
+#   published        the name as the list prints it -- the floor
+#   alias            an alias the list itself publishes
+#   inverted         given and family name the other way round
+#   dropped_token    a patronymic or middle name the customer record omits
+#   transliteration  the same name out of another script, spelled differently
+#   typo             a clerk's or a transliterator's slip: one letter
+#   diacritics       an accent the customer system could not store
+#   legal_form       an organization's suffix written differently or not at all
+#   identifier       the case a name alone cannot decide: see `constructed`
+#   common_name      a name thousands of people have, none of them listed
+#   near_miss        deliberately close to a listed record, and not it
+#
+# ### The constructed records at the bottom
+#
+# Three pairs, and the only invented records here. A name-identical pair
+# separated only by a date of birth is what proves the secondary-identifier
+# logic carries its weight, and thirty real records do not contain one -- the
+# published lists deduplicate. They are filed under `ofac_consolidated`, which
+# is otherwise unrepresented, so the per-source table shows them on their own
+# row rather than mixed into a real list's numbers.
+#
+# The second of each pair is published as `... (II)` and carries the shared
+# name as an alias. The scorer takes the best of an entity's names, so what it
+# sees is still two records with the same name and one field different -- but
+# `expect` can name one of them, which it could not do if the two were printed
+# identically.
+---
+queries:
+  # ---------------------------------------------------------------- OFAC SDN
+  - query: "ABBAS, Abu"
+    type: individual
+    expect: "ABBAS, Abu"
+    variation: published
+
+  - query: "Abu Abbas"
+    type: individual
+    expect: "ABBAS, Abu"
+    variation: alias
+    note: OFAC publishes this one itself, in ALT.CSV.
+
+  - query: "Muhammad Zaydan"
+    type: individual
+    expect: "ABBAS, Abu"
+    variation: inverted
+    note: >-
+      The name he was listed under later, published inverted as
+      `ZAYDAN, Muhammad`. A customer record would carry it this way round.
+
+  - query: "Abu Abas"
+    type: individual
+    expect: "ABBAS, Abu"
+    variation: typo
+
+  - query: "Mohammed Zeidan"
+    type: individual
+    expect: "ABBAS, Abu"
+    variation: transliteration
+    note: The same man, out of Arabic through a different transliterator.
+
+  - query: "Abu Abbas"
+    type: individual
+    dob: "1948-12-10"
+    expect: "ABBAS, Abu"
+    variation: identifier
+    note: The date OFAC prints in its remarks, read by the remarks parser.
+
+  - query: "AEROCARIBBEAN AIRLINES"
+    type: organization
+    expect: "AEROCARIBBEAN AIRLINES"
+    variation: published
+
+  - query: "Aero-Caribbean"
+    type: organization
+    expect: "AEROCARIBBEAN AIRLINES"
+    variation: alias
+
+  - query: "Aerocaribbean Airlines S.A."
+    type: organization
+    expect: "AEROCARIBBEAN AIRLINES"
+    variation: legal_form
+
+  - query: "Munoz Hermanos S.A."
+    type: organization
+    expect: "MUÑOZ HERMANOS S.A."
+    variation: diacritics
+    note: A customer system that cannot store an Ñ, which is most of them.
+
+  - query: "Munoz Hermanos Sociedad Anonima"
+    type: organization
+    expect: "MUÑOZ HERMANOS S.A."
+    variation: legal_form
+    note: The suffix spelled out rather than abbreviated.
+
+  - query: "Novel Category Limited"
+    type: organization
+    expect: "NOVEL CATEGORY LTD"
+    variation: legal_form
+
+  - query: "Short Row Ltd."
+    type: organization
+    expect: "SHORT ROW LTD"
+    variation: published
+
+  - query: "Artavia"
+    type: vessel
+    expect: "ARTAVIA"
+    variation: published
+
+  - query: "EVER GIVEN"
+    type: vessel
+    expect: "ARTAVIA"
+    variation: alias
+    note: A renamed ship, which is why a vessel carries aliases at all.
+
+  # ------------------------------------------------------ UN consolidated
+  - query: "ERIC BADEGE"
+    type: individual
+    expect: "ERIC BADEGE"
+    variation: published
+
+  - query: "Badege, Eric"
+    type: individual
+    expect: "ERIC BADEGE"
+    variation: inverted
+
+  - query: "Erik Badege"
+    type: individual
+    expect: "ERIC BADEGE"
+    variation: typo
+
+  - query: "Eric Badege"
+    type: individual
+    dob: "1971"
+    countries: ["CD"]
+    expect: "ERIC BADEGE"
+    variation: identifier
+    note: A year-only date on the record, which is what most UN records carry.
+
+  - query: "Qusay Saddam Hussein Al-Tikriti"
+    type: individual
+    expect: "QUSAY SADDAM HUSSEIN AL-TIKRITI"
+    variation: published
+
+  - query: "Qusay Hussein"
+    type: individual
+    expect: "QUSAY SADDAM HUSSEIN AL-TIKRITI"
+    variation: dropped_token
+    note: Two of four tokens, which is how the press wrote it.
+
+  - query: "Kusay Saddam Husayn al Tikriti"
+    type: individual
+    expect: "QUSAY SADDAM HUSSEIN AL-TIKRITI"
+    variation: transliteration
+
+  - query: "Bosco Ntaganda"
+    type: individual
+    expect: "BOSCO TAGANDA"
+    variation: alias
+    note: >-
+      The spelling the ICC and every newspaper used; the UN's primary is
+      TAGANDA. This is the ordinary case, not the exotic one.
+
+  - query: "Bosco Ntagenda"
+    type: individual
+    expect: "BOSCO TAGANDA"
+    variation: alias
+
+  - query: "General Taganda"
+    type: individual
+    expect: "BOSCO TAGANDA"
+    variation: alias
+    note: An honorific the list publishes as part of an alias.
+
+  - query: "Amir Muhammad Said Abdal-Rahman al-Salbi"
+    type: individual
+    expect: "Amir Muhammad Sa’id Abdal-Rahman al-Salbi"
+    variation: diacritics
+    note: The UN prints a right single quote; no customer system will.
+
+  - query: "Abdullah Qardash"
+    type: individual
+    expect: "Amir Muhammad Sa’id Abdal-Rahman al-Salbi"
+    variation: alias
+
+  - query: "Abu Ibrahim al-Hashimi al-Qurashi"
+    type: individual
+    expect: "Amir Muhammad Sa’id Abdal-Rahman al-Salbi"
+    variation: alias
+
+  - query: "Muhammad Said Abd al-Rahman al-Mawla"
+    type: individual
+    expect: "Amir Muhammad Sa’id Abdal-Rahman al-Salbi"
+    variation: transliteration
+
+  - query: "JOHN IMANI NZENZE"
+    type: individual
+    expect: "JOHN IMANI NZENZE"
+    variation: published
+
+  - query: "John Nzenze"
+    type: individual
+    expect: "JOHN IMANI NZENZE"
+    variation: dropped_token
+
+  - query: "J. Nzenze"
+    type: individual
+    identifier: { kind: passport, value: "OP0204168" }
+    expect: "JOHN IMANI NZENZE"
+    variation: identifier
+    note: >-
+      The case the identifier weight exists for: a name too thin to clear any
+      threshold, and the passport number that settles it anyway.
+
+  - query: "Allied Democratic Forces"
+    type: organization
+    expect: "ADF"
+    variation: alias
+
+  - query: "ADF/NALU"
+    type: organization
+    expect: "ADF"
+    variation: alias
+
+  - query: "Butembo Airlines"
+    type: organization
+    expect: "BUTEMBO AIRLINES (BAL)"
+    variation: dropped_token
+
+  # ---------------------------------------------------------- Canada SEMA
+  - query: "Khazalbek Bakhtibekovich Atabekov"
+    type: individual
+    expect: "Khazalbek Bakhtibekovich Atabekov"
+    variation: published
+
+  - query: "Khazalbek Atabekov"
+    type: individual
+    expect: "Khazalbek Bakhtibekovich Atabekov"
+    variation: dropped_token
+    note: No patronymic, which is how a Western customer record holds the name.
+
+  - query: "Atabekov, Khazalbek"
+    type: individual
+    expect: "Khazalbek Bakhtibekovich Atabekov"
+    variation: inverted
+
+  - query: "Kazalbek Atabekov"
+    type: individual
+    expect: "Khazalbek Bakhtibekovich Atabekov"
+    variation: typo
+
+  - query: "Dmitry Balaba"
+    type: individual
+    dob: "1972"
+    expect: "Dmitry Vladimirovich Balaba"
+    variation: dropped_token
+
+  - query: "Dmitri Vladimirovich Balaba"
+    type: individual
+    expect: "Dmitry Vladimirovich Balaba"
+    variation: transliteration
+
+  - query: "Aleksandr Barsukov"
+    type: individual
+    dob: "1965-04-29"
+    expect: "Aleksandr Petrovich Barsukov"
+    variation: identifier
+
+  - query: "Alexander Petrovich Barsukov"
+    type: individual
+    expect: "Aleksandr Petrovich Barsukov"
+    variation: transliteration
+    note: ks and x, which is the commonest Russian transliteration split.
+
+  - query: "Roman Trotsenko"
+    type: individual
+    expect: "Roman Viktorovich TROTSENKO"
+    variation: dropped_token
+
+  - query: "Roman Victorovich Trocenko"
+    type: individual
+    expect: "Roman Viktorovich TROTSENKO"
+    variation: alias
+    note: >-
+      Canada publishes this variant, but comma-joined into one alias string
+      with the Cyrillic form. Whether that reaches the index is exactly the
+      kind of thing this harness is for.
+
+  - query: "Kirill Mordashov"
+    type: individual
+    expect: "Kirill Alekseevich MORDASHOV"
+    variation: dropped_token
+
+  - query: "Nicolas Maduro Moros"
+    type: individual
+    expect: "Nicolás MADURO MOROS"
+    variation: diacritics
+
+  - query: "Nicolas Maduro"
+    type: individual
+    expect: "Nicolás MADURO MOROS"
+    variation: dropped_token
+
+  - query: "Serhiy Aksyonov"
+    type: individual
+    expect: "Serhiy Valeriyovich AKSYONOV"
+    variation: dropped_token
+
+  - query: "Sergey Aksyonov"
+    type: individual
+    expect: "Serhiy Valeriyovich AKSYONOV"
+    variation: transliteration
+    note: The Russian form of a name Canada published in its Ukrainian one.
+
+  - query: "Abdel Rahim Hamdan Dagalo"
+    type: individual
+    expect: "Abdelrahim Hamdan Dagalo"
+    variation: alias
+
+  - query: "Jumah al Ahmad"
+    type: individual
+    expect: "Jumah Al-Ahmad"
+    variation: transliteration
+
+  - query: "Mansour Othman Abahussain"
+    type: individual
+    dob: "1972-08-10"
+    expect: "Mansour Othman ABAHUSSAIN"
+    variation: identifier
+    note: One of two candidate dates Canada published for the same man.
+
+  - query: "Ali Fazli"
+    type: individual
+    expect: "Ali Fazli"
+    variation: published
+    note: >-
+      Two tokens, both common. The floor case for a list with no aliases and
+      no dates.
+
+  - query: "Islamic Revolutionary Guard Corps"
+    type: organization
+    expect: "Islamic Revolutionary Guard Corps/Corps des Gardiens de la Révolution islamique"
+    variation: published
+    note: >-
+      Canada prints the English and the French joined by a slash. The English
+      half alone is what anyone would screen.
+
+  - query: "IRGC"
+    type: organization
+    expect: "Islamic Revolutionary Guard Corps/Corps des Gardiens de la Révolution islamique"
+    variation: alias
+    note: An acronym, inside Canada's comma-joined alias string.
+
+  - query: "Lakhta Plaza LLC"
+    type: organization
+    expect: "Lakhta Plaza"
+    variation: legal_form
+
+  - query: "Lakhta Plaza Limited Liability Company"
+    type: organization
+    expect: "Lakhta Plaza"
+    variation: alias
+
+  - query: "Baltiyskiy III"
+    type: vessel
+    expect: "Balitiyskiy III"
+    variation: typo
+    note: >-
+      The typo is the publisher's: Canada prints `Balitiyskiy`. A screening
+      tool has to find the record from the correct spelling of the ship.
+
+  - query: "Dmitry Mendeleev"
+    type: vessel
+    expect: "Dmitry Mendeleev"
+    variation: published
+
+  # ------------------------------------------------ names that must not hit
+  - query: "John Smith"
+    type: individual
+    expect: none
+    variation: common_name
+
+  - query: "Maria Garcia"
+    type: individual
+    expect: none
+    variation: common_name
+
+  - query: "David Miller"
+    type: individual
+    expect: none
+    variation: common_name
+
+  - query: "Wei Zhang"
+    type: individual
+    expect: none
+    variation: common_name
+
+  - query: "Ahmed Hassan"
+    type: individual
+    expect: none
+    variation: common_name
+    note: >-
+      Common enough that tens of thousands of customers carry it, and close
+      enough to the shape of these lists to be the expensive false positive.
+
+  - query: "Mohammed Ali"
+    type: individual
+    expect: none
+    variation: common_name
+
+  - query: "Carlos Rodriguez"
+    type: individual
+    expect: none
+    variation: common_name
+
+  - query: "Hiroshi Tanaka"
+    type: individual
+    expect: none
+    variation: common_name
+
+  - query: "Anna Kowalski"
+    type: individual
+    expect: none
+    variation: common_name
+
+  - query: "Eric Badger"
+    type: individual
+    expect: none
+    variation: near_miss
+    note: One letter and one syllable from ERIC BADEGE, and a different man.
+
+  - query: "Bosco Kanyamibwa"
+    type: individual
+    expect: none
+    variation: near_miss
+
+  - query: "John Imani"
+    type: individual
+    expect: none
+    variation: near_miss
+    note: >-
+      Two given names of a listed man and none of his surname. Contested, and
+      deliberately so: this is where a threshold is actually decided.
+
+  - query: "Dmitry Vladimirovich Kozlov"
+    type: individual
+    expect: none
+    variation: near_miss
+    note: The patronymic and given name of a listed man, another surname.
+
+  - query: "Aleksandr Petrov"
+    type: individual
+    expect: none
+    variation: near_miss
+
+  - query: "Roman Trotsky"
+    type: individual
+    expect: none
+    variation: near_miss
+
+  - query: "Ali Fazel"
+    type: individual
+    expect: none
+    variation: near_miss
+    note: >-
+      One letter from `Ali Fazli`, on a list that publishes neither aliases
+      nor a date to tell the two apart. If this alerts, nothing downstream can
+      clear it.
+
+  - query: "Caribbean Airlines Limited"
+    type: organization
+    expect: none
+    variation: near_miss
+    note: The flag carrier of Trinidad and Tobago, and not AEROCARIBBEAN.
+
+  - query: "Ever Green"
+    type: vessel
+    expect: none
+    variation: near_miss
+    note: Two real ships, and one of them is on a list.
+
+  - query: "Premier Trading LLC"
+    type: organization
+    expect: none
+    variation: near_miss
+    note: >-
+      Canada lists a vessel called `Premier`. A one-word vessel name against
+      an ordinary company is the precision hazard a type filter exists for.
+
+  - query: "Hermanos Munoz Restaurant"
+    type: organization
+    expect: none
+    variation: near_miss
+
+  # --------------------------------- the constructed identifier pairs, below
+  - query: "Sergei Nikolaevich Ivanov"
+    type: individual
+    dob: "1962-03-11"
+    expect: "IVANOV, Sergei Nikolaevich"
+    variation: identifier
+    note: The date is the only thing that says which of the two records it is.
+
+  - query: "Sergei Nikolaevich Ivanov"
+    type: individual
+    dob: "1977-11-02"
+    expect: "IVANOV, Sergei Nikolaevich (II)"
+    variation: identifier
+
+  - query: "Sergei Nikolaevich Ivanov"
+    type: individual
+    dob: "1985-06-01"
+    expect: none
+    variation: identifier
+    note: >-
+      The name of two listed men and the birthday of neither, which is what a
+      customer with an unlucky name looks like. Both records have to fall
+      under the threshold, or the date of birth is decoration.
+
+  - query: "Faisal al-Harbi"
+    type: individual
+    countries: ["SA"]
+    expect: "AL-HARBI, Faisal"
+    variation: identifier
+
+  - query: "Faisal al-Harbi"
+    type: individual
+    countries: ["YE"]
+    expect: "AL-HARBI, Faisal (II)"
+    variation: identifier
+    note: >-
+      Nationality is the softest of the three signals, so this is the case
+      that says whether it separates anything at all.
+
+  - query: "Orion Shipping Limited"
+    type: organization
+    identifier: { kind: registration_number, value: "IMO 9210081" }
+    expect: "ORION SHIPPING LIMITED"
+    variation: identifier
+
+  - query: "Orion Shipping Limited"
+    type: organization
+    identifier: { kind: registration_number, value: "IMO 9484857" }
+    expect: "ORION SHIPPING LIMITED (II)"
+    variation: identifier
+    note: >-
+      Two companies of the same name in two registries, told apart by the
+      number the customer's onboarding form already collects. Both carry the
+      name exactly, so the name alone already scores 100 and the document
+      number has nothing left to add -- the pair is here to make that ceiling
+      visible, and it is why both records alert.
+
+# Invented, and the only invented records here -- see the header. Each pair
+# is one name published twice with one field different, which is the shape no
+# real list of thirty records contains and the shape the whole secondary
+# identifier argument rests on.
+constructed:
+  - id: "constructed:ivanov-1962"
+    source: ofac_consolidated
+    type: individual
+    names:
+      - { value: "IVANOV, Sergei Nikolaevich", kind: primary }
+    dates_of_birth: ["1962-03-11"]
+    nationalities: ["RU"]
+
+  - id: "constructed:ivanov-1977"
+    source: ofac_consolidated
+    type: individual
+    names:
+      - { value: "IVANOV, Sergei Nikolaevich (II)", kind: primary }
+      - { value: "IVANOV, Sergei Nikolaevich", kind: aka }
+    dates_of_birth: ["1977-11-02"]
+    nationalities: ["RU"]
+
+  - id: "constructed:al-harbi-sa"
+    source: ofac_consolidated
+    type: individual
+    names:
+      - { value: "AL-HARBI, Faisal", kind: primary }
+    nationalities: ["SA"]
+
+  - id: "constructed:al-harbi-ye"
+    source: ofac_consolidated
+    type: individual
+    names:
+      - { value: "AL-HARBI, Faisal (II)", kind: primary }
+      - { value: "AL-HARBI, Faisal", kind: aka }
+    nationalities: ["YE"]
+
+  - id: "constructed:orion-9210081"
+    source: ofac_consolidated
+    type: organization
+    names:
+      - { value: "ORION SHIPPING LIMITED", kind: primary }
+    identifiers:
+      - { kind: registration_number, value: "IMO 9210081" }
+
+  - id: "constructed:orion-9484857"
+    source: ofac_consolidated
+    type: organization
+    names:
+      - { value: "ORION SHIPPING LIMITED (II)", kind: primary }
+      - { value: "ORION SHIPPING LIMITED", kind: aka }
+    identifiers:
+      - { kind: registration_number, value: "IMO 9484857" }
