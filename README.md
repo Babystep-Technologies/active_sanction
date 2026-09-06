@@ -42,6 +42,17 @@ Specs that genuinely need a real endpoint are tagged `:live`. They are excluded 
 
     $ bundle exec rspec --tag live
 
+### Benchmarks
+
+`benchmark/` holds the measurements that answer a design question rather than
+pass or fail, so they are not part of `rake`:
+
+    $ bundle exec rake benchmark:similarity          # the edit-distance primitives
+    $ RUBYOPT=--yjit bundle exec rake benchmark:similarity
+
+Each one prints the Ruby and JIT it ran under, because that is most of what
+the numbers mean.
+
 ### Static typing
 
 Every file in `lib/` is `# typed: strict`, and new files are born that way: a
