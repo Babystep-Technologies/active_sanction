@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<export xmlns="http://eu.europa.ec/fpi/fsd/export" generationDate="2026-08-05T16:47:04.449+02:00" globalFileId="184961">
+    <sanctionEntity designationDetails="" unitedNationId="" euReferenceNumber="EU.27.28" logicalId="13">
+        <remark>UNSC RESOLUTION 1483</remark>
+        <regulation regulationType="regulation" organisationType="commission" publicationDate="2003-07-08" entryIntoForceDate="2003-07-07" numberTitle="1210/2003 (OJ L169)" programme="IRQ" logicalId="348">
+            <publicationUrl>http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="Saddam" middleName="" lastName="Hussein Al-Tikriti" wholeName="Saddam Hussein Al-Tikriti" function="" gender="M" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="17">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Abu Ali" function="" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="19">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Abou Ali" function="" title="" nameLanguage="FR" strong="true" regulationLanguage="en" logicalId="380">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </nameAlias>
+        <citizenship region="" countryIso2Code="IQ" countryDescription="IRAQ" regulationLanguage="en" logicalId="1">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </citizenship>
+        <birthdate circa="false" calendarType="GREGORIAN" city="al-Awja, near Tikrit" zipCode="" birthdate="1937-04-28" dayOfMonth="28" monthOfYear="4" year="1937" region="" place="" countryIso2Code="IQ" countryDescription="IRAQ" regulationLanguage="en" logicalId="14">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </birthdate>
+    </sanctionEntity>
+    <sanctionEntity designationDetails="" unitedNationId="" euReferenceNumber="EU.39.56" logicalId="20">
+        <remark>Saddam's second son</remark>
+        <regulation regulationType="regulation" organisationType="commission" publicationDate="2003-07-08" entryIntoForceDate="2003-07-07" numberTitle="1210/2003 (OJ L169)" programme="IRQ" logicalId="348">
+            <publicationUrl>http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="Qoussaï" middleName="Saddam" lastName="Hussein Al-Tikriti" wholeName="Qoussaï Saddam Hussein Al-Tikriti" function="" title="" nameLanguage="FR" strong="true" regulationLanguage="en" logicalId="381">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </nameAlias>
+        <nameAlias firstName="Qusay" middleName="Saddam" lastName="Hussein Al-Tikriti" wholeName="Qusay Saddam Hussein Al-Tikriti" function="Oversaw Special Republican Guard, Special Security Organisation, and Republican Guard" gender="M" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="26">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </nameAlias>
+        <citizenship region="" countryIso2Code="IQ" countryDescription="IRAQ" regulationLanguage="en" logicalId="2">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </citizenship>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Baghdad" zipCode="" year="1966" region="" place="" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="20">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </birthdate>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Baghdad" zipCode="" year="1965" region="" place="" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="19">
+            <regulationSummary regulationType="regulation" publicationDate="2003-07-08" numberTitle="1210/2003 (OJ L169)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2003:169:0006:0023:EN:PDF"/>
+        </birthdate>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2001-10-17" designationDetails="" unitedNationId="" euReferenceNumber="EU.367.96" logicalId="514">
+        <regulation regulationType="amendment" organisationType="commission" publicationDate="2023-02-13" entryIntoForceDate="2023-02-14" numberTitle="2023/329 (OJ L43I)" programme="TAQA" logicalId="169120">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="عبد المنان آغا" function="" title="" nameLanguage="AR" strong="true" regulationLanguage="en" logicalId="149552">
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Abdul Manan" middleName="" lastName="Agha" wholeName="Abdul Manan Agha" function="" title="Haji" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="1213">
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Saiyid Abd al-Man" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="17520">
+            <remark>low quality alias; formerly listed a</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Abdul Man’am Saiyid" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="1215">
+            <remark>low quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Abdul Manan" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="1214">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2007-03-29" designationDetails="" unitedNationId="" euReferenceNumber="EU.3672.18" logicalId="3745">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2017-03-08" entryIntoForceDate="2017-03-09" numberTitle="2017/396 (OJ L60)" programme="COD" logicalId="100709">
+            <publicationUrl>http://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32017R0396&amp;from=EN</publicationUrl>
+        </regulation>
+        <subjectType code="enterprise" classificationCode="E"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Congomet Trading House" function="" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="5130">
+            <regulationSummary regulationType="amendment" publicationDate="2011-11-01" numberTitle="1097/2011 (OJ L285)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2011:285:0002:0005:EN:PDF"/>
+        </nameAlias>
+        <address city="Butembo, North Kivu" street="" poBox="" zipCode="" region="" place="" asAtListingTime="false" countryIso2Code="CD" countryDescription="CONGO, Democratic Republic of (was Zaire)" regulationLanguage="en" logicalId="1014">
+            <regulationSummary regulationType="amendment" publicationDate="2011-11-01" numberTitle="1097/2011 (OJ L285)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2011:285:0002:0005:EN:PDF"/>
+            <contactInfo key="PHONE" value="+253 (0) 99 983 784"/>
+        </address>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2023-10-17" designationDetails="UN designation 09/06/2010 (no longer valid)" unitedNationId="" euReferenceNumber="EU.1905.90" logicalId="5669">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2025-09-29" entryIntoForceDate="2025-09-29" numberTitle="2025/1982 (OJ L202501982)" programme="IRN" logicalId="217748">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:L_202501982</publicationUrl>
+        </regulation>
+        <subjectType code="enterprise" classificationCode="E"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Omran Sahel" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="8009">
+            <remark>Associated entities: 
+Khatam al-Anbiya Construction Headquarters (KAA);
+Ghorb Nooh.
+Website: www.sahelomran.ir</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-10-17" numberTitle="2023/2196 (OJ L17102023)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202302196"/>
+        </nameAlias>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2011-03-24" designationDetails="" unitedNationId="" euReferenceNumber="EU.3092.36" logicalId="6177">
+        <regulation regulationType="amendment" organisationType="commission" publicationDate="2023-02-13" entryIntoForceDate="2023-02-14" numberTitle="2023/329 (OJ L43I)" programme="TAQA" logicalId="169120">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="إبراهيم حسن طالع عسيري" function="" title="" nameLanguage="AR" strong="true" regulationLanguage="en" logicalId="149568">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="إبراهيم حسن طالع العسيري" function="" title="" nameLanguage="AR" strong="true" regulationLanguage="en" logicalId="149569">
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Ibrahim al-'Asiri" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="106107">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Abu-Salaah" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10494">
+            <remark>low quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Abosslah" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10492">
+            <remark>low quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Abu" middleName="" lastName="Saleh" wholeName="Abu Saleh" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10491">
+            <remark>low quality aliias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hassan" lastName="Al Asiri" wholeName="Ibrahim Hassan Al Asiri" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10490">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hasan Tali" lastName="al-’Asiri" wholeName="Ibrahim Hasan Tali al-’Asiri" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10488">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hassan Tali" lastName="Al-Asiri" wholeName="Ibrahim Hassan Tali Al-Asiri" function="Operative and principal bomb maker of Al-Qaida in the Arabian Peninsula (AQAP)" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10473">
+            <remark>Believed to be hiding in Yemen as at March 2011; Wanted by Saudi Arabia; Reportedly deceased; Also associated with Nasir ‘abd-al-Karim ‘Abdullah Al-Wahishi (deceased), Qasim Yahya Mahdi al-Rimi, and Anwar Nasser Abdulla Al-Aulaqi (deceased)</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hassan Tali" lastName="Asiri" wholeName="Ibrahim Hassan Tali Asiri" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10475">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hasan Talea" lastName="Aseeri" wholeName="Ibrahim Hasan Talea Aseeri" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10477">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hassan" lastName="al-Asiri" wholeName="Ibrahim Hassan al-Asiri" function="" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="10478">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hasan Tali" lastName="Asiri" wholeName="Ibrahim Hasan Tali Asiri" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10481">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hassan Tali" lastName="Assiri" wholeName="Ibrahim Hassan Tali Assiri" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10482">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <nameAlias firstName="Ibrahim" middleName="Hasan Tali’A" lastName="’Asiri" wholeName="Ibrahim Hasan Tali’A ’Asiri" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="10486">
+            <remark>good quality alias</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </nameAlias>
+        <citizenship region="" countryIso2Code="SA" countryDescription="SAUDI ARABIA" regulationLanguage="en" logicalId="675">
+            <regulationSummary regulationType="amendment" publicationDate="2011-04-01" numberTitle="317/2011 (OJ L86)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2011:086:0063:0064:EN:PDF"/>
+        </citizenship>
+        <birthdate circa="false" calendarType="GREGORIAN" city="" zipCode="" birthdate="1982-04-18" dayOfMonth="18" monthOfYear="4" year="1982" region="" place="" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="1509">
+            <regulationSummary regulationType="amendment" publicationDate="2011-04-01" numberTitle="317/2011 (OJ L86)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2011:086:0063:0064:EN:PDF"/>
+        </birthdate>
+        <birthdate circa="false" calendarType="ISLAMIC" city="" zipCode="" birthdate="1982-04-19" dayOfMonth="24" monthOfYear="6" year="1402" region="" place="" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="1510">
+            <remark>hijri calendar</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2011-04-01" numberTitle="317/2011 (OJ L86)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2011:086:0063:0064:EN:PDF"/>
+        </birthdate>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Riyadh" zipCode="" birthdate="1982-04-19" dayOfMonth="19" monthOfYear="4" year="1982" region="" place="" countryIso2Code="SA" countryDescription="SAUDI ARABIA" regulationLanguage="en" logicalId="1508">
+            <regulationSummary regulationType="amendment" publicationDate="2011-04-01" numberTitle="317/2011 (OJ L86)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2011:086:0063:0064:EN:PDF"/>
+        </birthdate>
+        <address city="" street="" poBox="" zipCode="" region="" place="" asAtListingTime="false" countryIso2Code="YE" countryDescription="YEMEN" regulationLanguage="en" logicalId="1716">
+            <regulationSummary regulationType="amendment" publicationDate="2011-04-01" numberTitle="317/2011 (OJ L86)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2011:086:0063:0064:EN:PDF"/>
+        </address>
+        <identification diplomatic="false" knownExpired="false" knownFalse="false" reportedLost="false" revokedByIssuer="false" issuedBy="" latinNumber="" nameOnDocument="" number="1028745097" region="" identificationTypeCode="id" identificationTypeDescription="National identification card" countryIso2Code="SA" countryDescription="SAUDI ARABIA" regulationLanguage="en" logicalId="565">
+            <remark>(national civil identification number)</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2011-04-01" numberTitle="317/2011 (OJ L86)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2011:086:0063:0064:EN:PDF"/>
+        </identification>
+        <identification diplomatic="false" knownExpired="true" knownFalse="false" reportedLost="false" revokedByIssuer="false" issueDate="2005-04-30" issuedBy="" latinNumber="" nameOnDocument="" number="F654645" validTo="2010-03-07" region="" identificationTypeCode="passport" identificationTypeDescription="National passport" countryIso2Code="SA" countryDescription="SAUDI ARABIA" regulationLanguage="en" logicalId="564">
+            <remark>Saudi Arabian passport number, issued on 30.4.2005, expired on 7.3.2010, issue date in Hijri Calendar 24.06.1426, expiry date in Hijri Calendar 21.03.1431</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-13" numberTitle="2023/329 (OJ L43I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.043.01.0001.01.ENG&amp;toc"/>
+        </identification>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2011-05-23" designationDetails="" unitedNationId="" euReferenceNumber="EU.2417.3" logicalId="6428">
+        <remark>Engineering firm that procures equipment for Iran's IR-40 heavy water research reactor. Date of listing 23.5.2011.</remark>
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2025-07-28" entryIntoForceDate="2025-07-29" numberTitle="2025/1559 (OJ L202501559)" programme="IRN" logicalId="216042">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202501559</publicationUrl>
+        </regulation>
+        <subjectType code="enterprise" classificationCode="E"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Taghtiran  Kashan Company" function="" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="177686">
+            <regulationSummary regulationType="amendment" publicationDate="2025-07-28" numberTitle="2025/1559 (OJ L202501559)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202501559"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Taghtiran" function="" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="12446">
+            <remark>Associated entities: Defense Industries Organization (DIO)</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2025-07-28" numberTitle="2025/1559 (OJ L202501559)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202501559"/>
+        </nameAlias>
+        <address city="Teheran" street="Unit 2, No. 3, 2nd Alley, Asad Abadi St., Vali-e asr St.," poBox="14316" zipCode="" region="" place="" asAtListingTime="false" countryIso2Code="IR" countryDescription="IRAN (ISLAMIC REPUBLIC OF)" regulationLanguage="en" logicalId="177674">
+            <remark>Principal place of business: Tehran, Iran</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2025-07-28" numberTitle="2025/1559 (OJ L202501559)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202501559"/>
+        </address>
+        <identification diplomatic="false" knownExpired="false" knownFalse="false" reportedLost="false" revokedByIssuer="false" issuedBy="" latinNumber="" nameOnDocument="" number="-" region="" identificationTypeCode="regnumber" identificationTypeDescription="Registration Number" countryIso2Code="IR" countryDescription="IRAN (ISLAMIC REPUBLIC OF)" regulationLanguage="en" logicalId="177685">
+            <remark>Place of registration: Tehran, Iran</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2025-07-28" numberTitle="2025/1559 (OJ L202501559)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202501559"/>
+        </identification>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2012-03-23" designationDetails="" unitedNationId="" euReferenceNumber="EU.2909.48" logicalId="6971">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2022-04-12" entryIntoForceDate="2022-04-12" numberTitle="2022/592 (OJ L114)" programme="IRN" logicalId="151405">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32022R0592</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="Sadeq" middleName="" lastName="LARIJANI" wholeName="Sadeq LARIJANI" function="Head of the Expediency Council since 29 December 2018. Former member of the Guardian Council (until September 2021). Former Head of the Judiciary (2009-2019)." gender="M" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="15843">
+            <regulationSummary regulationType="amendment" publicationDate="2022-04-12" numberTitle="2022/592 (OJ L114)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32022R0592"/>
+        </nameAlias>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Najaf" zipCode="" year="1960" region="" place="" countryIso2Code="IQ" countryDescription="IRAQ" regulationLanguage="en" logicalId="1791">
+            <regulationSummary regulationType="amendment" publicationDate="2012-03-24" numberTitle="264/2012 (OJ L87)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2012:087:0026:0036:EN:PDF"/>
+        </birthdate>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Najaf" zipCode="" monthOfYear="8" year="1961" region="" place="" countryIso2Code="IQ" countryDescription="IRAQ" regulationLanguage="en" logicalId="1792">
+            <regulationSummary regulationType="amendment" publicationDate="2012-03-24" numberTitle="264/2012 (OJ L87)" publicationUrl="http://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2012:087:0026:0036:EN:PDF"/>
+        </birthdate>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2014-03-17" designationDetails="" unitedNationId="" euReferenceNumber="EU.2797.3" logicalId="7300">
+        <remark>none</remark>
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2020-03-13" entryIntoForceDate="2020-03-14" numberTitle="2020/398 (OJ L78)" programme="UKR" logicalId="124181">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32020R0398&amp;from=EN</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Anatoliy Alekseevich SIDOROV" function="Commander, Russia's Western Military District." gender="M" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="104364">
+            <regulationSummary regulationType="amendment" publicationDate="2020-03-13" numberTitle="2020/398 (OJ L78)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32020R0398&amp;from=EN"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Анатолий Алексеевич СИДОРОВ" function="" gender="M" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="106251">
+            <regulationSummary regulationType="amendment" publicationDate="2020-03-13" numberTitle="2020/398 (OJ L78)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32020R0398&amp;from=EN"/>
+        </nameAlias>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Siva" zipCode="" birthdate="1958-07-02" dayOfMonth="2" monthOfYear="7" year="1958" region="Perm region" place="" countryIso2Code="RU" countryDescription="RUSSIAN FEDERATION" regulationLanguage="en" logicalId="122839">
+            <remark>Siva, Perm region, USSR (now Russian Federation)</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2020-03-13" numberTitle="2020/398 (OJ L78)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32020R0398&amp;from=EN"/>
+        </birthdate>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2016-03-02" designationDetails="" unitedNationId="" euReferenceNumber="EU.4198.83" logicalId="107840">
+        <remark>The Chongchongang Shipping Company, through its vessel, the Chong Chon Gang, attempted to directly import the illicit shipment of conventional weapons and arms to the DPRK in July 2013.</remark>
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2022-09-12" entryIntoForceDate="2022-09-13" numberTitle="2022/1503 (OJ L235)" programme="PRK" logicalId="161780">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/en/TXT/PDF/?uri=CELEX:32022R1503</publicationUrl>
+        </regulation>
+        <subjectType code="enterprise" classificationCode="E"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Chongchongang Shipping Company" function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="107841">
+            <remark>Owner of a vessel, the Chong Chon Gang, that attempted to directly import the illicit shipment of conventional weapons and arms to the DPRK in July 2013.</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2022-09-12" numberTitle="2022/1503 (OJ L235)" publicationUrl="https://eur-lex.europa.eu/legal-content/en/TXT/PDF/?uri=CELEX:32022R1503"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Chongchongang Shipping Co LTD" function="" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="143174">
+            <regulationSummary regulationType="amendment" publicationDate="2022-09-12" numberTitle="2022/1503 (OJ L235)" publicationUrl="https://eur-lex.europa.eu/legal-content/en/TXT/PDF/?uri=CELEX:32022R1503"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Chong Chon Gang Shipping Co. Ltd." function="" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="107899">
+            <regulationSummary regulationType="amendment" publicationDate="2016-03-05" numberTitle="2016/315 (OJ L60)" publicationUrl="http://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32016R0315&amp;from=EN"/>
+        </nameAlias>
+        <address city="Pyongyang" street="817 Haeun, Donghung-dong, Central District" poBox="" zipCode="" region="" place="" asAtListingTime="false" countryIso2Code="KP" countryDescription="KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF" regulationLanguage="en" logicalId="107897">
+            <regulationSummary regulationType="amendment" publicationDate="2022-09-12" numberTitle="2022/1503 (OJ L235)" publicationUrl="https://eur-lex.europa.eu/legal-content/en/TXT/PDF/?uri=CELEX:32022R1503"/>
+        </address>
+        <address city="Pyongyang" street="817, Haeum,Tonghun-dong, Chung-gu" poBox="" zipCode="" region="" place="" asAtListingTime="false" countryIso2Code="KP" countryDescription="KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF" regulationLanguage="en" logicalId="107896">
+            <regulationSummary regulationType="amendment" publicationDate="2022-09-12" numberTitle="2022/1503 (OJ L235)" publicationUrl="https://eur-lex.europa.eu/legal-content/en/TXT/PDF/?uri=CELEX:32022R1503"/>
+        </address>
+        <identification diplomatic="false" knownExpired="false" knownFalse="false" reportedLost="false" revokedByIssuer="false" issuedBy="" latinNumber="" nameOnDocument="" number="5342883" region="" identificationTypeCode="imo" identificationTypeDescription="IMO (vessel identification)" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="107898">
+            <regulationSummary regulationType="amendment" publicationDate="2016-03-05" numberTitle="2016/315 (OJ L60)" publicationUrl="http://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32016R0315&amp;from=EN"/>
+        </identification>
+    </sanctionEntity>
+    <sanctionEntity designationDetails="" unitedNationId="LYi.28" euReferenceNumber="EU.4801.12" logicalId="118593">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2018-11-29" entryIntoForceDate="2018-11-29" numberTitle="2018/1863 (OJ L304)" programme="LBY" logicalId="115500">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32018R1863&amp;from=EN</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="Salah" middleName="" lastName="Badi" wholeName="Salah Badi" function="Senior commander of the armed anti-GNA Al-Somood front, also known as Fakhr or ‘Pride of Libya’, and the Misratan Al Marsa Central Shield brigade" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="118594">
+            <regulationSummary regulationType="amendment" publicationDate="2018-11-29" numberTitle="2018/1863 (OJ L304)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32018R1863&amp;from=EN"/>
+        </nameAlias>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2020-11-06" designationDetails="" unitedNationId="" euReferenceNumber="EU.6002.12" logicalId="126538">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2020-11-06" entryIntoForceDate="2020-11-06" numberTitle="2020/1649 (OJ L370I)" programme="SYR" logicalId="133314">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32020R1649&amp;from=EN</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="حسن قطانة" function="" gender="M" title="" nameLanguage="AR" strong="true" regulationLanguage="en" logicalId="126580">
+            <regulationSummary regulationType="amendment" publicationDate="2020-11-06" numberTitle="2020/1649 (OJ L370I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32020R1649&amp;from=EN"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Mohammad Hassan QATANA" function="Minister of Agriculture and Agrarian reform. Appointed in August 2020." gender="M" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="126540">
+            <regulationSummary regulationType="amendment" publicationDate="2020-11-06" numberTitle="2020/1649 (OJ L370I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32020R1649&amp;from=EN"/>
+        </nameAlias>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Damascus" zipCode="" region="" place="" countryIso2Code="SY" countryDescription="SYRIAN ARAB REPUBLIC" regulationLanguage="en" logicalId="126539">
+            <regulationSummary regulationType="amendment" publicationDate="2020-11-06" numberTitle="2020/1649 (OJ L370I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32020R1649&amp;from=EN"/>
+        </birthdate>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2021-04-12" designationDetails="" unitedNationId="" euReferenceNumber="EU.6131.26" logicalId="127388">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2021-04-12" entryIntoForceDate="2021-04-12" numberTitle="2021/584 (OJ L124I)" programme="IRN" logicalId="135716">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2021.124.01.0001.01.ENG&amp;toc=OJ%3AL%3A2021%3A124I%3ATOC</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Gholamreza SOLEIMANI" function="Head of the Basij Organisation of the Islamic Revolutionary Guard Corps (IRGC)" gender="M" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="127393">
+            <regulationSummary regulationType="amendment" publicationDate="2021-04-12" numberTitle="2021/584 (OJ L124I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2021.124.01.0001.01.ENG&amp;toc=OJ%3AL%3A2021%3A124I%3ATOC"/>
+        </nameAlias>
+        <citizenship region="" countryIso2Code="IR" countryDescription="IRAN (ISLAMIC REPUBLIC OF)" regulationLanguage="en" logicalId="127392">
+            <regulationSummary regulationType="amendment" publicationDate="2021-04-12" numberTitle="2021/584 (OJ L124I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2021.124.01.0001.01.ENG&amp;toc=OJ%3AL%3A2021%3A124I%3ATOC"/>
+        </citizenship>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Farsan" zipCode="" year="1965" region="" place="" countryIso2Code="IR" countryDescription="IRAN (ISLAMIC REPUBLIC OF)" regulationLanguage="en" logicalId="127390">
+            <regulationSummary regulationType="amendment" publicationDate="2021-04-12" numberTitle="2021/584 (OJ L124I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2021.124.01.0001.01.ENG&amp;toc=OJ%3AL%3A2021%3A124I%3ATOC"/>
+        </birthdate>
+        <birthdate circa="false" calendarType="ISLAMIC" city="Farsan" zipCode="" year="1343" region="" place="" countryIso2Code="IR" countryDescription="IRAN (ISLAMIC REPUBLIC OF)" regulationLanguage="en" logicalId="127389">
+            <remark>Iranian Hijri calendar</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2021-04-12" numberTitle="2021/584 (OJ L124I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2021.124.01.0001.01.ENG&amp;toc=OJ%3AL%3A2021%3A124I%3ATOC"/>
+        </birthdate>
+        <birthdate circa="false" calendarType="GREGORIAN" city="Farsan" zipCode="" year="1964" region="" place="" countryIso2Code="IR" countryDescription="IRAN (ISLAMIC REPUBLIC OF)" regulationLanguage="en" logicalId="127391">
+            <regulationSummary regulationType="amendment" publicationDate="2021-04-12" numberTitle="2021/584 (OJ L124I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2021.124.01.0001.01.ENG&amp;toc=OJ%3AL%3A2021%3A124I%3ATOC"/>
+        </birthdate>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2022-04-08" designationDetails="" unitedNationId="" euReferenceNumber="EU.8060.95" logicalId="139009">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2023-03-14" entryIntoForceDate="2023-03-15" numberTitle="2023/571 (OJ L75 I)" programme="UKR" logicalId="172660">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R0571</publicationUrl>
+        </regulation>
+        <subjectType code="enterprise" classificationCode="E"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Sovcombank" function="a Russian bank" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="139011">
+            <remark>Full corporate name: Public Joint Stock Company "Sovcombank". Type of entity: Public Joint Stock Company
+Associated entity: Government of the Russian Federation.</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-03-14" numberTitle="2023/571 (OJ L75 I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R0571"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Buycombank" function="" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="139010">
+            <remark>former name of Sovcombank</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-03-14" numberTitle="2023/571 (OJ L75 I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R0571"/>
+        </nameAlias>
+        <address city="Kostroma" street="Prospekt Tekstilshchikov, 46" poBox="" zipCode="156000" region="Kostroma Oblast" place="" asAtListingTime="false" countryIso2Code="RU" countryDescription="RUSSIAN FEDERATION" regulationLanguage="en" logicalId="139028">
+            <regulationSummary regulationType="amendment" publicationDate="2022-09-15" numberTitle="2022/1529 (OJ L239)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32022R1529"/>
+        </address>
+        <identification diplomatic="false" knownExpired="false" knownFalse="false" reportedLost="false" revokedByIssuer="false" issuedBy="" latinNumber="" nameOnDocument="" number="4401116480" region="" identificationTypeCode="fiscalcode" identificationTypeDescription="National Fiscal Code" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="139656">
+            <remark>Tax ID number</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-03-14" numberTitle="2023/571 (OJ L75 I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R0571"/>
+        </identification>
+        <identification diplomatic="false" knownExpired="false" knownFalse="false" reportedLost="false" revokedByIssuer="false" issuedBy="" latinNumber="" nameOnDocument="" number="1144400000425" region="" identificationTypeCode="regnumber" identificationTypeDescription="Registration Number" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="139657">
+            <remark>Date of registration: 01.09.2014</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2022-09-15" numberTitle="2022/1529 (OJ L239)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32022R1529"/>
+        </identification>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2023-02-25" designationDetails="" unitedNationId="" euReferenceNumber="EU.9786.78" logicalId="150299">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2024-12-03" entryIntoForceDate="2024-12-04" numberTitle="2024/2999 (OJ L03122024)" programme="HR" logicalId="204640">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202402999</publicationUrl>
+        </regulation>
+        <subjectType code="enterprise" classificationCode="E"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="M-Invest" function="cover entity for the Wagner Group in Sudan" title="" nameLanguage="" strong="true" regulationLanguage="en" logicalId="150302">
+            <remark>Place of registration: d. 76 korp. 4 litera A ofis N620, prospekt Obukhovskoi Oborony St. Petersburg, Russian Federation.
+Principal place of business: Khartoum, Sudan.</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-25" numberTitle="2023/430 (OJ L59I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.059.01.0423.01.ENG&amp;toc=OJ%3AL%3A2023%3A059I%3ATOC"/>
+        </nameAlias>
+        <identification diplomatic="false" knownExpired="false" knownFalse="false" reportedLost="false" revokedByIssuer="false" issuedBy="" latinNumber="" nameOnDocument="" number="7811636632" region="" identificationTypeCode="fiscalcode" identificationTypeDescription="National Fiscal Code" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="150300">
+            <remark>Tax ID number</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-25" numberTitle="2023/430 (OJ L59I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.059.01.0423.01.ENG&amp;toc=OJ%3AL%3A2023%3A059I%3ATOC"/>
+        </identification>
+        <identification diplomatic="false" knownExpired="false" knownFalse="false" reportedLost="false" revokedByIssuer="false" issuedBy="" latinNumber="" nameOnDocument="" number="1177847044066" region="d. 76 korp. 4 litera A ofis N620, prospekt Obukhovskoi Oborony St. Petersburg" identificationTypeCode="regnumber" identificationTypeDescription="Registration Number" countryIso2Code="RU" countryDescription="RUSSIAN FEDERATION" regulationLanguage="en" logicalId="150301">
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-25" numberTitle="2023/430 (OJ L59I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.059.01.0423.01.ENG&amp;toc=OJ%3AL%3A2023%3A059I%3ATOC"/>
+        </identification>
+        <identification diplomatic="false" knownExpired="false" knownFalse="false" reportedLost="false" revokedByIssuer="false" issuedBy="" latinNumber="" nameOnDocument="" number="06513574" region="" identificationTypeCode="other" identificationTypeDescription="Other identification number" countryIso2Code="00" countryDescription="UNKNOWN" regulationLanguage="en" logicalId="150993">
+            <remark>Government gazette number</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-02-25" numberTitle="2023/430 (OJ L59I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv%3AOJ.LI.2023.059.01.0423.01.ENG&amp;toc=OJ%3AL%3A2023%3A059I%3ATOC"/>
+        </identification>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2023-07-20" designationDetails="" unitedNationId="" euReferenceNumber="EU.10436.68" logicalId="155661">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2023-07-20" entryIntoForceDate="2023-07-20" numberTitle="2023/1497 (OJ L183 I)" programme="MMR" logicalId="179720">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1497</publicationUrl>
+        </regulation>
+        <subjectType code="person" classificationCode="P"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Porel Aung Thein" function="Member of the State Administration Council (SAC) since 1 February 2023. (Member of the Union Solidarity and Development Party (USDP))." gender="M" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="155664">
+            <regulationSummary regulationType="amendment" publicationDate="2023-07-20" numberTitle="2023/1497 (OJ L183 I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1497"/>
+        </nameAlias>
+        <citizenship region="" countryIso2Code="MM" countryDescription="MYANMAR" regulationLanguage="en" logicalId="155663">
+            <regulationSummary regulationType="amendment" publicationDate="2023-07-20" numberTitle="2023/1497 (OJ L183 I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1497"/>
+        </citizenship>
+        <birthdate circa="false" calendarType="GREGORIAN" city="" zipCode="" yearRangeFrom="1960" yearRangeTo="1979" region="" place="" countryIso2Code="MM" countryDescription="MYANMAR" regulationLanguage="en" logicalId="155662">
+            <remark>(approx. 50 years old)</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2023-07-20" numberTitle="2023/1497 (OJ L183 I)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1497"/>
+        </birthdate>
+    </sanctionEntity>
+    <sanctionEntity designationDate="2024-01-22" designationDetails="" unitedNationId="" euReferenceNumber="EU.11094.30" logicalId="161649">
+        <regulation regulationType="amendment" organisationType="council" publicationDate="2024-01-22" entryIntoForceDate="2024-01-22" numberTitle="2024/384 (OJ L22012024)" programme="SDNZ" logicalId="190361">
+            <publicationUrl>https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202400384</publicationUrl>
+        </regulation>
+        <subjectType code="enterprise" classificationCode="E"/>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="Zadna International Company for Investment Limited" function="a Sudanese holding company in agriculture and construction" title="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="161651">
+            <remark>Type of entity: State Controlled Company. 
+Date of registration: 1997.
+99 % owned by the Special Fund for the Social Security of the Armed Forces (SFSSAF), formerly known as the Charity Organisation for the Support of the Armed Forces
+Chairman (appointed in October 2021): General El Mirghani Idris Suleiman.
+Director-General (appointed in May 2023): Dr. Taha Hussein Yousef.</remark>
+            <regulationSummary regulationType="amendment" publicationDate="2024-01-22" numberTitle="2024/384 (OJ L22012024)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202400384"/>
+        </nameAlias>
+        <nameAlias firstName="" middleName="" lastName="" wholeName="société internationale à responsabilité limitée pour les investissements Zadna" function="" title="" nameLanguage="FR" strong="true" regulationLanguage="en" logicalId="161734">
+            <regulationSummary regulationType="amendment" publicationDate="2024-01-22" numberTitle="2024/384 (OJ L22012024)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202400384"/>
+        </nameAlias>
+        <address city="Khartoum" street="Doha Street Property 436, Manshia Doha Street" poBox="" zipCode="11429" region="" place="" asAtListingTime="false" countryIso2Code="SD" countryDescription="SUDAN" regulationLanguage="en" logicalId="161650">
+            <regulationSummary regulationType="amendment" publicationDate="2024-01-22" numberTitle="2024/384 (OJ L22012024)" publicationUrl="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202400384"/>
+        </address>
+    </sanctionEntity>
+</export>

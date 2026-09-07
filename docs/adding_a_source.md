@@ -63,6 +63,7 @@ jurisdiction is nearest:
 | Several delimited files that only mean something joined | `lib/active_sanction/sources/ofac.rb`, `ofac_sdn.rb` | `spec/active_sanction/sources/ofac_sdn_spec.rb` |
 | One XML document, one flat record shape | `lib/active_sanction/sources/canada_sema.rb` | `spec/active_sanction/sources/canada_sema_spec.rb` |
 | One XML document, several record shapes | `lib/active_sanction/sources/un_consolidated.rb` | `spec/active_sanction/sources/un_consolidated_spec.rb` |
+| One XML document, tens of megabytes, data in attributes | `lib/active_sanction/sources/eu_fsf.rb` | `spec/active_sanction/sources/eu_fsf_spec.rb` |
 | Two lists from one publisher in one format | `lib/active_sanction/sources/ofac.rb` holds the reading; `ofac_sdn.rb` and `ofac_consolidated.rb` declare only which list they are | |
 
 Each of those files opens with a class comment describing the list, its quirks,
