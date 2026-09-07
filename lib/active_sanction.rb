@@ -36,6 +36,7 @@ require "active_sanction/sources/ofac_consolidated"
 require "active_sanction/sources/un_consolidated"
 require "active_sanction/sources/canada_sema"
 require "active_sanction/sources/eu_fsf"
+require "active_sanction/sources/uk_sanctions_list"
 
 module ActiveSanction
   # Guards the memoized matcher. Building one indexes every stored list, so
