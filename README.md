@@ -32,7 +32,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 ## What it does
 
 - **Fetches.** Conditional GET on ETag and Last-Modified, bounded redirects, retries with backoff, a checksum-verified cache of the raw payloads, and a User-Agent that identifies you to the publisher.
-- **Parses.** Six lists today, into one `Entity`: names and aliases with their kind and quality, dates of birth as `PartialDate` (year-only, approximate and ranged dates are all real on these lists), addresses, document numbers, nationalities, programs — and the publisher's own text kept verbatim in `remarks` whether the parser understood it or not.
+- **Parses.** Seven lists today, into one `Entity`: names and aliases with their kind and quality, dates of birth as `PartialDate` (year-only, approximate and ranged dates are all real on these lists), addresses, document numbers, nationalities, programs — and the publisher's own text kept verbatim in `remarks` whether the parser understood it or not.
 - **Stores.** One checksummed `Snapshot` per source, in gzipped JSON on disk, in your application's database, in memory, or in a store you write. Nothing on the query path names a concrete store.
 - **Screens.** Fold the name, retrieve candidates from an inverted index, score each with four string algorithms and a phonetic pass, adjust on dates of birth, nationalities and document numbers, and report the reasons — which sum to the score exactly.
 - **Diffs.** What changed between two syncs, so a book of business is re-screened against the handful of records that moved rather than against the whole list.
@@ -43,7 +43,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 - **It does not decide anything.** A score is evidence for a human. The threshold at which a score becomes an alert, and what happens to that alert, are policy your compliance function owns.
 - **It is not a case management system.** No alert queue, no dispositions, no audit store. It produces the record; keeping it is your application's job.
 - **It screens names against lists, and nothing more.** No politically-exposed-person data, no adverse media, no beneficial ownership, no OFAC 50 Percent Rule resolution — a subsidiary that is sanctioned only by virtue of its owners is not on any of these files and will not be found here.
-- **Six lists ship: two US, one UN, one Canada, one EU, one UK.** Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) is not yet read. If your obligations cover a jurisdiction outside that set, this gem does not cover them.
+- **Seven lists ship: two US, one UN, one Canada, one EU, one UK, one Australia.** If your obligations cover a jurisdiction outside that set, this gem does not cover them.
 - **Non-Latin script is not transliterated.** `Путин` does not fold to `putin`; a Cyrillic name matches a Cyrillic query and nothing else. What makes it survivable is that these publishers ship a romanized name alongside the original — see [Normalizing a name for matching](#normalizing-a-name-for-matching) for what that does and does not leave open.
 - **It does not monitor.** It syncs when you tell it to. Nothing here notices overnight that a publisher changed its format ([#68](https://github.com/Babystep-Technologies/active_sanction/issues/68), [#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)) or wakes anybody when it does.
 - **There is no CLI.** It is a library, called from an initializer, a rake task or a job.
@@ -60,7 +60,7 @@ or
 
     $ gem install active_sanction
 
-Ruby 3.1 or newer. The dependencies are `csv`, `rexml` and `sorbet-runtime` — all pure Ruby, so nothing here builds a native extension or asks a deployment to. Nokogiri is supported as an XML backend and is deliberately not a dependency; see `xml_backend` under [Configuration](#configuration).
+Ruby 3.1 or newer. The dependencies are `csv`, `rexml` and `sorbet-runtime` — all pure Ruby, so nothing here builds a native extension or asks a deployment to. Nokogiri is supported as an XML backend and is deliberately not a dependency; see `xml_backend` under [Configuration](#configuration). Australia publishes its list as an Excel workbook and no spreadsheet gem was added for it either — see [The Australian Consolidated List](#the-australian-consolidated-list).
 
 ## Quickstart
 
@@ -83,7 +83,8 @@ puts report
 ```
 
 ```
-6 sources in 48.98s: 6 updated
+7 sources in 62.31s: 7 updated
+  australia_dfat     updated     3906 records  just fetched   13.33s
   canada_sema        updated     5690 records  just fetched    3.99s
   eu_fsf             updated     6234 records  just fetched   14.48s
   ofac_consolidated  updated      481 records  just fetched    3.23s
@@ -149,6 +150,7 @@ That is the whole of the working library. Everything below is either a fact abou
 | `canada_sema` | CA | Global Affairs Canada | ~5,690 | one XML file | As the regulations are amended |
 | `eu_fsf` | EU | European Commission | ~6,234 | one XML file, 25.7 MB | As the Council adopts or amends a regulation |
 | `uk_sanctions_list` | UK | FCDO | ~6,334 | one XML file, 21.8 MB | Whenever a designation is made, amended or revoked |
+| `australia_dfat` | AU | DFAT / Australian Sanctions Office | ~3,906 | one XLSX workbook, 1.3 MB | As the Foreign Minister designates, and as the UN amends a regime |
 
 Record counts are as of the fixtures this gem was written against; the live files move. No publisher commits to a schedule, and none of them announce a change out of band, which is why every fetch here is conditional: asking daily costs one request per file on the days nothing happened. Sync on your own risk appetite rather than on a publisher's calendar.
 
@@ -187,7 +189,16 @@ Three further consequences of the same file:
 * **A "number" field may be a sentence.** 340 of the 721 business registration numbers open with a label (`INN: 7710137066`), a handful carry several numbers, a country and a newline in one field, and one national identity number reads `Kuwait, number 260012001546`. All of it is kept exactly as published: every rule that peels `INN: ` off the first also has to decide what to do with the rest, and each of those answers is a guess about free text. The exception is a ship's IMO number, where the prefix restates the element it is already inside — `IMO9562233` on 635 of the 670, and bare on the other 35 — and is peeled into the note so that the FCDO's own two spellings of one registry number are one identifier rather than two.
 * **`<CryptoWalletAddresses>` and `<HullIdentificationNumbers>` are in the schema and empty in the data**, so neither is read. They are the first things to add when either appears.
 
-**All six — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name for matching](#normalizing-a-name-for-matching), and [One name transliterated two ways is the case this does not solve](#one-name-transliterated-two-ways-is-the-case-this-does-not-solve).
+**`australia_dfat` — the Control Date is not a listing date, and it is on every row.** DFAT's own [guide to the list](https://www.dfat.gov.au/international-relations/security/sanctions/consolidated-list/guide-australias-consolidated-list) defines it as "the last date the sanction entry was updated or edited on the Consolidated List". It is a real date on all 11,163 rows, it is the only date-typed column in the file, and reading it as `listed_on` would report the Taliban listings of January 2001 as having been made a few months ago — with nothing in a sync report looking wrong. It is kept in `remarks`, labelled. The actual listing date is prose in `Listing Information`, and is read on the **1,438 of 3,906** records that state one; the other 63% name a legislative instrument and no date at all, and get no `listed_on`.
+
+Four further consequences of the same file:
+
+* **No document number of any kind, for any record.** No passport, no national identity number, no company registration. The only identifier on the whole list is an IMO number, on 344 vessel rows. So an Australian name match has nothing behind it to make it decisive, the way an OFAC passport number usually settles one — the same weakness as the Canadian list, and a screening policy should know it before setting a threshold.
+* **A record is several rows, joined on a reference DFAT suffixes with letters.** `1000` is the primary name, `1000a` and `1000b` its aliases, and every other column is repeated on each — so 11,163 rows are 3,906 records. The repetition is not exact: 80 groups disagree with themselves about the additional information, 39 about the birth dates, 23 about the address. Every column is unioned across the group rather than read off the primary row, because two records have a place of birth, and one an address, only because an alias row carried it.
+* **Birth dates arrive in nine spellings, two of which are only distinguishable through the spreadsheet's styles.** 4,183 are Excel serial numbers, 2,709 are the year somebody was born written as a plain number, and the two are the same kind of cell — a reader that ignores `xl/styles.xml` gets one of the two wrong for every row. The rest are `dd/mm/yyyy` text (day first: DFAT writes Australian dates, and not one of the 2,013 has a middle component above twelve), `mm/yyyy`, `Approximately 1963`, `Approximately: Between 1972 and 1975`, `12 April 1965`, ten-year lists, and pairs separated by a carriage return the workbook escapes as `_x000D_`. Four records out of 3,906 carry a fragment typed wrong at the source — `1980.1981`, `/02/1961`, `7/02/1950/11/1950`, `10/061962` — and each is kept verbatim in `remarks` rather than dropped.
+* **An address is one free-text column and is not decomposed.** DFAT publishes no street, city or country parts, so the whole published string is `Address#street`. Where one cell enumerates several addresses `a) ... b) ...`, which is 859 rows, they are split; a semicolon is not split on, because it appears inside single addresses too.
+
+**All seven — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name for matching](#normalizing-a-name-for-matching), and [One name transliterated two ways is the case this does not solve](#one-name-transliterated-two-ways-is-the-case-this-does-not-solve).
 
 ## Reading a score
 
@@ -467,6 +478,33 @@ Every one of the 6,334 records carries a `NameType` of `Primary Name` — six ca
 
 Two mappings are worth stating because they are not the only defensible ones. A name is six numbered parts and is joined in numeric order — `Name1` to `Name6`, given names ascending with the family name last — which is *not* the order the CSV lists its columns in; the CSV files `Name 6` first because it is presenting a surname to a reader, and following that would produce `JAN ABDUL KABIR MUHAMMAD`. And `Primary Name Variation`, which is 5,513 of the 15,677 published names, is an alternative *spelling* of the designated name rather than a second designation, so it is filed as an alias — which is what leaves `Entity#primary_name` answering with the name the FCDO actually designated.
 
+### The Australian Consolidated List
+
+`Sources::AustraliaDfat` reads the Consolidated List the Australian Sanctions Office publishes — every person, entity and vessel designated or declared by the Foreign Minister under the Autonomous Sanctions Regulations 2011, plus every UN Security Council listing Australia gives effect to. 3,906 records, in one Excel workbook.
+
+**It is published as a spreadsheet, and as nothing else.** DFAT's Consolidated List page offers exactly one download — `Australian_Sanctions_Consolidated_List.xlsx`, 1.3 MB, one sheet, 11,163 rows, 19 columns. There is no CSV, no XML and no JSON. So reading a spreadsheet is not a convenience here; it is the price of screening against Australian sanctions at all.
+
+**No spreadsheet gem was added for it.** `Parsers::Spreadsheet` reads the workbook with `zlib` and the XML toolkit the other five adapters already use, because an `.xlsx` is a ZIP of XML parts and the only thing actually missing was a ZIP header unpacker. It reads one sheet of cell values as strings, resolves the shared string table, and renders a date cell as ISO 8601 at the precision its own number format displays. It does not evaluate formulas — a formula cell reads as the value cached in it — and it ignores everything a spreadsheet can hold that a sanctions list does not put data in. The older binary `.xls` is a different format and is not read.
+
+```ruby
+row[:date_of_birth]   # => "1962-08-24"   the cell holds 22882, formatted m/d/yyyy
+row[:date_of_birth]   # => "1958"         the cell holds 1958, formatted General
+```
+
+That distinction is the whole reason the styles are read. `18798` is the 19th of June 1951 if the cell is formatted as a date and the year 18798 if it is not, and only `xl/styles.xml` says which — 4,183 of these birth dates are serials and 2,709 are years, in the same column.
+
+**The URL this gem was scoped against is gone, and what replaced it still answers 200.** `regulation8_consolidated.xlsx` now redirects to `regulation8_consolidated_2.xls` — a real file, served successfully, in the old binary format, last modified in March 2022. An adapter pointed at it would download a list four years stale on every sync and never once look unhealthy. This adapter declares the URL DFAT's own page links today.
+
+**DFAT's edge rejects this gem's User-Agent.** Verified against the live endpoint: `active_sanction/x.y.z (+https://…)` gets no response at all — not a 403, a dropped connection — while `curl/8.7.1`, `Wget/1.21` and `python-requests/2.31.0` are served. The filter is on the leading product token, and an unrecognised one is dropped, so identifying ourselves honestly is what gets us blocked. This source sends the configured agent inside the form written for exactly this case:
+
+```
+Mozilla/5.0 (compatible; active_sanction/0.1.0 (+https://github.com/Babystep-Technologies/active_sanction))
+```
+
+which is how a well-behaved crawler has identified itself since Googlebot. The agent, its version and whatever contact URL you configured are all still in the string; DFAT can still see who we are and block us on purpose. It is the same identification in a shape the edge parses. It is the only place any source departs from `Sources::Base`, and `AustraliaDfat#fetch_file` is the whole of it.
+
+**Conditional GET works.** The endpoint serves both an `ETag` and a `Last-Modified` and honours both, so a sync against an unchanged list answers 304 and downloads nothing. The workbook also stamps its own save time inside `docProps/core.xml`, which is what `source_version` reports — `2026-09-04T05:37:12Z`, the same date DFAT prints on its download page — rather than an HTTP header.
+
 ### Storing what a sync produced
 
 A synced list is a `Snapshot` — one source's entities plus a checksum over their content — and storage keeps one per source, written whole and read back whole.
@@ -517,7 +555,7 @@ ActiveSanction.configure { |c| c.storage_dir = "/srv/lists" }  # or globally
 ~/.active_sanction/ofac_sdn/snapshot-sha256-9f86d081884c7d65....json.gz
 ```
 
-The sidecar is exactly `Storage::Meta#to_h`, which is what makes `snapshot_meta` cheap: printing how old six lists are reads six small JSON files instead of inflating and deserializing tens of megabytes.
+The sidecar is exactly `Storage::Meta#to_h`, which is what makes `snapshot_meta` cheap: printing how old seven lists are reads seven small JSON files instead of inflating and deserializing tens of megabytes.
 
 **A sync killed part-way through either has not happened or has happened completely.** That is why the list file is named after the content it holds rather than sitting at a fixed `snapshot.json.gz`. Replacing a list means replacing both the list and the sidecar describing it, and whichever order two renames happen in, a process killed between them leaves a snapshot and a meta that do not describe each other — the new list under the old checksum, or a sidecar advertising records that are not there. Either way the previous list is gone and the source is unreadable until the next successful sync.
 
@@ -609,11 +647,12 @@ exit report.exit_code           # 1 if any source failed, so cron and CI can ale
 **A failed source keeps its previous snapshot.** Nothing clears a stored list on failure — not a 500, not a parse error, not a publisher that started serving HTML where XML used to be. Screening against yesterday's OFAC list produces a report with a known, visible age on it; screening against an empty list produces a clean report for every customer, which is the most expensive thing this library can get wrong. That trade is only safe while the age is visible, so every result carries the record count and age of the list that source is *still* being screened against:
 
 ```
-6 sources in 27.14s: 2 updated, 3 unchanged, 1 failed
+7 sources in 27.14s: 2 updated, 4 unchanged, 1 failed
   ofac_sdn           updated    19015 records  just fetched   12.41s
   eu_fsf             updated     6234 records  just fetched   13.15s
   ofac_consolidated  unchanged   1203 records  2h old          0.28s
   uk_sanctions_list  unchanged   6334 records  2h old          0.21s
+  australia_dfat     unchanged   3906 records  2h old          0.22s
   canada_sema        unchanged    684 records  2h old          0.19s
   un_consolidated    failed       612 records  3d old          1.11s  Net::ReadTimeout: execution expired
 ```

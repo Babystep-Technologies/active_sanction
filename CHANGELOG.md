@@ -94,7 +94,34 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
   Nevis`, `St Lucia`, `St Vincent` — and `Palestinian` and `Occupied Palestinian Territories`,
   which between them resolve 53 of the 63 UK nationality values that previously did not. Purely
   additive: no existing spelling resolves differently, and the accuracy report is unchanged.
-- `docs/adding_a_source.md`, the end-to-end walkthrough for a seventh
+- **Australia's Consolidated List (DFAT)** — 3,906 records, read with no change to core
+  ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)). The endpoint the
+  issue named was unverified and is now gone: `regulation8_consolidated.xlsx` redirects to a
+  `.xls` last modified in **March 2022**, which is served 200 and would look healthy on every
+  sync. This adapter reads the file DFAT's own page links today. Two things are worth knowing
+  before relying on it. **The Control Date is not a listing date** — DFAT defines it as when
+  the entry was last edited, it is on all 11,163 rows, and mapping it to `listed_on` would
+  report the Taliban listings of January 2001 as having been made this year; the real listing
+  date is prose, and is read on 1,438 of the 3,906 records. And **DFAT publishes no document
+  number of any kind** — no passport, no national identity number, no company registration —
+  so the only identifier on the list is an IMO number on 344 vessel rows, which makes a clean
+  Australian result weaker evidence than a clean OFAC one for the same reason a Canadian one
+  is. The endpoint also rejects this gem's User-Agent outright: its edge drops a request whose
+  leading product token it does not recognise, so this source sends the configured agent
+  inside `Mozilla/5.0 (compatible; …)` — the same identification, in a shape the edge parses.
+  It is the only place any source departs from `Sources::Base`.
+- `Parsers::Spreadsheet`, a reusable `.xlsx` toolkit, **and no new dependency**. Australia
+  publishes its list as a spreadsheet and as nothing else, so reading one is the price of
+  screening against Australian sanctions at all — but an `.xlsx` is a ZIP of XML parts, `zlib`
+  is stdlib and this gem already reads XML, so what was missing was a ZIP header unpacker. It
+  resolves the shared string table and reads `xl/styles.xml`, which is not optional: `18798`
+  is a date if the cell is formatted as one and a year if it is not, and the Australian list
+  has 4,183 of the first and 2,709 of the second in the same column. Date cells arrive as ISO
+  8601 at the precision the cell displays, which `PartialDate::Parser` reads directly.
+- Two spellings added to `countries.txt` — `Democratic People's Republic of Korea (North
+  Korea)` and `Slovak Republic` — which resolve the only 2 of Australia's 77 nationality
+  values that previously did not. Purely additive: no existing spelling resolves differently.
+- `docs/adding_a_source.md`, the end-to-end walkthrough for an eighth
   ([#17](https://github.com/Babystep-Technologies/active_sanction/issues/17)).
 
 #### Storage

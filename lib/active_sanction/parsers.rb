@@ -80,6 +80,7 @@ module ActiveSanction
 end
 
 require "active_sanction/parsers/delimited_table"
+require "active_sanction/parsers/spreadsheet"
 require "active_sanction/parsers/xml_records"
 require "active_sanction/parsers/xml_records/backends/rexml"
 require "active_sanction/parsers/xml_records/backends/nokogiri"

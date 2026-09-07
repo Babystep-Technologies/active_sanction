@@ -65,6 +65,7 @@ jurisdiction is nearest:
 | One XML document, several record shapes | `lib/active_sanction/sources/un_consolidated.rb` | `spec/active_sanction/sources/un_consolidated_spec.rb` |
 | One XML document, tens of megabytes, data in attributes | `lib/active_sanction/sources/eu_fsf.rb` | `spec/active_sanction/sources/eu_fsf_spec.rb` |
 | One XML document, deeply nested containers, data in elements | `lib/active_sanction/sources/uk_sanctions_list.rb` | `spec/active_sanction/sources/uk_sanctions_list_spec.rb` |
+| One spreadsheet, one row per name, records joined on a reference | `lib/active_sanction/sources/australia_dfat.rb` | `spec/active_sanction/sources/australia_dfat_spec.rb` |
 | Two lists from one publisher in one format | `lib/active_sanction/sources/ofac.rb` holds the reading; `ofac_sdn.rb` and `ofac_consolidated.rb` declare only which list they are | |
 
 Each of those files opens with a class comment describing the list, its quirks,
@@ -273,6 +274,53 @@ reader.root["dateGenerated"]           # the publisher's own version marker
 
 Do not pass `backend:`. Which XML library parses a list is an installation's
 decision (`config.xml_backend`), not a list's.
+
+### `Parsers::Spreadsheet` — an `.xlsx` workbook
+
+```ruby
+LIST = ActiveSanction::Parsers::Spreadsheet.new(sheet: "Consolidated List")
+
+reader = LIST.read(raw)
+reader.each do |row|
+  row[:name_of_individual_or_entity]   # => "MOHAMMAD HASSAN AKHUND"
+  row[:date_of_birth]                  # => "1962-08-24"
+  row.number                           # => 2, the sheet's own row number
+end
+reader.sheet_names                     # => ["Consolidated List"]
+reader.modified                        # the publisher's own save time
+```
+
+Reach for this only when the publisher offers nothing else — Australia does not,
+which is why it exists. It reads the workbook with `zlib` and `Parsers::XmlRecords`,
+so it adds no dependency; an `.xlsx` is a ZIP of XML parts and the only thing
+missing was a ZIP header unpacker.
+
+- **The first row is always the header** and is never yielded as a record. Its
+  cells name the columns by default, lowercased and snake_cased the way
+  `DelimitedTable` normalizes a CSV header. Passing `columns:` renames them by
+  position instead; the header is still consumed, because it is still a header.
+- **`sheet:`** takes a name, a zero-based index, or nil for the first sheet. Name
+  it: a publisher adding a tab should be an error rather than a silent change of
+  which sheet is read.
+- **A cell arrives as a String, or nil.** Shared strings are resolved, inline
+  strings are read, a boolean reads `TRUE`/`FALSE`, and Excel's `_x000D_` escapes
+  are undone.
+- **A date cell arrives as ISO 8601 at the precision its format displays** —
+  `2026-04-14`, `1973-11`, `1975` — which `PartialDate::Parser` reads directly. A
+  number under any non-date format is passed through as the publisher wrote it,
+  which is what keeps `1958` a year rather than becoming a day in 1905. Getting
+  this right *requires* `xl/styles.xml`: the two cells are otherwise identical.
+- **A row states only the cells it filled**, so cells are placed by their
+  address (`r="C7"`) and never by position. A value past the last named column is
+  dropped and warned about; a row with nothing in it is spacing and is skipped.
+- **Formulas are not evaluated.** A formula cell reads as the value cached in it,
+  which is what the file displays and what an export contains. Merged cells,
+  comments, charts and styling are ignored, and the older binary `.xls` is a
+  different format that is not read.
+
+A `Row` behaves like `DelimitedTable::Row` — `row[:typo]` raises, `row.fetch` is
+the optional case, `row.null?` asks whether the cell was empty — except that it
+reports `row.number`, the spreadsheet's own row number, rather than a line.
 
 ### `Parsers::Join` — several files, one logical record
 
