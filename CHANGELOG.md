@@ -66,7 +66,17 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
   ([#21](https://github.com/Babystep-Technologies/active_sanction/issues/21)).
 - **Canada SEMA / JVCFOA consolidated list**, with deterministic synthetic ids for a list that
   publishes none ([#22](https://github.com/Babystep-Technologies/active_sanction/issues/22)).
-- `docs/adding_a_source.md`, the end-to-end walkthrough for a fifth
+- **EU Consolidated Financial Sanctions List (FSF)** — 6,234 records in one 25.7 MB document,
+  the first list large enough to exercise the streaming XML interface, read with no change to
+  core ([#39](https://github.com/Babystep-Technologies/active_sanction/issues/39)). Three
+  judgment calls in it are worth knowing about before relying on the list: the EU marks no
+  name as the official one, so a stated rule picks one; alias quality and alias kind are prose
+  in a per-name `<remark>` rather than a column, and are read from it; and four birth dates
+  are published in the Islamic calendar, three of which therefore produce no date of birth at
+  all rather than a Gregorian year in the fourteenth century that would *conflict* with the
+  real one. The endpoint does not honour conditional GET, so this is the one list that
+  downloads in full on every sync.
+- `docs/adding_a_source.md`, the end-to-end walkthrough for a sixth
   ([#17](https://github.com/Babystep-Technologies/active_sanction/issues/17)).
 
 #### Storage
@@ -150,8 +160,7 @@ Documented in full in the README under
 [Known data limitations, per source](README.md#known-data-limitations-per-source), and
 summarized here because they are what a reader of a first release most needs:
 
-- Four lists: two US, one UN, one Canada. The EU
-  ([#39](https://github.com/Babystep-Technologies/active_sanction/issues/39)), the UK
+- Five lists: two US, one UN, one Canada, one EU. The UK
   ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia
   ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are not read.
 - Non-Latin script is not transliterated. A Cyrillic name matches a Cyrillic query and nothing
@@ -161,6 +170,12 @@ summarized here because they are what a reader of a first release most needs:
 - Canada publishes no nationality, address, place of birth or document number at all, and no
   identifier of its own — so its ids are synthetic, and a clean Canadian result is weaker
   evidence than a clean OFAC one.
+- The EU publishes no primary name and no alias-quality column, so which of a record's names
+  is called primary is this library's rule rather than the Commission's, and most EU aliases
+  arrive ungraded. Its endpoint ignores conditional GET, so every sync of it transfers 25.7 MB.
+- The labeled accuracy set does not yet carry EU cases, so the committed recall and precision
+  figures describe the other four lists. The EU adapter's own spec covers it; the accuracy
+  report does not.
 - Recall at the default threshold is 0.939 overall on the labeled set, and every record this
   version misses is named in the committed accuracy report.
 

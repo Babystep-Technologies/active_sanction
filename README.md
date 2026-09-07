@@ -32,7 +32,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 ## What it does
 
 - **Fetches.** Conditional GET on ETag and Last-Modified, bounded redirects, retries with backoff, a checksum-verified cache of the raw payloads, and a User-Agent that identifies you to the publisher.
-- **Parses.** Four lists today, into one `Entity`: names and aliases with their kind and quality, dates of birth as `PartialDate` (year-only, approximate and ranged dates are all real on these lists), addresses, document numbers, nationalities, programs — and the publisher's own text kept verbatim in `remarks` whether the parser understood it or not.
+- **Parses.** Five lists today, into one `Entity`: names and aliases with their kind and quality, dates of birth as `PartialDate` (year-only, approximate and ranged dates are all real on these lists), addresses, document numbers, nationalities, programs — and the publisher's own text kept verbatim in `remarks` whether the parser understood it or not.
 - **Stores.** One checksummed `Snapshot` per source, in gzipped JSON on disk, in your application's database, in memory, or in a store you write. Nothing on the query path names a concrete store.
 - **Screens.** Fold the name, retrieve candidates from an inverted index, score each with four string algorithms and a phonetic pass, adjust on dates of birth, nationalities and document numbers, and report the reasons — which sum to the score exactly.
 - **Diffs.** What changed between two syncs, so a book of business is re-screened against the handful of records that moved rather than against the whole list.
@@ -43,7 +43,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 - **It does not decide anything.** A score is evidence for a human. The threshold at which a score becomes an alert, and what happens to that alert, are policy your compliance function owns.
 - **It is not a case management system.** No alert queue, no dispositions, no audit store. It produces the record; keeping it is your application's job.
 - **It screens names against lists, and nothing more.** No politically-exposed-person data, no adverse media, no beneficial ownership, no OFAC 50 Percent Rule resolution — a subsidiary that is sanctioned only by virtue of its owners is not on any of these files and will not be found here.
-- **Four lists ship: two US, one UN, one Canada.** The EU ([#39](https://github.com/Babystep-Technologies/active_sanction/issues/39)), the UK ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are not yet read. If your obligations cover a jurisdiction in that list, this gem does not cover them.
+- **Five lists ship: two US, one UN, one Canada, one EU.** The UK ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are not yet read. If your obligations cover a jurisdiction in that list, this gem does not cover them.
 - **Non-Latin script is not transliterated.** `Путин` does not fold to `putin`; a Cyrillic name matches a Cyrillic query and nothing else. What makes it survivable is that these publishers ship a romanized name alongside the original — see [Normalizing a name for matching](#normalizing-a-name-for-matching) for what that does and does not leave open.
 - **It does not monitor.** It syncs when you tell it to. Nothing here notices overnight that a publisher changed its format ([#68](https://github.com/Babystep-Technologies/active_sanction/issues/68), [#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)) or wakes anybody when it does.
 - **There is no CLI.** It is a library, called from an initializer, a rake task or a job.
@@ -83,8 +83,9 @@ puts report
 ```
 
 ```
-4 sources in 13.08s: 4 updated
+5 sources in 26.60s: 5 updated
   ofac_sdn           updated    19321 records  just fetched   9.94s
+  eu_fsf             updated     6234 records  just fetched  13.52s
   ofac_consolidated  updated      481 records  just fetched   1.68s
   un_consolidated    updated     1011 records  just fetched   0.91s
   canada_sema        updated     5690 records  just fetched   0.55s
@@ -145,6 +146,7 @@ That is the whole of the working library. Everything below is either a fact abou
 | `ofac_consolidated` | US | Treasury / OFAC | ~481 | three CSVs, joined | Irregular, much less often than the SDN list |
 | `un_consolidated` | UN | UN Security Council | ~1,010 | one XML file | As the Council amends a regime |
 | `canada_sema` | CA | Global Affairs Canada | ~5,690 | one XML file | As the regulations are amended |
+| `eu_fsf` | EU | European Commission | ~6,234 | one XML file, 25.7 MB | As the Council adopts or amends a regulation |
 
 Record counts are as of the fixtures this gem was written against; the live files move. No publisher commits to a schedule, and none of them announce a change out of band, which is why every fetch here is conditional: asking daily costs one request per file on the days nothing happened. Sync on your own risk appetite rather than on a publisher's calendar.
 
@@ -166,7 +168,14 @@ Three further consequences of the same file:
 * **Aliases are one comma-joined string with no declared separator, and no kinds.** They are split on semicolons and never on commas, because `Завод "Дагдизель", АО` would otherwise yield a bare Russian legal form as an alias. That costs recall on roughly 300 records whose primary name is published anyway.
 * **`Country-Pays` is not a nationality** and is not read as one. It names the regulation a person is listed under, so it is mapped to `programs`.
 
-**All four — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name for matching](#normalizing-a-name-for-matching), and [One name transliterated two ways is the case this does not solve](#one-name-transliterated-two-ways-is-the-case-this-does-not-solve).
+**`eu_fsf` — no name is marked as the official one, and four birth dates are not Gregorian.** All 31,053 published names are equal `<nameAlias>` elements carrying `strong="true"`, so which one to call primary is this adapter's decision rather than the Commission's — see [The EU consolidated list](#the-eu-consolidated-list) for the rule and what it costs. Separately, `calendarType="ISLAMIC"` appears on four birth dates whose year, month and day are Hijri; three of them carry no Gregorian equivalent and so produce **no date of birth at all**, with the published date kept in `remarks`. A screening policy that expects a date of birth on every EU person will not get one, and that is the safe direction: reading `1343` as a Gregorian year would make a real date of birth *conflict* with the record and push a true hit below the threshold.
+
+Two further consequences of the same file:
+
+* **Conditional GET does not work, so every sync downloads 25.7 MB.** The endpoint serves `Last-Modified`, sends no `ETag` and `Cache-Control: no-store`, and answers `If-Modified-Since` with 200 and the whole file. The request is still made conditionally, and the parsed content still hashes to the same snapshot checksum, so a re-download of an unchanged list diffs to nothing — but the bandwidth is spent. Budget for it if you sync hourly.
+* **Alias quality is prose, not a column.** The EU publishes no grade. 499 of the 31,053 names carry one in the free-text `<remark>` on the name — "low quality alias", "Good quality a.k.a.", "formerly known as" — which is read; the rest arrive ungraded, which the scorer treats as unstated rather than as good.
+
+**All five — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name for matching](#normalizing-a-name-for-matching), and [One name transliterated two ways is the case this does not solve](#one-name-transliterated-two-ways-is-the-case-this-does-not-solve).
 
 ## Reading a score
 
@@ -370,6 +379,44 @@ entity.remarks    # => "[source fields] Country: Belarus / Bélarus; Schedule: 1
 
 Aliases are split on semicolons and never on commas. A comma is genuinely ambiguous in this field: `Завод "Дагдизель", АО` would yield a bare Russian legal form as an alias, and `Министерство образования, науки и молодежи Республики Крым` is one ministry rather than two. That costs recall on roughly 300 records whose primary name is published anyway, which is the cheaper of the two mistakes.
 
+### The EU consolidated list
+
+`Sources::EuFsf` reads the Financial Sanctions Files export the European Commission publishes for the EU Consolidated Financial Sanctions List — 6,234 records in one 25.7 MB document, the largest list this gem reads by an order of magnitude and the first one that actually exercises the streaming XML interface. It parses in a single pass; nothing ever holds two records at once.
+
+**The token in the URL is not a credential.** The public endpoint answers 403 without a `token` parameter and 500 with a wrong one, but `dG9rZW4tMjAxNw` is base64 for `token-2017`, it has been the value on the Commission's own public download page since that year, and it is the same string for every caller. It is declared inline the way any other part of a URL is. If it ever rotates, no release of this gem is needed:
+
+```ruby
+ActiveSanction::Sources::EuFsf.token = "..."                 # or
+ActiveSanction::Sources::EuFsf.url :main, "https://..."
+```
+
+**Conditional GET does not work here.** The endpoint serves `Last-Modified` but answers `If-Modified-Since` with 200 and the whole file, sends no `ETag`, and sets `Cache-Control: no-store`. So this is the one list that downloads 25.7 MB on every sync where the other four usually download nothing. The request is still made conditionally — it costs nothing, and the day the Commission honours it, it works — and the parsed content still hashes to the same snapshot checksum, so a re-download of an unchanged list is reported unchanged and diffs to nothing.
+
+Three things about the data are worth knowing before a screening policy leans on it.
+
+**No name is marked as the official one, so this adapter picks one.** All 31,053 `<nameAlias>` elements carry `strong="true"` and none is flagged primary, and every candidate signal in the file is wrong somewhere: document order files Qusay Hussein's French transliteration ahead of his English name, `nameLanguage` files a Cyrillic spelling of Anatoliy Sidorov's name under `EN`, and ordering by `logicalId` picks a non-Latin name for 3,203 of the 5,502 multi-name records. The rule is **the first name the Commission published that the Commission did not itself annotate as an alias** — which passes over the 24 records that lead with a name their own remark calls a low-quality alias or a former name. "Primary" therefore means less here than it does on the OFAC lists, and it costs nothing in score: an entity's score is the best of its names, and the kind reaches only the reason line.
+
+**Alias quality and alias kind are prose in a `<remark>`, and are read as such.** There is no grade column. 499 names carry a grading the Commission wrote out — "low quality alias", "Good quality a.k.a.", "formerly known as", "Maiden name: Al Akhras" — and those become `quality` and `kind` on the `Name`. The phrase has to *begin* an annotation rather than merely appear in the remark, because it appears in prose about other entities: Zadna International's own remark says the company is "99 % owned by the Special Fund ..., formerly known as the Charity Organisation for the Support of the Armed Forces", and a loose match files Zadna's published English name as a former name on the strength of a sentence about its owner.
+
+**Four birth dates are not in the Gregorian calendar.**
+
+```ruby
+# <birthdate calendarType="ISLAMIC" year="1343" city="Farsan" .../>
+entity.dates_of_birth   # => []
+entity.remarks          # => "... Date of birth as published: 1343 (islamic calendar); Place of birth: Farsan, ..."
+```
+
+`year`, `monthOfYear` and `dayOfMonth` hold a Hijri date on those records. One of the four also carries a converted `birthdate` attribute and is read from that; the other three produce **no date of birth**, and the published date goes to `remarks`. Reading `1343` as published would not merely fail to match a real date of birth — it would *conflict* with one, and the scorer penalizes a conflicting date, so a true hit would be pushed below the threshold by the very field that should have confirmed it.
+
+Two smaller judgment calls, both visible in the parsed record:
+
+```ruby
+entity.nationalities   # => ["IQ"]      citizenship as ISO 3166 alpha-2, not "IRAQ"
+entity.type            # => :organization    for a shipping company holding an IMO number
+```
+
+`countryIso2Code="00"` is the Commission's sentinel for "not stated" — it is on 1,743 of the birth dates and 1,352 of the documents — and is dropped rather than filed as a country called `00`. And `subjectType` publishes only `person` and `enterprise`: the 41 records carrying an `imo` document are shipping *companies* holding IMO company numbers, not ships, so none of them is retyped as a vessel on the strength of the document kind.
+
 ### Storing what a sync produced
 
 A synced list is a `Snapshot` — one source's entities plus a checksum over their content — and storage keeps one per source, written whole and read back whole.
@@ -512,8 +559,9 @@ exit report.exit_code           # 1 if any source failed, so cron and CI can ale
 **A failed source keeps its previous snapshot.** Nothing clears a stored list on failure — not a 500, not a parse error, not a publisher that started serving HTML where XML used to be. Screening against yesterday's OFAC list produces a report with a known, visible age on it; screening against an empty list produces a clean report for every customer, which is the most expensive thing this library can get wrong. That trade is only safe while the age is visible, so every result carries the record count and age of the list that source is *still* being screened against:
 
 ```
-4 sources in 13.08s: 1 updated, 2 unchanged, 1 failed
+5 sources in 27.14s: 2 updated, 2 unchanged, 1 failed
   ofac_sdn           updated    19015 records  just fetched   12.41s
+  eu_fsf             updated     6234 records  just fetched   13.15s
   ofac_consolidated  unchanged   1203 records  2h old          0.28s
   canada_sema        unchanged    684 records  2h old          0.19s
   un_consolidated    failed       612 records  3d old          1.11s  Net::ReadTimeout: execution expired
@@ -914,7 +962,7 @@ library.
 
 Bug reports and pull requests are welcome at https://github.com/Babystep-Technologies/active_sanction.
 
-The most useful contribution is a new list. [`docs/adding_a_source.md`](docs/adding_a_source.md) is written for exactly that, and the shared conformance group means a new adapter is held to the same checklist the shipped ones are. The EU ([#39](https://github.com/Babystep-Technologies/active_sanction/issues/39)), the UK ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are open and unclaimed.
+The most useful contribution is a new list. [`docs/adding_a_source.md`](docs/adding_a_source.md) is written for exactly that, and the shared conformance group means a new adapter is held to the same checklist the shipped ones are. The UK ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are open and unclaimed.
 
 The second most useful is a name this version gets wrong. A missed record or a false alert belongs in [`benchmark/fixtures/labeled_set.yml`](benchmark/fixtures/labeled_set.yml) with what it is supposed to find, whether or not the matching is changed in the same pull request — a case nobody has written down is a case that regresses silently.
 
