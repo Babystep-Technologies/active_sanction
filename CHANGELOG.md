@@ -76,7 +76,25 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
   all rather than a Gregorian year in the fourteenth century that would *conflict* with the
   real one. The endpoint does not honour conditional GET, so this is the one list that
   downloads in full on every sync.
-- `docs/adding_a_source.md`, the end-to-end walkthrough for a sixth
+- **UK Sanctions List** — 6,334 designations in one 21.8 MB XML document, read with no change
+  to core ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)). The
+  issue was scoped against OFSI's Consolidated List of Asset Freeze Targets, which the UK
+  retired on 28 January 2026 when it moved every designation onto one list; its blob still
+  answers 200 with a frozen 16.6 MB file, so an adapter reading it would look healthy on every
+  sync and screen against a list that stopped moving in January. **If you have your own
+  integration against `ConList.csv`, that is the thing to check today.** Two things about the
+  data are worth knowing before relying on it: a date component the FCDO does not know is
+  spelled out rather than omitted — `dd/mm/1962` is a year, `00/00/1975` is another spelling
+  of the same, and 824 of 3,788 birth dates carry one, every one of which reads as nil through
+  an ordinary date parser — and the publisher's own non-Latin script labels disagree with its
+  own strings on three records, which is why `Name#script` is left unstated here. The endpoint
+  honours conditional GET on both ETag and Last-Modified, so an unchanged list downloads
+  nothing.
+- Four UK spellings added to `countries.txt` — `Congo (Democratic Republic)`, `St Kitts and
+  Nevis`, `St Lucia`, `St Vincent` — and `Palestinian` and `Occupied Palestinian Territories`,
+  which between them resolve 53 of the 63 UK nationality values that previously did not. Purely
+  additive: no existing spelling resolves differently, and the accuracy report is unchanged.
+- `docs/adding_a_source.md`, the end-to-end walkthrough for a seventh
   ([#17](https://github.com/Babystep-Technologies/active_sanction/issues/17)).
 
 #### Storage

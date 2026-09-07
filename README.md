@@ -32,7 +32,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 ## What it does
 
 - **Fetches.** Conditional GET on ETag and Last-Modified, bounded redirects, retries with backoff, a checksum-verified cache of the raw payloads, and a User-Agent that identifies you to the publisher.
-- **Parses.** Five lists today, into one `Entity`: names and aliases with their kind and quality, dates of birth as `PartialDate` (year-only, approximate and ranged dates are all real on these lists), addresses, document numbers, nationalities, programs — and the publisher's own text kept verbatim in `remarks` whether the parser understood it or not.
+- **Parses.** Six lists today, into one `Entity`: names and aliases with their kind and quality, dates of birth as `PartialDate` (year-only, approximate and ranged dates are all real on these lists), addresses, document numbers, nationalities, programs — and the publisher's own text kept verbatim in `remarks` whether the parser understood it or not.
 - **Stores.** One checksummed `Snapshot` per source, in gzipped JSON on disk, in your application's database, in memory, or in a store you write. Nothing on the query path names a concrete store.
 - **Screens.** Fold the name, retrieve candidates from an inverted index, score each with four string algorithms and a phonetic pass, adjust on dates of birth, nationalities and document numbers, and report the reasons — which sum to the score exactly.
 - **Diffs.** What changed between two syncs, so a book of business is re-screened against the handful of records that moved rather than against the whole list.
@@ -43,7 +43,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 - **It does not decide anything.** A score is evidence for a human. The threshold at which a score becomes an alert, and what happens to that alert, are policy your compliance function owns.
 - **It is not a case management system.** No alert queue, no dispositions, no audit store. It produces the record; keeping it is your application's job.
 - **It screens names against lists, and nothing more.** No politically-exposed-person data, no adverse media, no beneficial ownership, no OFAC 50 Percent Rule resolution — a subsidiary that is sanctioned only by virtue of its owners is not on any of these files and will not be found here.
-- **Five lists ship: two US, one UN, one Canada, one EU.** The UK ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are not yet read. If your obligations cover a jurisdiction in that list, this gem does not cover them.
+- **Six lists ship: two US, one UN, one Canada, one EU, one UK.** Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) is not yet read. If your obligations cover a jurisdiction outside that set, this gem does not cover them.
 - **Non-Latin script is not transliterated.** `Путин` does not fold to `putin`; a Cyrillic name matches a Cyrillic query and nothing else. What makes it survivable is that these publishers ship a romanized name alongside the original — see [Normalizing a name for matching](#normalizing-a-name-for-matching) for what that does and does not leave open.
 - **It does not monitor.** It syncs when you tell it to. Nothing here notices overnight that a publisher changed its format ([#68](https://github.com/Babystep-Technologies/active_sanction/issues/68), [#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)) or wakes anybody when it does.
 - **There is no CLI.** It is a library, called from an initializer, a rake task or a job.
@@ -83,12 +83,13 @@ puts report
 ```
 
 ```
-5 sources in 26.60s: 5 updated
-  ofac_sdn           updated    19321 records  just fetched   9.94s
-  eu_fsf             updated     6234 records  just fetched  13.52s
-  ofac_consolidated  updated      481 records  just fetched   1.68s
-  un_consolidated    updated     1011 records  just fetched   0.91s
-  canada_sema        updated     5690 records  just fetched   0.55s
+6 sources in 48.98s: 6 updated
+  canada_sema        updated     5690 records  just fetched    3.99s
+  eu_fsf             updated     6234 records  just fetched   14.48s
+  ofac_consolidated  updated      481 records  just fetched    3.23s
+  ofac_sdn           updated    19329 records  just fetched    9.92s
+  uk_sanctions_list  updated     6334 records  just fetched   13.90s
+  un_consolidated    updated     1011 records  just fetched    3.44s
 ```
 
 The first run downloads each list in full. Later ones ask every publisher whether anything has changed and usually download nothing at all, so a sync scheduled hourly costs a handful of conditional requests on most days. Snapshots land in `~/.active_sanction` unless you name a store. A source that fails does not stop the others and **keeps the list it already had**; `report.failed?` and `report.exit_code` are what a cron job alerts on. See [Syncing every list, and what happens when one is down](#syncing-every-list-and-what-happens-when-one-is-down).
@@ -147,6 +148,7 @@ That is the whole of the working library. Everything below is either a fact abou
 | `un_consolidated` | UN | UN Security Council | ~1,010 | one XML file | As the Council amends a regime |
 | `canada_sema` | CA | Global Affairs Canada | ~5,690 | one XML file | As the regulations are amended |
 | `eu_fsf` | EU | European Commission | ~6,234 | one XML file, 25.7 MB | As the Council adopts or amends a regulation |
+| `uk_sanctions_list` | UK | FCDO | ~6,334 | one XML file, 21.8 MB | Whenever a designation is made, amended or revoked |
 
 Record counts are as of the fixtures this gem was written against; the live files move. No publisher commits to a schedule, and none of them announce a change out of band, which is why every fetch here is conditional: asking daily costs one request per file on the days nothing happened. Sync on your own risk appetite rather than on a publisher's calendar.
 
@@ -175,7 +177,17 @@ Two further consequences of the same file:
 * **Conditional GET does not work, so every sync downloads 25.7 MB.** The endpoint serves `Last-Modified`, sends no `ETag` and `Cache-Control: no-store`, and answers `If-Modified-Since` with 200 and the whole file. The request is still made conditionally, and the parsed content still hashes to the same snapshot checksum, so a re-download of an unchanged list diffs to nothing — but the bandwidth is spent. Budget for it if you sync hourly.
 * **Alias quality is prose, not a column.** The EU publishes no grade. 499 of the 31,053 names carry one in the free-text `<remark>` on the name — "low quality alias", "Good quality a.k.a.", "formerly known as" — which is read; the rest arrive ungraded, which the scorer treats as unstated rather than as good.
 
-**All five — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name for matching](#normalizing-a-name-for-matching), and [One name transliterated two ways is the case this does not solve](#one-name-transliterated-two-ways-is-the-case-this-does-not-solve).
+**`uk_sanctions_list` — the list this one replaced is still on the internet, and still answers 200.** The UK moved every sanctions designation onto one list on 28 January 2026. OFSI's Consolidated List of Asset Freeze Targets stopped being updated that day and its gov.uk page is marked withdrawn — but `ofsistorage.blob.core.windows.net/publishlive/2022format/ConList.csv` still serves a real 16.6 MB file. A screening system pointed at it downloads successfully, parses successfully, reports itself fresh, and screens against a list that has not moved since January. This adapter reads the UK Sanctions List instead. If you have your own integration against `ConList.csv`, that is the thing to check today.
+
+**`uk_sanctions_list` — a date component the FCDO does not know is spelled out, not omitted.** 824 of the 3,788 published birth dates — 22% — carry a placeholder where a component goes: `dd/mm/1962` is a year, `dd/07/1978` is a year and a month, and one record spells the same absence with zeros as `00/00/1975`. Read with any ordinary date parser every one of them is nil, and 22% of everything this list says about when a person was born disappears with no warning; read credulously they become invalid dates, or dates the scorer compares as though the FCDO had been precise. `Sources::UkSanctionsList::PublishedDate` reads them at the precision the FCDO stated. One record, `15/08/19yy`, states a day and a month and no year at all: `PartialDate` has no shape for that and it produces **no date of birth**, with the published string kept in `remarks`.
+
+Three further consequences of the same file:
+
+* **The FCDO's own script labels disagree with its own strings, so `Name#script` is left unstated.** `NonLatinScriptType` is on 2,057 of the 3,856 non-Latin names and agrees with the characters on 2,054 of them — but three names labelled `Cyrillic` are Latin transliterations, and 185 names filed as non-Latin hold no non-Latin character at all. The label and the language are kept in `remarks`, and which script a string is in stays a question about its characters.
+* **A "number" field may be a sentence.** 340 of the 721 business registration numbers open with a label (`INN: 7710137066`), a handful carry several numbers, a country and a newline in one field, and one national identity number reads `Kuwait, number 260012001546`. All of it is kept exactly as published: every rule that peels `INN: ` off the first also has to decide what to do with the rest, and each of those answers is a guess about free text. The exception is a ship's IMO number, where the prefix restates the element it is already inside — `IMO9562233` on 635 of the 670, and bare on the other 35 — and is peeled into the note so that the FCDO's own two spellings of one registry number are one identifier rather than two.
+* **`<CryptoWalletAddresses>` and `<HullIdentificationNumbers>` are in the schema and empty in the data**, so neither is read. They are the first things to add when either appears.
+
+**All six — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name for matching](#normalizing-a-name-for-matching), and [One name transliterated two ways is the case this does not solve](#one-name-transliterated-two-ways-is-the-case-this-does-not-solve).
 
 ## Reading a score
 
@@ -390,7 +402,7 @@ ActiveSanction::Sources::EuFsf.token = "..."                 # or
 ActiveSanction::Sources::EuFsf.url :main, "https://..."
 ```
 
-**Conditional GET does not work here.** The endpoint serves `Last-Modified` but answers `If-Modified-Since` with 200 and the whole file, sends no `ETag`, and sets `Cache-Control: no-store`. So this is the one list that downloads 25.7 MB on every sync where the other four usually download nothing. The request is still made conditionally — it costs nothing, and the day the Commission honours it, it works — and the parsed content still hashes to the same snapshot checksum, so a re-download of an unchanged list is reported unchanged and diffs to nothing.
+**Conditional GET does not work here.** The endpoint serves `Last-Modified` but answers `If-Modified-Since` with 200 and the whole file, sends no `ETag`, and sets `Cache-Control: no-store`. So this is the one list that downloads 25.7 MB on every sync where the other five usually download nothing. The request is still made conditionally — it costs nothing, and the day the Commission honours it, it works — and the parsed content still hashes to the same snapshot checksum, so a re-download of an unchanged list is reported unchanged and diffs to nothing.
 
 Three things about the data are worth knowing before a screening policy leans on it.
 
@@ -416,6 +428,44 @@ entity.type            # => :organization    for a shipping company holding an I
 ```
 
 `countryIso2Code="00"` is the Commission's sentinel for "not stated" — it is on 1,743 of the birth dates and 1,352 of the documents — and is dropped rather than filed as a country called `00`. And `subjectType` publishes only `person` and `enterprise`: the 41 records carrying an `imo` document are shipping *companies* holding IMO company numbers, not ships, so none of them is retyped as a vessel on the strength of the document kind.
+
+### The UK Sanctions List
+
+`Sources::UkSanctionsList` reads the UK Sanctions List the Foreign, Commonwealth and Development Office publishes under the Sanctions and Anti-Money Laundering Act 2018 — 6,334 designations in one 21.8 MB XML document, against a published XSD.
+
+**It is not the OFSI Consolidated List, and the difference matters more than a rename.** The UK ran two lists until 28 January 2026: the UKSL, which carried every designation, and OFSI's Consolidated List of Asset Freeze Targets, which carried the financial ones. On that date the second was retired. The FCDO's own [transition guidance](https://www.gov.uk/guidance/moving-to-a-single-list-for-uk-sanctions-designations-28-january-2026) says the Consolidated List "is no longer being updated", and its gov.uk publication page is marked `[Withdrawn]`.
+
+The file did not go away. `ConList.csv` still answers `200 text/csv` with 16.6 MB of real designations, so an integration built against it does not break — it quietly stops being current, which is the failure mode this library is least able to survive and least able to detect. Nothing in a sync report distinguishes a fresh list from a frozen one that is still being served.
+
+`OFSI Group ID` is retired with it: designations made since 28 January 2026 do not get one. The historic Group ID is still carried on every earlier designation and stays valid for a licence application or a breach report, so it is kept in `remarks`, and `source_ref` is built from the `Unique ID` that every record has.
+
+```ruby
+entity.source_ref   # => "AFG0001"
+entity.remarks      # => "... [source fields] OFSI group id: 12703; UN reference: TAe.010; ..."
+```
+
+**The XML rather than the CSV, because the CSV is a cartesian product.** The FCDO publishes seven formats, two of them machine-readable at this size. The CSV was added in January to match the shape OFSI's readers were built for, and it is 49.9 MB and 58,424 rows for the same 6,334 designations, because it emits one row per *combination* of every repeating group. One record, `INU0075`, occupies 3,780 rows — 10 names × 7 addresses × 3 phone numbers × 2 websites × 9 subsidiaries. Reading it means grouping the rows and then de-duplicating each dimension back out of the product, which is reconstruction rather than parsing. The XML states the same structure directly, in 44% of the bytes, and carries a field the CSV has no column for.
+
+**Conditional GET works here**, unlike the EU's endpoint. The FCDO serves both an `ETag` and a `Last-Modified` and honours both, so a sync against an unchanged list answers 304 and downloads nothing:
+
+```
+run 1: 6334 entities in 14.4s
+run 2: unchanged (304) in 0.1s
+```
+
+The URLs have been static since January — the FCDO made them so precisely to stop a screening system re-discovering the link on every refresh — which is why this adapter declares one and does not scrape a publication page for it.
+
+**Every judgment this adapter makes, the FCDO published a field for.** That is unusual, and it is what makes a clean UK result worth more than a clean EU one.
+
+```ruby
+entity.primary_name.value   # => "MUHAMMAD JAMAL ABD-AL RAHIM AHMAD AL-KASHIF"
+entity.names.map(&:quality) # => [nil, :good, :low, :low, :low, ...]
+entity.programs             # => ["The Russia (Sanctions) (EU Exit) Regulations 2019"]
+```
+
+Every one of the 6,334 records carries a `NameType` of `Primary Name` — six carry two, none carries none — so which name to call primary is the publisher's decision here rather than this adapter's, which is exactly the judgment the EU adapter is stuck making. Alias grading is a field (`AliasStrength`, on 2,073 names) rather than prose. The regime is the statutory instrument itself, and maps to `programs`; the measures actually imposed are a separate field and go to `remarks`.
+
+Two mappings are worth stating because they are not the only defensible ones. A name is six numbered parts and is joined in numeric order — `Name1` to `Name6`, given names ascending with the family name last — which is *not* the order the CSV lists its columns in; the CSV files `Name 6` first because it is presenting a surname to a reader, and following that would produce `JAN ABDUL KABIR MUHAMMAD`. And `Primary Name Variation`, which is 5,513 of the 15,677 published names, is an alternative *spelling* of the designated name rather than a second designation, so it is filed as an alias — which is what leaves `Entity#primary_name` answering with the name the FCDO actually designated.
 
 ### Storing what a sync produced
 
@@ -559,10 +609,11 @@ exit report.exit_code           # 1 if any source failed, so cron and CI can ale
 **A failed source keeps its previous snapshot.** Nothing clears a stored list on failure — not a 500, not a parse error, not a publisher that started serving HTML where XML used to be. Screening against yesterday's OFAC list produces a report with a known, visible age on it; screening against an empty list produces a clean report for every customer, which is the most expensive thing this library can get wrong. That trade is only safe while the age is visible, so every result carries the record count and age of the list that source is *still* being screened against:
 
 ```
-5 sources in 27.14s: 2 updated, 2 unchanged, 1 failed
+6 sources in 27.14s: 2 updated, 3 unchanged, 1 failed
   ofac_sdn           updated    19015 records  just fetched   12.41s
   eu_fsf             updated     6234 records  just fetched   13.15s
   ofac_consolidated  unchanged   1203 records  2h old          0.28s
+  uk_sanctions_list  unchanged   6334 records  2h old          0.21s
   canada_sema        unchanged    684 records  2h old          0.19s
   un_consolidated    failed       612 records  3d old          1.11s  Net::ReadTimeout: execution expired
 ```

@@ -80,7 +80,7 @@ BY|BLR|Belarus|Byelorussia
 BZ|BLZ|Belize
 CA|CAN|Canada
 CC|CCK|Cocos (Keeling) Islands|Keeling Islands
-CD|COD|Congo, Democratic Republic of the|Democratic Republic of the Congo|DR Congo|Zaire
+CD|COD|Congo, Democratic Republic of the|Democratic Republic of the Congo|DR Congo|Zaire|Congo (Democratic Republic)
 CF|CAF|Central African Republic
 CG|COG|Congo|Republic of the Congo|Congo-Brazzaville
 CH|CHE|Switzerland
@@ -160,7 +160,7 @@ KG|KGZ|Kyrgyzstan
 KH|KHM|Cambodia
 KI|KIR|Kiribati
 KM|COM|Comoros
-KN|KNA|Saint Kitts and Nevis
+KN|KNA|Saint Kitts and Nevis|St Kitts and Nevis
 KP|PRK|Korea, Democratic People's Republic of|Democratic People's Republic of Korea|North Korea|DPRK
 KR|KOR|Korea, Republic of|Republic of Korea|South Korea
 KW|KWT|Kuwait
@@ -168,7 +168,7 @@ KY|CYM|Cayman Islands
 KZ|KAZ|Kazakhstan
 LA|LAO|Lao People's Democratic Republic|Laos
 LB|LBN|Lebanon
-LC|LCA|Saint Lucia
+LC|LCA|Saint Lucia|St Lucia
 LI|LIE|Liechtenstein
 LK|LKA|Sri Lanka
 LR|LBR|Liberia
@@ -223,7 +223,7 @@ PL|POL|Poland
 PM|SPM|Saint Pierre and Miquelon
 PN|PCN|Pitcairn
 PR|PRI|Puerto Rico
-PS|PSE|Palestine, State of|Palestine|State of Palestine|Palestinian Territory|Occupied Palestinian Territory
+PS|PSE|Palestine, State of|Palestine|State of Palestine|Palestinian Territory|Occupied Palestinian Territory|Occupied Palestinian Territories|Palestinian
 PT|PRT|Portugal
 PW|PLW|Palau
 PY|PRY|Paraguay
@@ -277,7 +277,7 @@ US|USA|United States|United States of America|America
 UY|URY|Uruguay
 UZ|UZB|Uzbekistan
 VA|VAT|Holy See|Vatican City|Vatican
-VC|VCT|Saint Vincent and the Grenadines
+VC|VCT|Saint Vincent and the Grenadines|St Vincent
 VE|VEN|Venezuela, Bolivarian Republic of|Venezuela|Bolivarian Republic of Venezuela
 VG|VGB|Virgin Islands, British|British Virgin Islands
 VI|VIR|Virgin Islands, U.S.|United States Virgin Islands
