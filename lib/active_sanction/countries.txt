@@ -161,7 +161,7 @@ KH|KHM|Cambodia
 KI|KIR|Kiribati
 KM|COM|Comoros
 KN|KNA|Saint Kitts and Nevis|St Kitts and Nevis
-KP|PRK|Korea, Democratic People's Republic of|Democratic People's Republic of Korea|North Korea|DPRK
+KP|PRK|Korea, Democratic People's Republic of|Democratic People's Republic of Korea|North Korea|DPRK|Democratic People's Republic of Korea (North Korea)
 KR|KOR|Korea, Republic of|Republic of Korea|South Korea
 KW|KWT|Kuwait
 KY|CYM|Cayman Islands
@@ -242,7 +242,7 @@ SG|SGP|Singapore
 SH|SHN|Saint Helena, Ascension and Tristan da Cunha|Saint Helena
 SI|SVN|Slovenia
 SJ|SJM|Svalbard and Jan Mayen
-SK|SVK|Slovakia
+SK|SVK|Slovakia|Slovak Republic
 SL|SLE|Sierra Leone
 SM|SMR|San Marino
 SN|SEN|Senegal
