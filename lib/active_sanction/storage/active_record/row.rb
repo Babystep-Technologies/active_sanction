@@ -61,6 +61,8 @@ module ActiveSanction
           self.abstract_class = true
         end
 
+        # `active_sanction_snapshots` -- one row per synced list, carrying the
+        # checksum the whole list is rebuilt against.
         class Snapshot < Base
           extend T::Sig
 
@@ -83,6 +85,8 @@ module ActiveSanction
           end
         end
 
+        # `active_sanction_entities` -- one row per record on a list, with its
+        # names, addresses and identifiers hanging off it.
         class Entity < Base
           self.table_name = "active_sanction_entities"
 
@@ -97,6 +101,8 @@ module ActiveSanction
                                  foreign_key: :entity_id, inverse_of: :entity, dependent: nil
         end
 
+        # `active_sanction_names` -- one row per name variant, primary or alias.
+        # `normalized_value` is the indexed column the prefilter probes.
         class Name < Base
           self.table_name = "active_sanction_names"
 
@@ -117,6 +123,8 @@ module ActiveSanction
           }
         end
 
+        # `active_sanction_addresses` -- one row per published address. Not a
+        # prefilter path: addresses on these lists are too partial to probe on.
         class Address < Base
           self.table_name = "active_sanction_addresses"
 
@@ -124,6 +132,9 @@ module ActiveSanction
                               inverse_of: :addresses
         end
 
+        # `active_sanction_identifiers` -- one row per document number, keyed on
+        # ActiveSanction::Identifier#normalized_value so that two publishers'
+        # punctuation of the same passport finds each other.
         class Identifier < Base
           self.table_name = "active_sanction_identifiers"
 

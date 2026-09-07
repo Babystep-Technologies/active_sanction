@@ -1,0 +1,11 @@
+--markup markdown
+--plugin sorbet
+--readme README.md
+--output-dir doc
+--no-private
+--protected
+lib/**/*.rb
+-
+CHANGELOG.md
+docs/adding_a_source.md
+LICENSE.txt

@@ -11,6 +11,18 @@ gemspec
 gem "nokogiri", "~> 1.15"
 
 gem "rake", "~> 13.0"
+
+# API documentation, generated from the prose already sitting above every
+# public method. `yard-sorbet` is what makes that enough: it reads the inline
+# `sig` blocks and turns them into `@param` and `@return` tags, so the types
+# are declared once, in the place the checker also reads them. Hand-written
+# type tags would be a second source of truth for something Sorbet already
+# states -- the same argument the README makes for not shipping an RBI.
+#
+#     $ bundle exec rake doc
+gem "yard", "~> 0.9"
+gem "yard-sorbet", "~> 0.9", require: false
+
 gem "rspec", "~> 3.13"
 gem "rubocop", "~> 1.75"
 gem "rubocop-rspec", "~> 3.5"

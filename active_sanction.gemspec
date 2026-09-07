@@ -48,14 +48,31 @@ Gem::Specification.new do |spec|
   # which spec/sorbet_runtime_spec.rb holds us to.
   spec.add_dependency "sorbet-runtime", "~> 0.6"
 
-  # Specify which files should be added to the gem when it is released.
-  # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
-  # `sorbet/` is the checker's working directory -- its config and the RBIs
-  # tapioca generates for our dependencies. `benchmark/` measures the machine
-  # it runs on and answers a question about this repository. Both are needed
-  # here and useless inside the packaged gem, so neither is shipped.
+  # What ships. Everything tracked in git, minus the parts of this repository
+  # that exist to develop it.
+  #
+  # `spec/` carries the fixtures, which are trimmed copies of government files
+  # and are the largest thing here. `sorbet/` is the checker's working
+  # directory -- its config and the RBIs tapioca generates for our
+  # dependencies. `benchmark/` measures the machine it runs on and answers a
+  # question about this repository. The rest is toolchain: CI, the linter's
+  # config, the Rakefile that drives all three, and `bin/` -- none of which do
+  # anything inside an installed gem, and each of which is one more file a
+  # security scan has to be told to ignore.
+  #
+  # What is deliberately kept is `docs/`, which is linked from the README and
+  # is as much a part of the library as the code is.
+  dev_only = %r{
+    \A(?:
+      (?:test|spec|features|sorbet|benchmark|bin|\.github)/ |
+      Gemfile |
+      Rakefile |
+      \.
+    )
+  }x
+
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
-    `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features|sorbet|benchmark)/}) }
+    `git ls-files -z`.split("\x0").reject { |f| f.match(dev_only) }
   end
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }

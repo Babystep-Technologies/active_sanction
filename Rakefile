@@ -16,6 +16,21 @@ task :typecheck do
   sh "bundle", "exec", "srb", "tc"
 end
 
+# Renders the prose already sitting above every public method, with the types
+# read off the inline `sig` blocks by yard-sorbet -- so the documentation has
+# no source of truth the checker does not also read.
+#
+# Not part of the default task: it writes a directory rather than passing or
+# failing, and `srb tc` is what actually holds the signatures honest.
+# `--fail-on-warning` catches the half of it that can rot silently -- a broken
+# cross-reference, an unparseable tag -- which is what makes this worth running
+# before a release. `yard stats --list-undoc` names anything public that
+# arrived without a comment.
+desc "Render the API documentation into doc/"
+task :doc do
+  sh "bundle", "exec", "yard", "doc", "--fail-on-warning"
+end
+
 namespace :benchmark do
   # Not part of the default task: a benchmark measures the machine it runs on,
   # so it answers a question rather than passing or failing.
