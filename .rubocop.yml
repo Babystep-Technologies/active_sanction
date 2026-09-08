@@ -37,12 +37,15 @@ RSpec/ExampleLength:
 # These files cover the test harness itself rather than a class:
 # network_isolation_spec that the suite cannot reach the internet,
 # sorbet_runtime_spec what a signature does and does not do in a host's
-# process, and the two conformance specs the shared example groups that every
-# source adapter and every storage adapter are held to.
+# process, supported_rubies_spec that the Rubies this gem claims to run on are
+# the Rubies a build actually ran, and the two conformance specs the shared
+# example groups that every source adapter and every storage adapter are held
+# to.
 RSpec/DescribeClass:
   Exclude:
     - "spec/network_isolation_spec.rb"
     - "spec/sorbet_runtime_spec.rb"
+    - "spec/supported_rubies_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
 

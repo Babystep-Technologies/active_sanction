@@ -288,10 +288,14 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
 - Sorbet at `typed: strict` across `lib/`, with per-query signatures declared
   `.checked(:tests)` and a supported way for a host to turn every runtime check off
   ([#73](https://github.com/Babystep-Technologies/active_sanction/issues/73)).
-- CI across Ruby 3.1-3.3, and a hermetic suite — an un-stubbed HTTP call fails rather than
-  quietly reaching a government server
+- CI across every Ruby the gem supports — 3.1, 3.2, 3.3, 3.4 and 4.0, plus a non-blocking
+  `ruby-head` — with the matrix, `.ruby-version`, `required_ruby_version` and RuboCop's
+  `TargetRubyVersion` held to each other by a spec, so the version a change is developed on
+  cannot again be the one version no build runs
   ([#2](https://github.com/Babystep-Technologies/active_sanction/issues/2),
-  [#3](https://github.com/Babystep-Technologies/active_sanction/issues/3)).
+  [#80](https://github.com/Babystep-Technologies/active_sanction/issues/80)).
+- A hermetic suite — an un-stubbed HTTP call fails rather than quietly reaching a government
+  server ([#3](https://github.com/Babystep-Technologies/active_sanction/issues/3)).
 
 ### Known limitations at this release
 
