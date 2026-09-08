@@ -1071,6 +1071,8 @@ After checking out the repo, run `bin/setup` to install dependencies, and `bin/c
 
 `bundle exec rake` runs the RSpec suite, then RuboCop, then `srb tc`; all three must pass.
 
+CI runs all three on every Ruby the gem supports — 3.1, 3.2, 3.3, 3.4 and 4.0 — plus `ruby-head`, which is allowed to fail: a change upstream is news rather than a broken build, so that job reports in the checks list and leaves the badge green. The Ruby in [`.ruby-version`](.ruby-version) is in that matrix by name, and [`spec/supported_rubies_spec.rb`](spec/supported_rubies_spec.rb) is what keeps it there: it reads the matrix, `.ruby-version`, the gemspec's `required_ruby_version` and RuboCop's `TargetRubyVersion`, and fails when they stop agreeing. The version a change is written on being the one version no build ever ran is how that drift stays invisible ([#80](https://github.com/Babystep-Technologies/active_sanction/issues/80)).
+
 The suite is hermetic. `spec_helper.rb` calls `WebMock.disable_net_connect!(allow_localhost: true)`, so an un-stubbed HTTP call raises `WebMock::NetConnectNotAllowedError` instead of quietly reaching the internet. Parser specs run against committed fixtures — a suite that can reach a government server stops proving anything about our parsing and starts proving that the server is up.
 
 Specs that genuinely need a real endpoint are tagged `:live`. They are excluded from the default run, and `WebMock` is re-enabled around each one:
