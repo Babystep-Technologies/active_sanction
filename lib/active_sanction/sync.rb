@@ -169,6 +169,14 @@ module ActiveSanction
       )
       @logger = T.let(logger, T.untyped)
       @lock = T.let(Mutex.new, Mutex)
+      # The settings this run was started under, so a worker thread reads them
+      # rather than the default client's. A configuration is fiber-local and a
+      # `Thread.new` does not inherit one -- see
+      # ActiveSanction.with_configuration -- so a run through a Client with its
+      # own User-Agent would otherwise identify itself as that client on the
+      # first source and as the default on the next three, purely according to
+      # `concurrency:`.
+      @configuration = T.let(ActiveSanction.config, Configuration)
     end
 
     # Runs the sync and returns the Report. Never raises for a source that
@@ -233,7 +241,9 @@ module ActiveSanction
       queue = Queue.new
       groups.each { |group| queue << group }
       queue.close
-      Array.new(workers) { Thread.new { drain(queue, &block) } }.flat_map(&:value)
+      Array.new(workers) do
+        Thread.new { ActiveSanction.with_configuration(@configuration) { drain(queue, &block) } }
+      end.flat_map(&:value)
     end
 
     sig do

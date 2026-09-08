@@ -239,7 +239,7 @@ RSpec.describe ActiveSanction::Parsers::XmlRecords do
   end
 
   describe "choosing a backend" do
-    after { ActiveSanction.reset_configuration! }
+    after { ActiveSanction.reset! }
 
     it "parses with REXML unless an installation says otherwise" do
       expect(described_class.new(records: "R").backend)

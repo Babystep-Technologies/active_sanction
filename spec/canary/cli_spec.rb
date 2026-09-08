@@ -19,7 +19,7 @@ RSpec.describe Canary::CLI do
   after do
     ActiveSanction::Sources.unregister(:canary_list)
     CanaryList.plan = nil
-    ActiveSanction.reset_configuration!
+    ActiveSanction.reset!
     FileUtils.remove_entry(directory, true)
   end
 

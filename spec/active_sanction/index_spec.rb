@@ -114,9 +114,13 @@ RSpec.describe ActiveSanction::Index do
       expect(index.candidates("Mohammed", limit: 2).size).to be <= 2
     end
 
+    # Configured rather than stubbed: a built configuration is frozen, which
+    # is the point of it, and a frozen object cannot be a partial double.
     it "falls back to the configured limit" do
-      allow(ActiveSanction.config).to receive(:candidate_limit).and_return(1)
+      ActiveSanction.configure { |c| c.candidate_limit = 1 }
       expect(index.candidates("Mohammed").size).to eq(1)
+    ensure
+      ActiveSanction.reset!
     end
 
     # Filtering after the cap would return fewer names than asked for, and

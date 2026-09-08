@@ -15,7 +15,7 @@ RSpec.describe ActiveSanction::ValidatorStore::FileSystem do
 
   after do
     FileUtils.remove_entry(dir)
-    ActiveSanction.reset_configuration!
+    ActiveSanction.reset!
   end
 
   # A second real endpoint, for the case where one source is updated and the

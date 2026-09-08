@@ -3,7 +3,7 @@
 require "json"
 
 RSpec.describe ActiveSanction::Diff do
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   def entity(ref, name: "ABBAS, Abu", source: :ofac_sdn, **overrides)
     ActiveSanction::Entity.new(

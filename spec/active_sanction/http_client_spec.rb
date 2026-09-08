@@ -14,7 +14,7 @@ RSpec.describe ActiveSanction::HttpClient do
   let(:url) { "https://sanctionslistservice.ofac.treas.gov/api/download/SDN.CSV" }
   let(:blob) { "https://ofacblob.blob.core.windows.net/sdn/SDN.CSV" }
 
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   describe "#get" do
     it "returns the status, headers and body" do

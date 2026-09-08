@@ -202,7 +202,32 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
     payload cache, not the conditional-GET validators — so diagnosing a source can never be the
     reason a later sync decides it is unchanged, and nothing here repairs anything.
 - `ActiveSanction.configure`, with a working default for every setting and a
-  `ConfigurationError` raised where a bad value is set rather than three hours into a sync.
+  `ConfigurationError` raised where a bad value is set rather than three hours into a sync. A
+  setting that does not exist is refused too, and the message names the ones that do.
+- `Client`, the object a server holds, and the end of process-global configuration
+  ([#55](https://github.com/Babystep-Technologies/active_sanction/issues/55)). Everything at
+  the module level — `ActiveSanction.screen`, `.sync!`, `.diff`, `.doctor` — is now sugar over
+  a default client that `ActiveSanction.configure` populates, so the quickstart is unchanged
+  and a script never has to know this exists. What it buys is what a global could not express:
+  several configurations alive at once.
+  - `ActiveSanction::Client.new(storage:, sources:, user_agent:, ...)` takes every setting
+    `configure` takes, holds it frozen, and shares nothing with another client — its own store,
+    its own lists, its own index, its own publisher identity. Two clients screen against their
+    own data with no cross-talk, which is what a pinned list version for an audit re-run beside
+    the current one for live traffic, and a source set per tenant, both need.
+  - `Configuration` became that client's value object rather than global state. It is frozen
+    when a client is built, `#with` derives a mutable copy from a frozen one, and the default
+    store is settled at freeze rather than memoized on first read — so no two threads can race
+    to construct it.
+  - **The thread-safety contract is written down**: a built client and its loaded index are
+    safe to screen from concurrently, and `sync!` is safe alongside readers but is not
+    concurrent-safe against another sync of the same storage. See the README table.
+  - `ActiveSanction.reset!` (previously `reset_configuration!`) drops the default client
+    outright, which is what a suite runs between examples.
+  - A sync that fans out now carries the configuration it was started under into each worker
+    thread, so a client's User-Agent does not depend on `sync_concurrency:`; and the source
+    registry is built at load rather than on first write, so two adapters registering from two
+    threads cannot each create half of it.
 - One documented error hierarchy under `ActiveSanction::Error`, which `rescue` catches
   everything this library raises from a public method
   ([#58](https://github.com/Babystep-Technologies/active_sanction/issues/58)):

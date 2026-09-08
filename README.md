@@ -284,7 +284,7 @@ threshold       mean       p50       p95       p99   slowest
        85     11.7 ms   10.2 ms   22.7 ms   39.1 ms   40.2 ms
 ```
 
-A matcher is immutable once built, so many threads screen through one without a lock, and a sync builds a new one rather than mutating the old — requests in flight finish against one consistent list version. See [Holding a matcher, and screening from many threads](#holding-a-matcher-and-screening-from-many-threads).
+A matcher is immutable once built, so many threads screen through one without a lock, and a sync builds a new one rather than mutating the old — requests in flight finish against one consistent list version. See [Holding a client, and screening from many threads](#holding-a-client-and-screening-from-many-threads).
 
 Every early exit in the scorer is a bound on what a pair *could* reach, never an approximation of what it did reach, so **a result at or above the threshold is exactly the result the same call without a threshold returns**. `rake benchmark:scorer` fails loudly if a threshold ever changes a score.
 
@@ -314,7 +314,13 @@ Everything has a working default; `ActiveSanction.configure` exists so that a ca
 | `scorer_weights` | `Scorer::Weights.default` | What each signal is worth. Changing one changes what every past decision would score today, which is why `weights` travels on every `MatchResult` |
 | `logger` | `nil` | Anything Logger-shaped |
 
-A bad value raises `ConfigurationError` at the point it is set, rather than producing a puzzling failure during a sync three hours later.
+A bad value raises `ConfigurationError` at the point it is set, rather than producing a puzzling failure during a sync three hours later. So does a setting that does not exist: a misspelled one is refused and the message names the settings there are, because a silently dropped `user_agnet` is an installation running on a default somebody thinks they changed.
+
+`ActiveSanction.configure` populates a default `Client` and freezes the configuration into it, so `ActiveSanction.config` is a value object rather than global mutable state — reading it is safe from anywhere, and changing it means configuring again. Every setting in the table above is also a keyword argument to `Client.new`, which is what a process holding several configurations at once uses instead; see [Holding a client, and screening from many threads](#holding-a-client-and-screening-from-many-threads).
+
+```ruby
+ActiveSanction.reset!    # drops the default client and starts from the defaults again — what a test suite runs between examples
+```
 
 ## Handling errors
 
@@ -1006,26 +1012,50 @@ Four fields make a past decision re-derivable, and each of them is a way the sam
 
 `backend` is the fifth, and it is what makes the seam real: a hosted backend answers the same call against data somebody else keeps fresh, and an audit record has to say which one answered. The score itself is never stored beside its reasons — it is the sum of them, re-derived on construction, and a `score:` that disagrees with the explanation it arrives with is refused rather than laundered into a record.
 
-#### Holding a matcher, and screening from many threads
+#### Holding a client, and screening from many threads
 
-`ActiveSanction.screen` is sugar over one shared `Matcher`, built from the configured store on first use. A server can hold its own instead, which is what a process needing two configurations at once — a pinned list version for an audit re-run beside the current one for live traffic — has to do:
+`ActiveSanction.screen` is sugar over a default `Client` built from the configuration on first use, and `ActiveSanction.configure` is what populates it. A server that needs more than one configuration alive at once holds its own clients instead, which is a thing a process-global cannot express at all:
 
 ```ruby
-MATCHER = ActiveSanction::Matcher.build(store, sources: %i[ofac_sdn])
+CLIENT = ActiveSanction::Client.new(
+  storage:    ActiveSanction::Storage::ActiveRecord.new,
+  sources:    %i[ofac_sdn un_consolidated],
+  user_agent: "acme-bank/1.0 (compliance@acme.example)"
+)
 
-MATCHER.screen(name: "Vladimir Putin")
-MATCHER.screen_all(customers.map { |c| { name: c.name, dob: c.born_on } })   # one array of results per query
+CLIENT.sync!
+CLIENT.screen(name: "Vladimir Putin")
+CLIENT.screen_all(customers.map { |c| { name: c.name, dob: c.born_on } })   # one array of results per query
 ```
 
-A matcher holds an index, the checksum of every list in it, the weights it scores with and the candidate cap it retrieves with. All of it is fixed at construction and the object is frozen, so `screen` allocates locals and touches nothing shared — many threads screen through one matcher without a lock.
-
-**Nothing on the query path reads configuration**, which is a stronger statement than thread safety and the one that matters for an audit: a threshold, a weight or a candidate cap changed halfway through a batch cannot produce a run that is half one set of numbers and half another, because the numbers were read once — into the `Query`, and into the matcher.
-
-A sync does not update a matcher. It builds a new one and the application swaps its reference, so requests in flight finish against one consistent list version:
+Every setting `ActiveSanction.configure` takes is a keyword argument here, held to the same rule and failing with the same message. A client holds them frozen — the store, the source list, the weights, the candidate cap, the thresholds a query defaults to, the User-Agent every request carries — plus one memo, the matcher it builds from its store on first use. A client's settings cannot be edited after it is built; deriving a neighbour is `#with`:
 
 ```ruby
-ActiveSanction.reload!                              # after a sync, for the shared one
-MATCHER = ActiveSanction::Matcher.build(store)      # for one held by the application
+AUDIT = CLIENT.with(storage: januarys_snapshots)   # a pinned list version, beside the live one
+```
+
+Two clients share nothing: each indexes its own store, screens only the lists it names, and identifies itself to publishers under its own User-Agent. That is what makes a pinned snapshot for an audit re-run, a source set per tenant, and one warm index shared across every request thread all true at the same time.
+
+##### What is safe to do concurrently, and what is not
+
+| | |
+|---|---|
+| Screening a built client from many threads | **Safe**, and the reason it exists. The matcher is frozen at build, and `screen` allocates locals and touches nothing shared |
+| Building the matcher | **Safe.** It happens once, under the client's lock, so eight threads racing at boot produce one index rather than eight |
+| `sync!` while other threads screen | **Safe.** A store publishes a list whole, so a thread mid-screen finishes against the version it started with. The next call moves onto the new list — `sync!` calls `reload!` itself when anything changed |
+| `sync!(concurrency: 3)` | **Safe.** It bounds how many *publishers* one run fetches from at once; each worker runs its own sources under the client's own settings |
+| Two `sync!` runs over one store | **Not supported**, from this process or another. The last writer wins per source, and the losers' downloads are discarded. Put a lock around the run, not a bigger `concurrency:` |
+| `ActiveSanction.configure` | At boot. It replaces the default client, which drops a matcher built over the old store — correct, and not something to do while requests are in flight |
+
+Nothing here makes a store thread-safe that is not. Both shipped adapters are: `Memory` guards its hash, and `FileSystem` publishes a list by renaming one file over another.
+
+A matcher holds an index, the checksum of every list in it, the weights it scores with and the candidate cap it retrieves with. All of it is fixed at construction and the object is frozen. **Nothing on the query path reads configuration**, which is a stronger statement than thread safety and the one that matters for an audit: a threshold, a weight or a candidate cap changed halfway through a batch cannot produce a run that is half one set of numbers and half another, because the numbers were read once — into the `Query`, and into the matcher.
+
+A sync does not update a matcher. It builds a new one and the reference is swapped, so requests in flight finish against one consistent list version:
+
+```ruby
+ActiveSanction.reload!    # after a sync run by something else, for the default client
+CLIENT.reload!            # the same, for one the application holds
 ```
 
 Batch screening stamps the whole call with one `screened_at`, because a rescreening of a customer book against a new list version is one event in an audit trail rather than ten thousand a microsecond apart. Results come back index-aligned rather than keyed by name — a book of customers contains the same name twice often enough, and a Hash would silently screen one of them and report both.

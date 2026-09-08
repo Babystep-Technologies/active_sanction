@@ -259,6 +259,19 @@ module ActiveSanction
       @normalizer_dictionary = T.let(Normalizer::Dictionary.default, Normalizer::Dictionary)
       @scorer_weights = T.let(Scorer::Weights.default, Scorer::Weights)
       @logger = T.let(nil, T.untyped)
+      @storage = T.let(nil, T.nilable(Storage::Base))
+      @default_storage = T.let(nil, T.nilable(Storage::Base))
+    end
+
+    # A copy starts unfrozen -- that is Ruby's rule for `dup`, and the reason
+    # `with` can derive a mutable configuration from a frozen one -- and drops
+    # the store that was derived from `storage_dir`, so a copy that moves the
+    # directory reads the directory it names. A store the caller assigned is
+    # not derived and is carried over.
+    sig { params(other: Configuration).void }
+    def initialize_copy(other)
+      super
+      @default_storage = nil
     end
 
     sig { params(value: T.untyped).void }
@@ -454,12 +467,12 @@ module ActiveSanction
     #
     # Built on first use rather than at boot, because constructing it touches
     # the filesystem and a process that never screens should not pay for a
-    # directory it will not read. Set `storage_dir` before anything reads
-    # this, for the same reason the dictionary and the weights are set at boot:
-    # a default store built from the old directory goes on reading it.
+    # directory it will not read. `Client.new` reads it once on the way to
+    # freezing, so a client's store is settled before any thread can race for
+    # it -- see #freeze.
     sig { returns(Storage::Base) }
     def storage
-      @storage ||= T.let(Storage::FileSystem.new(root: storage_dir), T.nilable(Storage::Base))
+      @storage || default_storage
     end
 
     # A Storage::Base subclass, which is the contract the whole query path is
@@ -473,6 +486,66 @@ module ActiveSanction
       end
 
       @storage = value
+    end
+
+    # Every setting a caller may name, which is what `Client.new` and
+    # `Configuration#with` accept as keyword arguments and what an unknown one
+    # is reported against. Derived from the writers rather than listed, so a
+    # setting added below is accepted here without anything remembering to say
+    # so twice.
+    sig { returns(T::Array[Symbol]) }
+    def self.settings
+      @settings ||= T.let(
+        public_instance_methods(false).grep(/=\z/).map { |name| name.to_s.chomp("=").to_sym }.sort.freeze,
+        T.nilable(T::Array[Symbol])
+      )
+    end
+
+    # A copy of these settings with some of them changed:
+    #
+    #   audit = ActiveSanction.config.with(storage: pinned_store, sources: %i[ofac_sdn])
+    #
+    # The copy is mutable and unfrozen whatever this one is, which is what
+    # makes a frozen configuration a value object rather than a dead end: a
+    # client derives its neighbour from it instead of rebuilding the schema.
+    sig { params(overrides: T.untyped).returns(Configuration) }
+    def with(**overrides)
+      dup.tap { |copy| copy.apply(**overrides) }
+    end
+
+    # Assigns through the writers, so a value given to `Client.new` is held to
+    # exactly the rule the same value set in a `configure` block is held to,
+    # and fails with the same message.
+    sig { params(overrides: T.untyped).returns(T.self_type) }
+    def apply(**overrides)
+      unknown = overrides.keys - self.class.settings
+      if unknown.any?
+        raise ConfigurationError,
+              "unknown setting(s): #{unknown.join(", ")}. Expected any of #{self.class.settings.join(", ")}"
+      end
+
+      overrides.each { |name, value| public_send(:"#{name}=", value) }
+      self
+    end
+
+    # A built configuration is frozen, and a client freezes the one it holds.
+    #
+    # The default store is resolved on the way through, because it is the one
+    # thing here that is built lazily and a frozen object cannot memoize. That
+    # is also the point: a store settled at build time is a store no two
+    # threads can race to construct, and a client that never screens pays for
+    # a `File.expand_path` rather than for a directory.
+    #
+    # The dictionary and the weights are already frozen value objects, and the
+    # source list is frozen here so that a caller holding the array it passed
+    # in cannot edit the lists a running client syncs.
+    sig { returns(T.self_type) }
+    def freeze
+      return self if frozen?
+
+      storage
+      @sources = T.let(@sources&.dup&.freeze, T.nilable(T::Array[Symbol]))
+      super
     end
 
     # Anything Logger-shaped. The fetch layer says what it did at `info` --
@@ -566,6 +639,14 @@ module ActiveSanction
     end
 
     private
+
+    # The store `storage_dir` names, built once. Memoized rather than built on
+    # every read because a FileSystem store is a directory and a checksum
+    # pattern, and two of them would be two objects saying the same thing.
+    sig { returns(Storage::Base) }
+    def default_storage
+      @default_storage ||= T.let(Storage::FileSystem.new(root: storage_dir), T.nilable(Storage::Base))
+    end
 
     sig { params(value: T.untyped).returns(Normalizer::Dictionary) }
     def normalizer_dictionary!(value)
