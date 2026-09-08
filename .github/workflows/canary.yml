@@ -1,0 +1,229 @@
+name: Canary
+
+# The upstream canary (#69): fetch every list this gem reads from its real
+# publisher, parse it, and compare what it measures against the baselines
+# committed under `.github/baselines`. When a publisher has changed something
+# the gem must adapt to, this opens an issue about it.
+#
+# 23:17 UTC on weekdays, which is after the US business day OFAC publishes in
+# and on the days it publishes. Weekly would be too slow for the free-text
+# vocabulary, which moves continuously; hourly would be rude. It is roughly
+# 40 MB across seven government endpoints, once a day, from a user agent that
+# names this repository.
+#
+# Two things about `schedule:` that are worth knowing before trusting this:
+# GitHub disables a scheduled workflow after 60 days of repository inactivity,
+# and it fires late under load. Neither is fatal for a daily canary, but the
+# first will eventually bite on a quiet repo -- and the silence looks exactly
+# like everything being fine. `workflow_dispatch` is here for that, and for
+# running it by hand after a suspected change.
+on:
+  schedule:
+    - cron: "17 23 * * 1-5"
+  workflow_dispatch:
+
+# Deliberately not `push` or `pull_request`. This never runs as part of CI and
+# never turns the CI badge red: a red build should mean our code broke, not
+# that a source went down. Treasury re-spelling a label is not a broken build,
+# and a badge that goes red for things nobody did gets muted within a week.
+permissions: {}
+
+# One canary at a time. Two overlapping runs would each open the issue the
+# other one was about to open, and the pair of them would agree with each
+# other rather than with yesterday.
+concurrency:
+  group: canary
+  cancel-in-progress: false
+
+jobs:
+  examine:
+    name: Examine the published lists
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      issues: write
+      actions: read # to read the previous run's report
+
+    outputs:
+      status: ${{ steps.canary.outputs.exit_code }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Ensure the label these issues are filed under exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create canary --color FBCA04 \
+            --description "Opened by the upstream canary: a publisher changed something (#69)" || true
+
+      # A runner is stateless, and nothing is reported until two consecutive
+      # runs agree about it -- so yesterday's report has to come from
+      # somewhere. It comes from yesterday's artifact. A run that left none is
+      # not an error: it means there is nothing to agree with, and the canary
+      # says `pending` rather than opening anything.
+      - name: Fetch the previous run's report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          previous=$(gh run list --workflow canary.yml --branch "${{ github.ref_name }}" \
+                       --status completed --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -z "$previous" ]; then
+            echo "no previous canary run to agree with"
+            exit 0
+          fi
+          gh run download "$previous" --name canary-report --dir previous \
+            || echo "run $previous left no report to agree with"
+
+      # `rake canary` exits 1 on drift and 2 on a source that could not be
+      # fetched. Neither is a broken job: the exit code is the finding, and it
+      # is carried to the baseline job below rather than failing this one.
+      - name: Run the canary
+        id: canary
+        env:
+          CANARY_OUT: tmp/canary
+          CANARY_PREVIOUS: previous/report.json
+          CANARY_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          bundle exec rake canary
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          [ -f tmp/canary/summary.md ] && cat tmp/canary/summary.md >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Keep the report for tomorrow's run to agree with
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canary-report
+          path: tmp/canary/
+          retention-days: 30
+          if-no-files-found: warn
+
+      # One open issue per source, found by the marker its body carries and
+      # rewritten rather than commented on, so a drift that lasts three weeks
+      # is one issue that says what is true today. A source that comes back
+      # clean closes its own issue.
+      #
+      # Only sources a second run agreed about are filed. Everything else --
+      # a 403 this afternoon, a file truncated mid-publish -- is in the report
+      # and the job summary, and is left alone until tomorrow confirms it.
+      - name: Open, update or close one issue per source
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          report=tmp/canary/report.json
+          if [ ! -f "$report" ]; then
+            echo "the canary wrote no report, so there is nothing to file" >&2
+            exit 0
+          fi
+
+          issue_for() {
+            gh issue list --label canary --state open --limit 100 --json number,body \
+              --jq "[.[] | select(.body | contains(\"<!-- canary:$1 -->\"))] | .[0].number // empty"
+          }
+
+          jq -r '.results[] | [.source, .status, (.reportable | tostring), .title] | @tsv' "$report" |
+            while IFS=$'\t' read -r source status reportable title; do
+              number=$(issue_for "$source")
+              body="tmp/canary/$source.md"
+              if [ "$reportable" = "true" ] && [ -f "$body" ]; then
+                if [ -n "$number" ]; then
+                  echo "updating #$number: $source"
+                  gh issue edit "$number" --title "$title" --body-file "$body"
+                else
+                  echo "opening an issue: $source"
+                  gh issue create --title "$title" --body-file "$body" --label canary
+                fi
+              elif [ "$status" = "ok" ] && [ -n "$number" ]; then
+                echo "closing #$number: $source is as committed again"
+                gh issue close "$number" --comment "Clean again as of [this run]($RUN_URL)."
+              fi
+            done
+
+  # Keeps the committed numbers current without anybody editing JSON. It runs
+  # only after a clean examination, so what it commits is a list that moved
+  # inside its tolerances rather than one that drifted: accepting drift is a
+  # judgment call, and this is not entitled to make it.
+  #
+  # One rolling branch and one rolling pull request, force-pushed. A drift
+  # review wants to see how far the numbers have come since they were last
+  # accepted, not a pull request a day each showing one weekday of it.
+  baselines:
+    name: Keep the committed baselines current
+    needs: examine
+    if: needs.examine.outputs.status == '0'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: canary-report
+          path: tmp/canary
+
+      # From the report the run above already wrote, so this costs no second
+      # download of seven government files.
+      - name: Rewrite the baselines from what the run measured
+        env:
+          CANARY_REPORT: tmp/canary/report.json
+        run: bundle exec rake canary:refresh
+
+      - name: Open or update the rolling baseline pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # `git status` rather than `git diff`, because the first run of a
+          # newly added adapter creates its baseline rather than changing one.
+          if [ -z "$(git status --porcelain -- .github/baselines)" ]; then
+            echo "the committed baselines already say what the lists say"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B canary/baselines
+          git add .github/baselines
+          git commit --message "Refresh the canary baselines" \
+            --message "Written by the canary from the lists as published. A number that moved here is a
+          number a government moved: what the baselines are for is that the movement is reviewable."
+
+          # A plain force push: the branch is machine-owned, is rebuilt from
+          # the default branch on every run, and holds nothing anybody wrote.
+          git push --force origin canary/baselines
+
+          # Only an *open* pull request counts: pushing to the branch of one
+          # that was merged or closed reopens nothing, and the numbers would
+          # sit on a branch nobody is looking at.
+          open_pr=$(gh pr list --head canary/baselines --state open --json number --jq '.[0].number // empty')
+          [ -n "$open_pr" ] || \
+            gh pr create --base "${{ github.ref_name }}" --head canary/baselines \
+              --title "Refresh the canary baselines" \
+              --body "The canary examined every list, found nothing outside its tolerances, and these are the
+          numbers it measured. Merging accepts them as what the next run compares against.
+
+          Rebuilt from the default branch and force-pushed by every clean canary run, so it always shows how
+          far the published lists have moved since the baselines were last accepted."

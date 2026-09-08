@@ -772,6 +772,32 @@ ActiveSanction::Sources.register(MyCompany::PatchedOfacSdn)
 
 There is deliberately no `clear!`.
 
+### And commit a canary baseline
+
+The upstream canary ([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69))
+fetches every registered source on weekdays and holds it against
+`.github/baselines/<key>.json`. A newly registered adapter has no such file, and
+nothing breaks: it is held to the coarse `floor` declarations you made in
+[section 7](#7-report-what-you-could-not-read) instead, and the run reports
+`compared: false` rather than reading as a clean comparison.
+
+Commit one anyway, in the same pull request as the adapter:
+
+```console
+$ CANARY_SOURCES=my_source bundle exec rake canary          # what it measures
+$ CANARY_SOURCES=my_source bundle exec rake canary:refresh  # write the baseline
+```
+
+That reaches the real publisher, which is the point: the numbers a reviewer sees
+in `.github/baselines/my_source.json` are the numbers the file actually yields,
+and from the next weekday onwards a change in any of them opens an issue. It is
+also the cheapest review anybody will ever give your parser — a fill rate that
+reads 4% where you expected 90% is a field you mapped to the wrong element, and
+it is far easier to see in that diff than in a fixture of forty records.
+
+[`.github/baselines/README.md`](../.github/baselines/README.md) documents the
+format and the per-key tolerances.
+
 ## 10. Typed, linted, and green
 
 Every file in `lib/` is `# typed: strict`, and new files are born that way: a
@@ -1050,6 +1076,8 @@ The example above is the easy shape. In roughly the order they bite:
       is in the fixture.
 - [ ] `Sources.register` at the bottom of the file, and a `require` in
       `lib/active_sanction.rb`.
+- [ ] A canary baseline committed under `.github/baselines/<key>.json`, written
+      by `CANARY_SOURCES=<key> bundle exec rake canary:refresh`.
 - [ ] A class comment describing the list, its record counts, its quirks, and
       what the adapter refuses to do about them.
 - [ ] `bundle exec rake` is green.

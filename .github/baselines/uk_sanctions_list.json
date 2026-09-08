@@ -1,0 +1,35 @@
+{
+  "source": "uk_sanctions_list",
+  "captured_at": "2026-09-08T15:31:26Z",
+  "tolerances": {
+    "record_count": 0.05,
+    "remarks_coverage": 0.02
+  },
+  "profile": {
+    "source": "uk_sanctions_list",
+    "record_count": 6340,
+    "checksum": "sha256:a5038595388da217840e0a97b49ca6d42192062d76b883efdb6b36eb6d5638de",
+    "cohorts": {
+      "individual": 4032,
+      "organization": 1644,
+      "vessel": 664,
+      "aircraft": 0,
+      "all": 6340
+    },
+    "fill": {
+      "names": 1.0,
+      "aliases": 0.7325,
+      "addresses": 0.5267,
+      "identifiers": 0.3292,
+      "programs": 1.0,
+      "remarks": 1.0,
+      "dates_of_birth": 0.8284,
+      "nationalities": 0.7227
+    },
+    "warnings": {},
+    "orphans": null,
+    "remarks_coverage": null,
+    "unrecognized": null,
+    "columns": []
+  }
+}

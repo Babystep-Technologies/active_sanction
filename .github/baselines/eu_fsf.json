@@ -1,0 +1,35 @@
+{
+  "source": "eu_fsf",
+  "captured_at": "2026-09-08T15:31:26Z",
+  "tolerances": {
+    "record_count": 0.05,
+    "remarks_coverage": 0.02
+  },
+  "profile": {
+    "source": "eu_fsf",
+    "record_count": 6234,
+    "checksum": "sha256:fd8802e1377585749988796971402d8174c74fa50b8bc6a0f7d8ca60c293dbf4",
+    "cohorts": {
+      "individual": 4462,
+      "organization": 1772,
+      "vessel": 0,
+      "aircraft": 0,
+      "all": 6234
+    },
+    "fill": {
+      "names": 1.0,
+      "aliases": 0.8811,
+      "addresses": 0.3296,
+      "identifiers": 0.3191,
+      "programs": 1.0,
+      "remarks": 1.0,
+      "dates_of_birth": 0.8483,
+      "nationalities": 0.5982
+    },
+    "warnings": {},
+    "orphans": null,
+    "remarks_coverage": null,
+    "unrecognized": null,
+    "columns": []
+  }
+}

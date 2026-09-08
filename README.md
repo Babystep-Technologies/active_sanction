@@ -46,7 +46,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 - **It screens names against lists, and nothing more.** No politically-exposed-person data, no adverse media, no beneficial ownership, no OFAC 50 Percent Rule resolution — a subsidiary that is sanctioned only by virtue of its owners is not on any of these files and will not be found here.
 - **Seven lists ship: two US, one UN, one Canada, one EU, one UK, one Australia.** If your obligations cover a jurisdiction outside that set, this gem does not cover them.
 - **Non-Latin script is not transliterated.** `Путин` does not fold to `putin`; a Cyrillic name matches a Cyrillic query and nothing else. What makes it survivable is that these publishers ship a romanized name alongside the original — see [Normalizing a name for matching](#normalizing-a-name-for-matching) for what that does and does not leave open.
-- **It does not monitor.** It syncs when you tell it to, and it diagnoses when you tell it to. `ActiveSanction.doctor` will notice that a publisher changed its format, but only in a job you schedule — nothing here runs overnight on its own, and nothing wakes anybody when it finds something ([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)).
+- **It does not monitor your deployment.** It syncs when you tell it to, and it diagnoses when you tell it to. `ActiveSanction.doctor` will notice that a publisher changed its format, but only in a job you schedule — nothing in your process runs overnight on its own, and nothing wakes anybody when it finds something. What does run overnight is [the upstream canary](#the-upstream-canary), on this repository rather than on yours: it watches the seven published lists on weekdays and files an issue here when one of them changes, which is how the adapters get fixed — but it knows nothing about whether *your* sync ran ([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)).
 - **There is no CLI.** It is a library, called from an initializer, a rake task or a job.
 
 ## Installation
@@ -1087,6 +1087,33 @@ a number about the fixture. To run either against a real synced corpus
 instead:
 
     $ BACKGROUND=store bundle exec rake benchmark:accuracy
+
+### The upstream canary
+
+A scheduled workflow that fetches every list from its real publisher on weekdays, parses it, and compares what it measures against the baselines committed under [`.github/baselines`](.github/baselines) ([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)). When a government has changed something this gem must adapt to, it opens an issue about it.
+
+    $ bundle exec rake canary                                  # what has moved
+    $ CANARY_SOURCES=ofac_sdn bundle exec rake canary          # one list
+    $ bundle exec rake canary:refresh                          # accept the numbers it measured
+
+```
+7 sources in 72.25s: all as committed
+australia_dfat     OK  3,906 records (baseline 3,906)
+canada_sema        OK  5,690 records (baseline 5,690)
+eu_fsf             OK  6,234 records (baseline 6,234)
+ofac_consolidated  OK  481 records (baseline 481)
+ofac_sdn           OK  19,365 records (baseline 19,365)
+uk_sanctions_list  OK  6,340 records (baseline 6,340)
+un_consolidated    OK  1,011 records (baseline 1,011)
+```
+
+**It is `ActiveSanction.doctor` pointed at a file instead of a snapshot, and it is for a different reader.** The doctor answers an operator's question — *is my deployment's data healthy?* — in their cron, against their storage. The canary answers the maintainer's — *has a publisher changed something the gem must adapt to?* Same signals, different consumer, different fix: a downstream doctor warning that OFAC's remarks vocabulary has moved can only ever result in an issue filed here, because the label table lives here and nobody else can change it. Every check the canary runs is the doctor's; nothing under `canary/` re-implements one, and nothing under `canary/` ships in the gem.
+
+**It never runs as part of CI and never turns the CI badge red.** A red build should mean our code broke, not that a source went down. Treasury re-spelling a label is not a broken build, and a badge that goes red for things nobody did gets muted within a week. The output is a GitHub issue — the artifact that survives, is assignable, and links to the fix.
+
+**A fetch that failed and a file that parsed into something different are different findings, and nothing is reported until two consecutive runs agree.** Government endpoints 403 a non-browser user agent and block cloud IP ranges, and a canary that cried wolf on one bad afternoon would be muted just as fast as a red badge. Each run keeps its report as a workflow artifact; the next run downloads it, and only a finding both of them made is opened.
+
+**A diff in `.github/baselines` is a change in what a government publishes.** That is why the baseline is a committed file rather than an `actions/cache` entry — a number moving there has a date, an author and a review — and a clean run opens a rolling pull request keeping those numbers current without anybody editing JSON. [`.github/baselines/README.md`](.github/baselines/README.md) documents the format and the per-key tolerances.
 
 ### API documentation
 

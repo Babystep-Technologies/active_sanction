@@ -31,6 +31,29 @@ task :doc do
   sh "bundle", "exec", "yard", "doc", "--fail-on-warning"
 end
 
+# The upstream canary (#69): every registered source fetched from its real
+# publisher and held against .github/baselines. Not part of the default task
+# and never part of CI -- it reaches seven government endpoints, and a red
+# build should mean our code broke rather than that a source went down. See
+# canary/canary.rb, and .github/workflows/canary.yml, which is what runs it.
+desc "Fetch every list and report what has drifted from .github/baselines (#69)"
+task :canary do
+  require_relative "canary/canary"
+  exit Canary::CLI.canary
+end
+
+namespace :canary do
+  # What a maintainer runs to accept what the lists say now. The diff it
+  # produces is the review: a number moving in .github/baselines is a change in
+  # what a government publishes, which is the one thing about these files that
+  # is otherwise invisible.
+  desc "Rewrite .github/baselines from a canary run (#69)"
+  task :refresh do
+    require_relative "canary/canary"
+    exit Canary::CLI.refresh
+  end
+end
+
 namespace :benchmark do
   # Not part of the default task: a benchmark measures the machine it runs on,
   # so it answers a question rather than passing or failing.

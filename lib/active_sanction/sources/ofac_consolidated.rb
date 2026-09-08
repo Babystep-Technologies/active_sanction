@@ -67,6 +67,25 @@ module ActiveSanction
       url :alt, "https://sanctionslistservice.ofac.treas.gov/api/download/CONS_ALT.CSV"
       url :add, "https://sanctionslistservice.ofac.treas.gov/api/download/CONS_ADD.CSV"
 
+      # Ofac declares 0.90, calibrated on the SDN file, where RemarksParser
+      # reads about 97% of the segments. This list reads at 80.3%, and it is
+      # not a parse that has gone wrong: the CMIC rows publish a vocabulary the
+      # SDN file has no equivalent of -- `Effective Date (CMIC)`,
+      # `Listing Date (CMIC)`, `Purchase/Sales For Divestment`, `HKAA
+      # Section 5`, an equity ticker -- none of which is a name, a date of
+      # birth, a nationality or a document number, so none of it is anything
+      # this parser has a home for.
+      #
+      # Inheriting the SDN's floor made every first `ActiveSanction.doctor` run
+      # against a deployment with no stored snapshot warn about this list
+      # forever, with no fix available to whoever read the warning. 0.75 sits
+      # the same distance below what the file does as 0.90 does for the SDN,
+      # and it is a floor rather than a target: it exists for the run with
+      # nothing to compare against, and is not consulted once there is a
+      # snapshot or a committed baseline. Found by the canary (#69) on its
+      # first run against the published lists.
+      floor :remarks_coverage, 0.75
+
       # The sub-lists, spelled the way OFAC's own `/sanctions-lists` endpoint
       # spells them -- which is what a report has to print beside a hit.
       NAMES = T.let({

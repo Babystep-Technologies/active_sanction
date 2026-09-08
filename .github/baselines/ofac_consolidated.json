@@ -1,0 +1,65 @@
+{
+  "source": "ofac_consolidated",
+  "captured_at": "2026-09-08T15:31:26Z",
+  "tolerances": {
+    "record_count": 0.05,
+    "remarks_coverage": 0.02
+  },
+  "profile": {
+    "source": "ofac_consolidated",
+    "record_count": 481,
+    "checksum": "sha256:bb2931630370ca0ec65c091be97b565e35c907948239e3b8d869903faf98a3fc",
+    "cohorts": {
+      "individual": 118,
+      "organization": 363,
+      "vessel": 0,
+      "aircraft": 0,
+      "all": 481
+    },
+    "fill": {
+      "names": 1.0,
+      "aliases": 0.8753,
+      "addresses": 0.8919,
+      "identifiers": 0.7277,
+      "programs": 1.0,
+      "remarks": 1.0,
+      "dates_of_birth": 0.9576,
+      "nationalities": 0.3305
+    },
+    "warnings": {},
+    "orphans": {
+      "aliases": 0,
+      "addresses": 0
+    },
+    "remarks_coverage": 0.8034,
+    "unrecognized": {
+      "Effective Date (CMIC)": 68,
+      "Listing Date (CMIC)": 68,
+      "Purchase/Sales For Divestment": 68,
+      "HKAA Section #": 39,
+      "Equity Ticker ######": 34
+    },
+    "columns": [
+      {
+        "column": "ent_num",
+        "description": "numeric",
+        "checked": 481,
+        "matched": 481,
+        "blank": 0,
+        "ratio": 1.0,
+        "at_least": 0.99,
+        "sample": []
+      },
+      {
+        "column": "sdn_type",
+        "description": "a published SDN_Type",
+        "checked": 118,
+        "matched": 118,
+        "blank": 363,
+        "ratio": 1.0,
+        "at_least": 0.75,
+        "sample": []
+      }
+    ]
+  }
+}
