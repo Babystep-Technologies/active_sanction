@@ -55,16 +55,19 @@ Gem::Specification.new do |spec|
   # and are the largest thing here. `sorbet/` is the checker's working
   # directory -- its config and the RBIs tapioca generates for our
   # dependencies. `benchmark/` measures the machine it runs on and answers a
-  # question about this repository. The rest is toolchain: CI, the linter's
-  # config, the Rakefile that drives all three, and `bin/` -- none of which do
-  # anything inside an installed gem, and each of which is one more file a
-  # security scan has to be told to ignore.
+  # question about this repository, and `canary/` (#69) watches seven
+  # government endpoints on this repository's behalf -- both are here to keep
+  # the library honest, and neither does anything in an application that
+  # installed it. The rest is toolchain: CI, the linter's config, the Rakefile
+  # that drives all of them, and `bin/` -- none of which do anything inside an
+  # installed gem, and each of which is one more file a security scan has to be
+  # told to ignore.
   #
   # What is deliberately kept is `docs/`, which is linked from the README and
   # is as much a part of the library as the code is.
   dev_only = %r{
     \A(?:
-      (?:test|spec|features|sorbet|benchmark|bin|\.github)/ |
+      (?:test|spec|features|sorbet|benchmark|canary|bin|\.github)/ |
       Gemfile |
       Rakefile |
       \.

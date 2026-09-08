@@ -1,0 +1,38 @@
+{
+  "source": "canada_sema",
+  "captured_at": "2026-09-08T15:31:26Z",
+  "tolerances": {
+    "record_count": 0.05,
+    "remarks_coverage": 0.02
+  },
+  "profile": {
+    "source": "canada_sema",
+    "record_count": 5690,
+    "checksum": "sha256:a07b224e9e3405ca18e42095b9d6fe0121dcd3472a150968885edf4b20ffd38c",
+    "cohorts": {
+      "individual": 3514,
+      "organization": 1445,
+      "vessel": 731,
+      "aircraft": 0,
+      "all": 5690
+    },
+    "fill": {
+      "names": 1.0,
+      "aliases": 0.5613,
+      "addresses": 0.0,
+      "identifiers": 0.1285,
+      "programs": 1.0,
+      "remarks": 1.0,
+      "dates_of_birth": 0.5307,
+      "nationalities": 0.0
+    },
+    "warnings": {
+      "\"Kirill Alekseevich MORDASHOV\" has a date this parser does not read (\"Sep-##\"); it was kept in remar...": 1,
+      "\"Abdelrahim Hamdan Dagalo\" has a date this parser does not read (\"born in the early ####s\"); it was ...": 1
+    },
+    "orphans": null,
+    "remarks_coverage": null,
+    "unrecognized": null,
+    "columns": []
+  }
+}

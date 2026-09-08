@@ -1,0 +1,65 @@
+{
+  "source": "ofac_sdn",
+  "captured_at": "2026-09-08T15:31:26Z",
+  "tolerances": {
+    "record_count": 0.05,
+    "remarks_coverage": 0.02
+  },
+  "profile": {
+    "source": "ofac_sdn",
+    "record_count": 19365,
+    "checksum": "sha256:ee0ed2fe89b908f1f8185d49c9c5c2114c6107f8c0a5878565e50ea951e5b936",
+    "cohorts": {
+      "individual": 7519,
+      "organization": 9964,
+      "vessel": 1540,
+      "aircraft": 342,
+      "all": 19365
+    },
+    "fill": {
+      "names": 1.0,
+      "aliases": 0.5136,
+      "addresses": 0.8342,
+      "identifiers": 0.7253,
+      "programs": 1.0,
+      "remarks": 0.9842,
+      "dates_of_birth": 0.9867,
+      "nationalities": 0.8026
+    },
+    "warnings": {},
+    "orphans": {
+      "aliases": 0,
+      "addresses": 0
+    },
+    "remarks_coverage": 0.9731,
+    "unrecognized": {
+      "Member of the": 615,
+      "ICTY indictee.": 45,
+      "all offices worldwide.": 43,
+      "Listing Date (EO": 30,
+      "Istanbul Chamber of": 29
+    },
+    "columns": [
+      {
+        "column": "ent_num",
+        "description": "numeric",
+        "checked": 19365,
+        "matched": 19365,
+        "blank": 0,
+        "ratio": 1.0,
+        "at_least": 0.99,
+        "sample": []
+      },
+      {
+        "column": "sdn_type",
+        "description": "a published SDN_Type",
+        "checked": 9401,
+        "matched": 9401,
+        "blank": 9964,
+        "ratio": 1.0,
+        "at_least": 0.75,
+        "sample": []
+      }
+    ]
+  }
+}

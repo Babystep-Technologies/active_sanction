@@ -229,6 +229,33 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
   [`benchmark/results/accuracy.md`](benchmark/results/accuracy.md) is a change in what this
   library finds ([#37](https://github.com/Babystep-Technologies/active_sanction/issues/37)).
   The default threshold of 75 is where F1 peaks on that set, measured rather than chosen.
+- **The upstream canary**: a scheduled workflow that fetches all seven lists from their real
+  publishers on weekdays, parses them, and compares what it measures against the baselines
+  committed under [`.github/baselines`](.github/baselines)
+  ([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)). It is
+  `ActiveSanction.doctor` pointed at a file instead of a snapshot, and it is for the
+  maintainer rather than the operator — a downstream doctor warning that OFAC's remarks
+  vocabulary moved can only ever result in an issue filed here, because the label table lives
+  here.
+  - **The output is a GitHub issue, one per source**, opened with the findings, rewritten by
+    every run that still finds something, and closed by the first run that comes back clean.
+    Deliberately not a red badge: this never runs as part of CI, because a red build should
+    mean our code broke rather than that a source went down.
+  - **A fetch failure is reported separately from a parse difference**, and nothing is opened
+    until two consecutive runs agree about it. Government endpoints 403 a non-browser user
+    agent and block cloud IP ranges, and a canary that cried wolf on one bad afternoon would
+    be muted inside a week. Each run keeps its report as a workflow artifact and the next run
+    confirms against it.
+  - **The baseline is a committed file, with tolerances per key** — 5% on a record count,
+    which moves every business day, and 2% on free-text coverage, which does not move on its
+    own at all. A diff in `.github/baselines` is a change in what a government publishes, and
+    a clean run opens a rolling pull request keeping those numbers current.
+  - It found something on its first run: OFAC's Consolidated list inherited the SDN file's
+    90% remarks-coverage floor and reads at 80.3%, because the CMIC rows publish a vocabulary
+    — `Purchase/Sales For Divestment`, `Equity Ticker`, `HKAA Section 5` — that has no
+    equivalent on the SDN file and nothing for this parser to do with it. The floor is now
+    declared on the Consolidated adapter at 0.75, so a first `doctor` run against a fresh
+    deployment no longer warns about a list that is doing exactly what it always does.
 - Benchmarks for the similarity algorithms, the index and the scorer
   ([#28](https://github.com/Babystep-Technologies/active_sanction/issues/28),
   [#31](https://github.com/Babystep-Technologies/active_sanction/issues/31),

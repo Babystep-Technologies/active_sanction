@@ -1,0 +1,35 @@
+{
+  "source": "australia_dfat",
+  "captured_at": "2026-09-08T15:31:26Z",
+  "tolerances": {
+    "record_count": 0.05,
+    "remarks_coverage": 0.02
+  },
+  "profile": {
+    "source": "australia_dfat",
+    "record_count": 3906,
+    "checksum": "sha256:539882eb573659cd61d290e0504fabe53c8e56d58e5998cfdd95197a150c90bc",
+    "cohorts": {
+      "individual": 2543,
+      "organization": 1041,
+      "vessel": 322,
+      "aircraft": 0,
+      "all": 3906
+    },
+    "fill": {
+      "names": 1.0,
+      "aliases": 0.5904,
+      "addresses": 0.3513,
+      "identifiers": 0.0819,
+      "programs": 1.0,
+      "remarks": 1.0,
+      "dates_of_birth": 0.9508,
+      "nationalities": 0.8392
+    },
+    "warnings": {},
+    "orphans": null,
+    "remarks_coverage": null,
+    "unrecognized": null,
+    "columns": []
+  }
+}
