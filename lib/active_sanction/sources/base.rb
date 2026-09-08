@@ -126,7 +126,7 @@ module ActiveSanction
       # The one method an adapter must write: bytes in, canonical records out.
       sig { params(_raw: T.untyped).returns(T::Array[Entity]) }
       def parse(_raw)
-        raise NotImplementedError,
+        raise UnsupportedError,
               "#{self.class} must implement #parse(raw) and return an Array of ActiveSanction::Entity"
       end
 
@@ -152,6 +152,8 @@ module ActiveSanction
       def snapshot(payloads = nil, **files)
         Snapshot.new(source: key, entities: parse(parse_argument(payloads || files)),
                      fetched_at: Time.now.utc, source_version: source_version)
+      rescue ActiveSanction::Error => e
+        raise e.in_source(declared_key)
       end
 
       # Every declared file, conditionally: a Hash of name => bytes, or nil
@@ -170,6 +172,8 @@ module ActiveSanction
         return nil if @results.each_value.all?(&:unchanged?)
 
         @results.keys.to_h { |name| [name, payload(name)] }
+      rescue ActiveSanction::Error => e
+        raise e.in_source(declared_key)
       end
 
       # Whether any of this source's files is due a fetch, answered locally and
@@ -195,6 +199,15 @@ module ActiveSanction
       end
 
       private
+
+      # This adapter's key, or nil for one that never declared it. What
+      # #source_id is stamped from -- see Error#in_source. The layers under
+      # here are deliberately ignorant of which list they are working on: the
+      # HTTP client sees a URL, the XML reader sees a payload, and neither can
+      # name the list in the error it raises. This is the one place that can,
+      # and it is the boundary a caller rescues at.
+      sig { returns(T.nilable(Symbol)) }
+      def declared_key = self.class.declared?(:key) ? key : nil
 
       # One declared URL, one payload: #parse gets the bytes. Several, and it
       # gets the Hash. Bytes handed straight to #snapshot are already the

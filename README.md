@@ -314,6 +314,64 @@ Everything has a working default; `ActiveSanction.configure` exists so that a ca
 
 A bad value raises `ConfigurationError` at the point it is set, rather than producing a puzzling failure during a sync three hours later.
 
+## Handling errors
+
+`rescue ActiveSanction::Error` catches everything this library raises from a public method. Under it sit the answers to the only three questions a caller embedding this in a request path actually has — *retry this*, *alert somebody*, *this is a bug in my call* — and none of them should be answered by matching on a message string.
+
+```
+ActiveSanction::Error              the marker; rescue this
+├── ConfigurationError             this installation is set up wrong; never retry
+├── SourceError                    something went wrong with one list
+│   ├── FetchError                 the bytes could not be obtained
+│   ├── ParseError                 the bytes could not be read
+│   └── IntegrityError             the bytes are not what they claim to be
+├── StorageError                   the store could not answer
+├── UnsupportedError               this object cannot do that
+├── InvalidArgument                a public method was called wrongly
+│   └── QueryError                 ...specifically, with an unusable query
+└── MissingKey                     a field or column that does not exist
+```
+
+```ruby
+begin
+  ActiveSanction.screen(name: params[:name], threshold: params[:threshold])
+rescue ActiveSanction::QueryError => e
+  render json: { error: e.message }, status: :unprocessable_entity   # the caller's fault
+rescue ActiveSanction::Error => e
+  raise unless e.retryable?
+
+  ResyncLater.enqueue(e.source_id)                                   # the publisher's
+end
+```
+
+**`retryable?` is a predicate, not a message to parse.** A host application deciding whether to back off is making that decision in the request path, and it should not be making it out of English:
+
+| Raised by | `retryable?` |
+|---|---|
+| 503, 500, 429, 408 from a publisher | `true` |
+| A timeout, a refused connection, a reset | `true` |
+| 403, 404, a redirect loop, a TLS failure | `false` |
+| A parse error, a corrupt snapshot, a bad query | `false` |
+| Anything unclassified | `false` — a failure nobody has looked at is one to look at, not one to hammer |
+
+`ConfigurationError` answers `false` unconditionally: nothing about waiting changes an initializer.
+
+**Every error carries structured attributes.** `source_id` names the list, `status` the HTTP status where a server produced one, and `to_h` renders the lot for a log line or a job record that has to outlive the process. The layer that raises is frequently not the layer that knows which list it was working on — the HTTP client sees a URL — so the source is stamped on as the error leaves the adapter.
+
+```ruby
+error.to_h
+# => { error: "ActiveSanction::FetchError", message: "https://... returned 503",
+#      source_id: :ofac_sdn, status: 503, retryable: true }
+```
+
+**A parse error says where.** "This 25 MB XML file is not XML" is not a diagnosable complaint, so `ParseError` carries `line`, `record` and `offset` — whichever of them the parser could produce — and appends the `locator` to its own message, so a log line that kept nothing but the message still says where to look. All three are nil where the parser genuinely cannot say; an error that cannot point at a line does not point at the wrong one.
+
+**Nothing from `net/http`, `csv`, `rexml`, `nokogiri`, `zlib` or `json` reaches you.** A malformed CSV row, a truncated gzip member, an XML document that turned out to be an HTML error page, a TLS certificate that does not verify — each is translated at the boundary it happens on. A host application should not have to know which XML backend is configured in order to rescue a bad download.
+
+**`ActiveSanction::Error` is a module rather than a class**, because two of its members have to be something else as well. A caller who passes `threshold: 300` has made the mistake Ruby has had a class for since 1995, so `InvalidArgument` is an `::ArgumentError` and `MissingKey` is a `::KeyError` — and Ruby has one superclass to give. Both still answer `rescue ActiveSanction::Error`, and both answer `is_a?`. The one consequence is that `ActiveSanction::Error` cannot itself be raised; raise the member that names the failure.
+
+**The hierarchy is public API.** Within a major version an error does not move to a different parent and an attribute is not removed. New subclasses may be added under an existing parent — that is what keeps `rescue ActiveSanction::FetchError` working when a new transport failure earns a name of its own — so a `case` over error classes wants an `else`.
+
 ## Adding a source
 
 [`docs/adding_a_source.md`](docs/adding_a_source.md) is the end-to-end walkthrough: reading the publisher's file before writing anything, choosing the format toolkit, mapping its fields onto the canonical model, deriving a stable id for a list that publishes none, trimming a fixture, wiring up the conformance spec, and registering the adapter — from inside this gem or from an application that never forks it. It ends with a complete worked adapter, its fixture and its spec.
@@ -638,11 +696,11 @@ report = ActiveSanction.sync!(concurrency: 3)   # fetch from three publishers at
 
 report.failed?                  # => true
 report[:ofac_sdn].status        # => :updated
-report[:un_consolidated].error  # => "Net::ReadTimeout: execution expired"
+report[:un_consolidated].error  # => "ActiveSanction::HttpClient::TimeoutError: GET https://... failed"
 exit report.exit_code           # 1 if any source failed, so cron and CI can alert
 ```
 
-**One source failing must not abort the others.** Government endpoints go down, change format without notice, and occasionally serve half a file. If a UN outage stopped OFAC from syncing, the library would fail exactly when it is most needed — during an incident, which is when lists move. So every source runs inside its own rescue, and the run ends with a summary rather than an exception. `StandardError` and not `Exception`: an `Interrupt` is somebody stopping this run on purpose, and swallowing it to go on downloading three more lists is not isolation, it is a job that will not die.
+**One source failing must not abort the others.** Government endpoints go down, change format without notice, and occasionally serve half a file. If a UN outage stopped OFAC from syncing, the library would fail exactly when it is most needed — during an incident, which is when lists move. So every source runs inside its own rescue, and the run ends with a summary rather than an exception. `StandardError` and not `Exception`: an `Interrupt` is somebody stopping this run on purpose, and swallowing it to go on downloading three more lists is not isolation, it is a job that will not die. What each source's `exception` carries is an [`ActiveSanction::Error`](#handling-errors), so a run that failed on a slow publisher (`retryable?`) is distinguishable from one that failed on a list that changed format, without reading the message.
 
 **A failed source keeps its previous snapshot.** Nothing clears a stored list on failure — not a 500, not a parse error, not a publisher that started serving HTML where XML used to be. Screening against yesterday's OFAC list produces a report with a known, visible age on it; screening against an empty list produces a clean report for every customer, which is the most expensive thing this library can get wrong. That trade is only safe while the age is visible, so every result carries the record count and age of the list that source is *still* being screened against:
 
@@ -654,7 +712,7 @@ exit report.exit_code           # 1 if any source failed, so cron and CI can ale
   uk_sanctions_list  unchanged   6334 records  2h old          0.21s
   australia_dfat     unchanged   3906 records  2h old          0.22s
   canada_sema        unchanged    684 records  2h old          0.19s
-  un_consolidated    failed       612 records  3d old          1.11s  Net::ReadTimeout: execution expired
+  un_consolidated    failed       612 records  3d old          1.11s  ActiveSanction::HttpClient::TimeoutError
 ```
 
 That table is `report.to_s`, but the report is an object rather than console output: it is what a host application alerts on, and `Sync::Report#to_h` round-trips through JSON so noticing a source that has been quietly failing since Tuesday does not mean scraping a log. `report.unscreenable` is the louder case underneath a failure — a source that kept its previous list is stale, one with nothing stored is not screened at all.
@@ -1018,8 +1076,9 @@ adapter conformance group goes on asserting the element types per fixture,
 which is what covers an adapter written outside this repository.
 Everything a publisher wrote is `T.untyped`
 on the way in, because the value objects already coerce it and raise
-`ArgumentError` with messages written for whoever has to fix the record, and a
-type error would say less. Three places are `T.untyped` on purpose and say why
+`InvalidArgument` -- an `ArgumentError`, so the code around this library keeps
+its existing rescue -- with messages written for whoever has to fix the record,
+and a type error would say less. Three places are `T.untyped` on purpose and say why
 in a comment where they sit: the source registry (duck-typed on `.key` and
 `.new`, which is what makes a bank's internal watchlist a first-class source),
 `XmlRecords::Backends` (same, for a backend registered from outside), and

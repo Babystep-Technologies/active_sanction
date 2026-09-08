@@ -41,7 +41,7 @@ module ActiveSanction
       sig { params(value: T.untyped).returns(String) }
       def normalize!(value)
         match = PATTERN.match(value.to_s.strip)
-        raise ArgumentError, "#{value.inspect} is not a #{ALGORITHM} checksum" if match.nil?
+        raise InvalidArgument, "#{value.inspect} is not a #{ALGORITHM} checksum" if match.nil?
 
         -"#{ALGORITHM}:#{T.must(match[1]).downcase}"
       end

@@ -179,6 +179,24 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
   ([#35](https://github.com/Babystep-Technologies/active_sanction/issues/35)).
 - `ActiveSanction.configure`, with a working default for every setting and a
   `ConfigurationError` raised where a bad value is set rather than three hours into a sync.
+- One documented error hierarchy under `ActiveSanction::Error`, which `rescue` catches
+  everything this library raises from a public method
+  ([#58](https://github.com/Babystep-Technologies/active_sanction/issues/58)):
+  `ConfigurationError`, `SourceError` (`FetchError`, `ParseError`, `IntegrityError`),
+  `StorageError`, `UnsupportedError`, `InvalidArgument` (`QueryError`) and `MissingKey`.
+  - Every error carries structured attributes rather than only a message: `source_id`,
+    `status`, `retryable?` and `to_h`. `retryable?` is first-class, so a host application
+    builds backoff from a predicate instead of from message strings — a 503 or a timeout is
+    retryable, a 403 or a parse failure is not, and a misconfiguration never is.
+  - `ParseError` says *where*: `line`, `record` or `offset`, appended to its own message, so a
+    25 MB payload that turns out not to be XML is diagnosable.
+  - The list a failure belongs to is stamped on as the error leaves the adapter, since the
+    layer that raises usually cannot know it — the HTTP client sees a URL.
+  - No public method leaks an exception class from `net/http`, `openssl`, `csv`, `rexml`,
+    `nokogiri`, `zlib` or `json`, and nothing raises a bare `RuntimeError` or `ArgumentError`.
+    `InvalidArgument` is an `::ArgumentError` and `MissingKey` a `::KeyError`, so surrounding
+    code keeps the rescue it already has; `ActiveSanction::Error` is a module so that both can
+    be in the hierarchy anyway.
 
 #### Measurement and tooling
 

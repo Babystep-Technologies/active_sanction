@@ -96,7 +96,7 @@ module ActiveSanction
       def self.from_h(hash)
         attributes = hash.to_h.transform_keys(&:to_sym)
         unknown = attributes.keys - MEMBERS
-        raise ArgumentError, "unknown Subject attribute(s): #{unknown.join(", ")}" if unknown.any?
+        raise InvalidArgument, "unknown Subject attribute(s): #{unknown.join(", ")}" if unknown.any?
 
         T.unsafe(self).new(**attributes)
       end
@@ -182,10 +182,10 @@ module ActiveSanction
         return value if value.is_a?(Normalizer::Form)
 
         string = value.to_s.strip
-        raise ArgumentError, "name is required -- there is nothing to screen without one" if string.empty?
+        raise InvalidArgument, "name is required -- there is nothing to screen without one" if string.empty?
 
         folded = Normalizer.call(string, type: type)
-        raise ArgumentError, "name folds away to nothing: #{string.inspect}" if folded.empty?
+        raise InvalidArgument, "name folds away to nothing: #{string.inspect}" if folded.empty?
 
         folded
       end
@@ -197,7 +197,7 @@ module ActiveSanction
         symbol = value.to_s.downcase.to_sym
         return symbol if Entity::TYPES.include?(symbol)
 
-        raise ArgumentError, "unknown type #{symbol.inspect}, expected one of #{Entity::TYPES.join(", ")} or nil"
+        raise InvalidArgument, "unknown type #{symbol.inspect}, expected one of #{Entity::TYPES.join(", ")} or nil"
       end
 
       sig { params(value: T.untyped).returns(PartialDate) }
@@ -205,7 +205,7 @@ module ActiveSanction
         case value
         when PartialDate then value
         when Hash then PartialDate.from_h(value)
-        else PartialDate.parse(value) || raise(ArgumentError, "not a date of birth: #{value.inspect}")
+        else PartialDate.parse(value) || raise(InvalidArgument, "not a date of birth: #{value.inspect}")
         end
       end
 

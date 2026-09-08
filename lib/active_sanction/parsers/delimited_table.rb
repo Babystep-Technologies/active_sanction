@@ -133,15 +133,15 @@ module ActiveSanction
 
         names = column_names!(value)
         duplicated = names.tally.select { |_, count| count > 1 }.keys
-        raise ArgumentError, "duplicate column name(s): #{duplicated.join(", ")}" if duplicated.any?
+        raise InvalidArgument, "duplicate column name(s): #{duplicated.join(", ")}" if duplicated.any?
 
         names.freeze
       end
 
       sig { params(value: T.untyped).returns(T::Array[Symbol]) }
       def column_names!(value)
-        raise ArgumentError, "columns must be an Array of names, got #{value.inspect}" unless value.is_a?(Array)
-        raise ArgumentError, "columns cannot be empty; pass nil to read them from the file's header" if value.empty?
+        raise InvalidArgument, "columns must be an Array of names, got #{value.inspect}" unless value.is_a?(Array)
+        raise InvalidArgument, "columns cannot be empty; pass nil to read them from the file's header" if value.empty?
 
         value.map { |name| name.to_s.strip.to_sym }
       end

@@ -52,12 +52,12 @@ RSpec.describe ActiveSanction::Sources::Base do
   describe "the contract" do
     it "tells an adapter that has not written one what #parse must return" do
       expect { Class.new(described_class).new.parse("<xml/>") }
-        .to raise_error(NotImplementedError, /must implement #parse\(raw\).*Array of ActiveSanction::Entity/)
+        .to raise_error(ActiveSanction::UnsupportedError, /must implement #parse\(raw\).*Array of ActiveSanction::Entity/)
     end
 
     it "names the adapter, not the base class" do
       expect { source.class.superclass.new.parse("") }
-        .to raise_error(NotImplementedError, /ActiveSanction::Sources::Base must implement/)
+        .to raise_error(ActiveSanction::UnsupportedError, /ActiveSanction::Sources::Base must implement/)
     end
 
     it "reads the class declarations from an instance" do

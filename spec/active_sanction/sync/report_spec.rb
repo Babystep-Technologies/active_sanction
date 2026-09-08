@@ -10,7 +10,9 @@ RSpec.describe ActiveSanction::Sync::Report do
     )
   end
 
-  def failure(source = :un_consolidated) = result(source, :failed, error: ActiveSanction::Error.new("503"))
+  def failure(source = :un_consolidated)
+    result(source, :failed, error: ActiveSanction::FetchError.new("503", status: 503))
+  end
 
   def report(*results, **overrides)
     described_class.new(results: results, started_at: Time.utc(2026, 9, 6), duration: 13.08, **overrides)
@@ -98,7 +100,7 @@ RSpec.describe ActiveSanction::Sync::Report do
     # down it for the row that is not like the others.
     it "prints a row per source, with what a failed source is still screening against" do
       expect(mixed.to_s.lines.last)
-        .to eq("  un_consolidated  failed       - records  nothing stored    1.50s  ActiveSanction::Error: 503")
+        .to eq("  un_consolidated  failed       - records  nothing stored    1.50s  ActiveSanction::FetchError: 503")
     end
 
     it "prints the age of a list that did not change" do

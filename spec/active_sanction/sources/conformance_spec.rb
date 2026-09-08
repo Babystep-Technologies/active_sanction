@@ -81,7 +81,11 @@ RSpec.describe "the sanction source contract" do
   end
 
   it "catches a missing declaration" do
-    source = broken_source(:contract_no_authority) { def self.authority(*) = raise(ActiveSanction::Error, "unset") }
+    source = broken_source(:contract_no_authority) do
+      def self.authority(*)
+        raise(ActiveSanction::Sources::DeclarationError, "unset")
+      end
+    end
     expect(failures(source, fixture: fixture)).to include(/declares the authority/)
   end
 

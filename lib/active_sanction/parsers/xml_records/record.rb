@@ -99,7 +99,7 @@ module ActiveSanction
         sig { params(path: T.untyped).returns(T::Array[Record]) }
         def nodes(path)
           steps, attribute = split(path)
-          raise ArgumentError, "#nodes reads elements, not the attribute #{path.inspect}" if attribute
+          raise InvalidArgument, "#nodes reads elements, not the attribute #{path.inspect}" if attribute
 
           descend(steps)
         end
@@ -115,8 +115,8 @@ module ActiveSanction
           return value unless value.nil?
           return default unless default.equal?(UNSET)
 
-          raise KeyError, "no value at #{path.inspect} in <#{name}>#{" on line #{line}" if line}. " \
-                          "It carries: #{present.join(", ")}"
+          raise MissingKey, "no value at #{path.inspect} in <#{name}>#{" on line #{line}" if line}. " \
+                            "It carries: #{present.join(", ")}"
         end
 
         sig { params(path: T.untyped).returns(T::Boolean) }

@@ -68,7 +68,7 @@ module ActiveSanction
 
       sig { params(on: T.untyped, children: T.untyped).void }
       def initialize(on:, **children)
-        raise ArgumentError, "a join needs at least one child reader" if children.empty?
+        raise InvalidArgument, "a join needs at least one child reader" if children.empty?
 
         @on = T.let(on.to_sym, Symbol)
         @children = T.let(children, T::Hash[Symbol, T.untyped])

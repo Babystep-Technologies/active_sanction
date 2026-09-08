@@ -40,7 +40,7 @@ module ActiveSanction
         sig { params(column: Symbol).returns(T.nilable(String)) }
         def [](column)
           values.fetch(column) do
-            raise KeyError, "no column #{column.inspect} in this table. Declared: #{columns.join(", ")}"
+            raise MissingKey, "no column #{column.inspect} in this table. Declared: #{columns.join(", ")}"
           end
         end
 

@@ -38,7 +38,7 @@ module ActiveSanction
 
       sig { params(limit: Integer).void }
       def initialize(limit: DEFAULT_LIMIT)
-        raise ArgumentError, "limit must be at least 1, got #{limit}" unless limit.positive?
+        raise InvalidArgument, "limit must be at least 1, got #{limit}" unless limit.positive?
 
         @limit = T.let(limit, Integer)
         @mutex = T.let(Mutex.new, Mutex)

@@ -79,7 +79,7 @@ module ActiveSanction
     def self.from_h(hash)
       attributes = hash.to_h.transform_keys(&:to_sym)
       unknown = attributes.keys - MEMBERS
-      raise ArgumentError, "unknown Identifier attribute(s): #{unknown.join(", ")}" if unknown.any?
+      raise InvalidArgument, "unknown Identifier attribute(s): #{unknown.join(", ")}" if unknown.any?
 
       # `new(**hash)` past a required keyword parameter is one of the few
       # things Sorbet cannot check statically. #initialize validates what
@@ -166,8 +166,8 @@ module ActiveSanction
     sig { params(value: T.untyped).returns(String) }
     def value!(value)
       string = value.to_s.strip
-      raise ArgumentError, "value is required" if string.empty?
-      raise ArgumentError, "value has no alphanumerics: #{string.inspect}" if string.gsub(INSIGNIFICANT, "").empty?
+      raise InvalidArgument, "value is required" if string.empty?
+      raise InvalidArgument, "value has no alphanumerics: #{string.inspect}" if string.gsub(INSIGNIFICANT, "").empty?
 
       -string
     end
@@ -176,12 +176,12 @@ module ActiveSanction
     # however they like, and no adapter should have to remember which.
     sig { params(value: T.untyped).returns(Symbol) }
     def kind!(value)
-      raise ArgumentError, "kind is required" if value.nil? || value.to_s.empty?
+      raise InvalidArgument, "kind is required" if value.nil? || value.to_s.empty?
 
       symbol = value.to_s.downcase.to_sym
       return symbol if KINDS.include?(symbol)
 
-      raise ArgumentError, "unknown kind #{symbol.inspect}, expected one of #{KINDS.join(", ")}"
+      raise InvalidArgument, "unknown kind #{symbol.inspect}, expected one of #{KINDS.join(", ")}"
     end
 
     sig { params(value: T.untyped).returns(T.nilable(String)) }
@@ -201,7 +201,7 @@ module ActiveSanction
       case value
       when nil, PartialDate then value
       when Hash then PartialDate.from_h(value)
-      else PartialDate.parse(value) || raise(ArgumentError, "#{member} is not a date: #{value.inspect}")
+      else PartialDate.parse(value) || raise(InvalidArgument, "#{member} is not a date: #{value.inspect}")
       end
     end
   end

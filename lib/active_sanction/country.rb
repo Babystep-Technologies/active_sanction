@@ -128,7 +128,7 @@ module ActiveSanction
           next if row.empty? || row.start_with?("#")
 
           fields = row.split(SEPARATOR).map(&:strip).reject(&:empty?)
-          raise ArgumentError, "#{path}: a country needs a code, a code and a name: #{row.inspect}" if fields.size < 3
+          raise InvalidArgument, "#{path}: a country needs a code, a code and a name: #{row.inspect}" if fields.size < 3
 
           block.call(fields)
         end
@@ -141,7 +141,7 @@ module ActiveSanction
 
         claimed = codes[key]
         if claimed && claimed != alpha2
-          raise ArgumentError, "#{field.inspect} is claimed by both #{claimed} and #{alpha2}"
+          raise InvalidArgument, "#{field.inspect} is claimed by both #{claimed} and #{alpha2}"
         end
 
         codes[key] = alpha2

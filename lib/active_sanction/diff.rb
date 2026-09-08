@@ -140,7 +140,7 @@ module ActiveSanction
 
     sig { params(key: T.nilable(Symbol), store: T.untyped).returns(Snapshot) }
     def self.stored!(key, store)
-      raise ArgumentError, "diff needs a `to:` snapshot, or a source to read the current one from" if key.nil?
+      raise InvalidArgument, "diff needs a `to:` snapshot, or a source to read the current one from" if key.nil?
 
       (store || ActiveSanction.storage).fetch_snapshot(key)
     end
@@ -314,8 +314,8 @@ module ActiveSanction
     def by_id(list)
       list.each_with_object({}) do |entity, index|
         unless entity.respond_to?(:id) && entity.respond_to?(:to_h)
-          raise ArgumentError, "a diff compares entities, got #{entity.class}. A store that hands back " \
-                               "half-deserialized records cannot be diffed -- see Storage::Base#read_snapshot"
+          raise InvalidArgument, "a diff compares entities, got #{entity.class}. A store that hands back " \
+                                 "half-deserialized records cannot be diffed -- see Storage::Base#read_snapshot"
         end
 
         index[entity.id] ||= entity
@@ -326,7 +326,7 @@ module ActiveSanction
     def snapshot!(member, value)
       return value if value.is_a?(Snapshot)
 
-      raise ArgumentError, "#{member} must be an ActiveSanction::Snapshot, got #{value.class}"
+      raise InvalidArgument, "#{member} must be an ActiveSanction::Snapshot, got #{value.class}"
     end
 
     # A diff of two different sources is not a diff, it is every record on both
@@ -336,11 +336,11 @@ module ActiveSanction
     def source!(named, previous, current)
       key = current.source
       if previous && previous.source != key
-        raise ArgumentError, "cannot diff a #{previous.source} snapshot against a #{key} one"
+        raise InvalidArgument, "cannot diff a #{previous.source} snapshot against a #{key} one"
       end
       return key if named.nil? || named.to_sym == key
 
-      raise ArgumentError, "asked for a #{named} diff, but the snapshots are #{key}"
+      raise InvalidArgument, "asked for a #{named} diff, but the snapshots are #{key}"
     end
   end
 end

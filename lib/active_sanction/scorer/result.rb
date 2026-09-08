@@ -81,7 +81,7 @@ module ActiveSanction
           .void.checked(:tests)
       end
       def initialize(entity:, name:, form:, explanation:)
-        raise ArgumentError, "a result needs at least one reason" if explanation.empty?
+        raise InvalidArgument, "a result needs at least one reason" if explanation.empty?
 
         @entity = entity
         @name = name

@@ -63,7 +63,7 @@ module ActiveSanction
     def self.from_h(hash)
       attributes = hash.to_h.transform_keys(&:to_sym)
       unknown = attributes.keys - MEMBERS
-      raise ArgumentError, "unknown Address attribute(s): #{unknown.join(", ")}" if unknown.any?
+      raise InvalidArgument, "unknown Address attribute(s): #{unknown.join(", ")}" if unknown.any?
 
       new(**attributes)
     end
@@ -160,7 +160,7 @@ module ActiveSanction
     def reject_empty!
       return if MEMBERS.any? { |member| public_send(member) }
 
-      raise ArgumentError, "an address needs at least one populated field"
+      raise InvalidArgument, "an address needs at least one populated field"
     end
   end
 end

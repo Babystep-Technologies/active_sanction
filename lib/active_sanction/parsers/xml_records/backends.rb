@@ -59,12 +59,12 @@ module ActiveSanction
           sig { params(name: T.untyped).returns(T.untyped) }
           def resolve(name)
             backend = registry.fetch(name.to_sym) do
-              raise ArgumentError,
+              raise InvalidArgument,
                     "unknown XML backend #{name.inspect}. Registered: #{registry.keys.join(", ")}"
             end
             return backend if backend.available?
 
-            raise ArgumentError, "the #{name.inspect} XML backend cannot run here: #{backend.unavailable_reason}"
+            raise InvalidArgument, "the #{name.inspect} XML backend cannot run here: #{backend.unavailable_reason}"
           end
 
           # Every registered backend that could actually run in this process.

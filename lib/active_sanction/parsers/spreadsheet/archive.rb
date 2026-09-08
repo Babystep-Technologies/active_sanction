@@ -164,7 +164,7 @@ module ActiveSanction
         def read_central_entry(offset)
           header = @bytes[offset, CENTRAL_FIXED].to_s
           unless header.start_with?(CENTRAL_SIGNATURE)
-            raise ParseError, "the central directory ends inside an entry header"
+            raise ParseError.new("the central directory ends inside an entry header", offset: offset)
           end
 
           entry = central_entry(header)
@@ -218,8 +218,8 @@ module ActiveSanction
           offset = Integer(entry.fetch(:local))
           header = @bytes[offset, LOCAL_FIXED].to_s
           unless header.start_with?(LOCAL_SIGNATURE)
-            raise ParseError,
-                  "the central directory points at byte #{offset} for #{name.inspect}, which is not a local header"
+            raise ParseError.new("the central directory points at #{name.inspect}, which is not a local header",
+                                 offset: offset)
           end
 
           name_length, extra_length = header[26, 4].to_s.unpack("vv")

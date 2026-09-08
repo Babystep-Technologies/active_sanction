@@ -68,7 +68,7 @@ module ActiveSanction
     def self.from_h(hash)
       attributes = hash.to_h.transform_keys(&:to_sym)
       unknown = attributes.keys - MEMBERS
-      raise ArgumentError, "unknown Validators attribute(s): #{unknown.join(", ")}" if unknown.any?
+      raise InvalidArgument, "unknown Validators attribute(s): #{unknown.join(", ")}" if unknown.any?
 
       # `new(**hash)` past a required keyword parameter is one of the few
       # things Sorbet cannot check statically. #initialize validates what
@@ -165,7 +165,7 @@ module ActiveSanction
     sig { params(value: T.untyped).returns(String) }
     def url!(value)
       string = value.to_s.strip
-      raise ArgumentError, "url is required" if string.empty?
+      raise InvalidArgument, "url is required" if string.empty?
 
       -string
     end
@@ -178,7 +178,7 @@ module ActiveSanction
              when nil then Time.now
              when Time then value
              when String then Time.parse(value)
-             else raise ArgumentError, "not a time: #{value.inspect}"
+             else raise InvalidArgument, "not a time: #{value.inspect}"
              end
       Time.at(time.to_i).utc
     end

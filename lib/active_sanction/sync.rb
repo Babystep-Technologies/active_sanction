@@ -99,7 +99,12 @@ module ActiveSanction
     # Raised by Report#success!, for a caller that wants any failure fatal.
     # Never raised by the run itself: by the time a failure is known, every
     # other source has already been fetched and stored.
-    class Failed < Error
+    #
+    # The one error in the hierarchy that is about a *run* rather than about
+    # one list, which is why it hangs off Error directly and carries the whole
+    # report rather than a single #source_id.
+    class Failed < StandardError
+      include ActiveSanction::Error
       extend T::Sig
 
       sig { returns(Report) }
@@ -109,6 +114,17 @@ module ActiveSanction
       def initialize(report)
         @report = T.let(report, Report)
         super(report.failure_message)
+      end
+
+      # True only when every source that failed failed retryably -- a run with
+      # one publisher timing out is worth re-running, and a run with a parse
+      # error in it is not going to come out differently in five minutes. A
+      # failure whose exception did not survive a round-trip through #to_h
+      # counts as not retryable, since nothing is known about it.
+      sig { returns(T::Boolean) }
+      def retryable?
+        failures = report.failed.map(&:exception)
+        retryable_or(failures.any? && failures.all? { |e| e.is_a?(ActiveSanction::Error) && e.retryable? })
       end
     end
 
@@ -200,7 +216,7 @@ module ActiveSanction
       return Sources[source] if source.is_a?(Symbol) || source.is_a?(String)
       return source if source.respond_to?(:key) && source.respond_to?(source.is_a?(Class) ? :new : :sync)
 
-      raise ArgumentError, "a source must be a registered key, or answer .key and .new, got #{source.inspect}"
+      raise InvalidArgument, "a source must be a registered key, or answer .key and .new, got #{source.inspect}"
     end
 
     # Groups that may run at the same time, each of which runs in order. See
@@ -262,8 +278,16 @@ module ActiveSanction
         store.write_snapshot(snapshot)
         complete(key, :updated, Storage::Meta.from_snapshot(snapshot), started)
       rescue StandardError => e
-        complete(key, :failed, previous, started, e)
+        complete(key, :failed, previous, started, stamp(key, e))
       end
+    end
+
+    # A failure captured for a source names that source, even when it was
+    # raised somewhere that could not know -- a store that will not open, an
+    # adapter constructor. Only ever fills a blank; see Error#in_source.
+    sig { params(key: Symbol, error: StandardError).returns(StandardError) }
+    def stamp(key, error)
+      error.is_a?(ActiveSanction::Error) ? error.in_source(key) : error
     end
 
     # A publisher that answered 304, or one that served a file whose parsed

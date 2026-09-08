@@ -83,7 +83,7 @@ module ActiveSanction
     def self.from_h(hash)
       attributes = hash.to_h.transform_keys(&:to_sym)
       unknown = attributes.keys - MEMBERS
-      raise ArgumentError, "unknown PartialDate attribute(s): #{unknown.join(", ")}" if unknown.any?
+      raise InvalidArgument, "unknown PartialDate attribute(s): #{unknown.join(", ")}" if unknown.any?
 
       new(**attributes)
     end
@@ -209,7 +209,7 @@ module ActiveSanction
 
     sig { params(year: T.untyped, month: T.untyped, day: T.untyped).returns([Date, Date]) }
     def assign_point(year, month, day)
-      raise ArgumentError, "year is required" if year.nil?
+      raise InvalidArgument, "year is required" if year.nil?
 
       number = integer!(:year, year)
       @year = number
@@ -223,19 +223,19 @@ module ActiveSanction
 
     sig { params(year: Integer).void }
     def validate_point!(year)
-      raise ArgumentError, "day given without a month" if @day && @month.nil?
-      raise ArgumentError, "not a real date: #{to_s.inspect}" unless Date.valid_date?(year, @month || 1, @day || 1)
+      raise InvalidArgument, "day given without a month" if @day && @month.nil?
+      raise InvalidArgument, "not a real date: #{to_s.inspect}" unless Date.valid_date?(year, @month || 1, @day || 1)
     end
 
     sig { params(from: T.untyped, to: T.untyped).returns([Date, Date]) }
     def assign_range(from, to)
-      raise ArgumentError, "a range needs both from and to" if from.nil? || to.nil?
+      raise InvalidArgument, "a range needs both from and to" if from.nil? || to.nil?
 
       first = endpoint!(:from, from)
       last = endpoint!(:to, to)
       @from = first
       @to = last
-      raise ArgumentError, "range runs backwards: #{first} to #{last}" if first.first_date > last.last_date
+      raise InvalidArgument, "range runs backwards: #{first} to #{last}" if first.first_date > last.last_date
 
       [first.first_date, last.last_date]
     end
@@ -244,7 +244,7 @@ module ActiveSanction
     def reject_mixed_shape(year, month, day)
       return if [year, month, day].all?(&:nil?)
 
-      raise ArgumentError, "a range carries its year in its endpoints, not alongside them"
+      raise InvalidArgument, "a range carries its year in its endpoints, not alongside them"
     end
 
     # Endpoints are themselves PartialDates so a span between two year-only
@@ -253,8 +253,8 @@ module ActiveSanction
     sig { params(member: Symbol, value: T.untyped).returns(PartialDate) }
     def endpoint!(member, value)
       date = coerce_endpoint(value)
-      raise ArgumentError, "#{member} is not a date: #{value.inspect}" if date.nil?
-      raise ArgumentError, "#{member} cannot itself be a range" if date.range?
+      raise InvalidArgument, "#{member} is not a date: #{value.inspect}" if date.nil?
+      raise InvalidArgument, "#{member} cannot itself be a range" if date.range?
 
       date
     end
@@ -272,7 +272,7 @@ module ActiveSanction
     def comparable!(other)
       return other if other.is_a?(PartialDate)
 
-      raise ArgumentError, "expected a #{self.class}, got #{other.class}"
+      raise InvalidArgument, "expected a #{self.class}, got #{other.class}"
     end
 
     sig { params(member: Symbol, value: T.untyped).returns(T.nilable(Integer)) }
@@ -284,7 +284,7 @@ module ActiveSanction
     def integer!(member, value)
       Integer(value.to_s, 10)
     rescue TypeError, ArgumentError
-      raise ArgumentError, "#{member} is not a number: #{value.inspect}"
+      raise InvalidArgument, "#{member} is not a number: #{value.inspect}"
     end
 
     sig { returns(String) }

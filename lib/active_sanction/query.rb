@@ -133,7 +133,7 @@ module ActiveSanction
       def from_h(hash)
         attributes = normalize(hash)
         unknown = attributes.keys - MEMBERS
-        raise ArgumentError, "unknown Query attribute(s): #{unknown.join(", ")}" if unknown.any?
+        raise QueryError, "unknown Query attribute(s): #{unknown.join(", ")}" if unknown.any?
 
         # `new(**hash)` past a required keyword parameter is one of the few
         # things Sorbet cannot check statically. #initialize validates what
@@ -153,7 +153,7 @@ module ActiveSanction
           written = key.to_s.to_sym
           member = ALIASES.fetch(written, written)
           clash = spellings[member]
-          raise ArgumentError, "#{clash} and #{written} are the same field -- pass one" if conflict?(clash, written)
+          raise QueryError, "#{clash} and #{written} are the same field -- pass one" if conflict?(clash, written)
 
           spellings[member] = written
           attributes[member] = wrap(member, value)
@@ -247,7 +247,7 @@ module ActiveSanction
       return nil if value.nil?
 
       keys = Array(value).map { |key| Sources::Definition.key!(key) }.uniq
-      raise ArgumentError, "sources cannot be empty -- omit it to screen against every list" if keys.empty?
+      raise QueryError, "sources cannot be empty -- omit it to screen against every list" if keys.empty?
 
       keys.freeze
     end
@@ -262,7 +262,7 @@ module ActiveSanction
       number = begin
         Float(value)
       rescue TypeError, ArgumentError
-        raise ArgumentError, "threshold must be a number between 0 and 100, got #{value.inspect}"
+        raise QueryError, "threshold must be a number between 0 and 100, got #{value.inspect}"
       end
       Scorer.threshold!(number)
     end
@@ -274,9 +274,9 @@ module ActiveSanction
       integer = begin
         Integer(value)
       rescue TypeError, ArgumentError
-        raise ArgumentError, "limit must be a whole number of results, got #{value.inspect}"
+        raise QueryError, "limit must be a whole number of results, got #{value.inspect}"
       end
-      raise ArgumentError, "limit must be at least 1, got #{integer}" unless integer.positive?
+      raise QueryError, "limit must be at least 1, got #{integer}" unless integer.positive?
 
       integer
     end

@@ -35,7 +35,7 @@ module ActiveSanction
     # stored beside it: the file is corrupt, was edited, or was written by a
     # serializer this version does not agree with. Never silently repaired --
     # a snapshot that cannot prove what it contains cannot anchor an audit.
-    class ChecksumMismatch < Error; end
+    class ChecksumMismatch < IntegrityError; end
 
     # Bumped whenever the serialized form changes shape. Stored snapshots carry
     # the version they were written under so they can be migrated or discarded
@@ -93,7 +93,7 @@ module ActiveSanction
     def self.from_h(hash)
       attributes = hash.to_h.transform_keys(&:to_sym)
       unknown = attributes.keys - MEMBERS
-      raise ArgumentError, "unknown Snapshot attribute(s): #{unknown.join(", ")}" if unknown.any?
+      raise InvalidArgument, "unknown Snapshot attribute(s): #{unknown.join(", ")}" if unknown.any?
 
       attributes[:entities] &&= attributes[:entities].map { |value| build_entity(value) }
       # `new(**hash)` past required keyword parameters is one of the few things
@@ -200,10 +200,10 @@ module ActiveSanction
 
     sig { params(value: T.untyped).returns(T::Array[T.untyped]) }
     def entities!(value)
-      raise ArgumentError, "entities must be an Array" unless value.is_a?(Array)
+      raise InvalidArgument, "entities must be an Array" unless value.is_a?(Array)
 
       value.each do |entity|
-        raise ArgumentError, "entities must respond to #to_h, got #{entity.class}" unless entity.respond_to?(:to_h)
+        raise InvalidArgument, "entities must respond to #to_h, got #{entity.class}" unless entity.respond_to?(:to_h)
       end
       value.dup.freeze
     end
@@ -212,7 +212,7 @@ module ActiveSanction
     def count!(value)
       return entities.size if value.nil? || value.to_i == entities.size
 
-      raise ArgumentError, "record_count #{value} does not match the #{entities.size} entities given"
+      raise InvalidArgument, "record_count #{value} does not match the #{entities.size} entities given"
     end
 
     # Truncated to the second, which is the precision #to_h serializes, so a
@@ -223,7 +223,7 @@ module ActiveSanction
              when nil then Time.now
              when Time then value
              when String then Time.parse(value)
-             else raise ArgumentError, "fetched_at is not a time: #{value.inspect}"
+             else raise InvalidArgument, "fetched_at is not a time: #{value.inspect}"
              end
       Time.at(time.to_i).utc
     end
@@ -231,14 +231,14 @@ module ActiveSanction
     sig { params(value: T.untyped).returns(Integer) }
     def version!(value)
       integer = Integer(value)
-      raise ArgumentError, "schema_version must be positive, got #{integer}" unless integer.positive?
+      raise InvalidArgument, "schema_version must be positive, got #{integer}" unless integer.positive?
 
       integer
     end
 
     sig { params(member: Symbol, value: T.untyped).returns(Symbol) }
     def symbol!(member, value)
-      raise ArgumentError, "#{member} is required" if value.nil? || value.to_s.empty?
+      raise InvalidArgument, "#{member} is required" if value.nil? || value.to_s.empty?
 
       value.to_sym
     end

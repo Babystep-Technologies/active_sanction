@@ -64,19 +64,10 @@ module ActiveSanction
       # which decides between salvaging the records already read and refusing
       # the payload outright; it escapes as a ParseError either way, so a
       # caller rescuing the toolkit's errors does not have to know about it.
-      class MalformedDocument < ParseError
-        extend T::Sig
-
-        # nil where the backend reports no position -- libxml2 does not always.
-        sig { returns(T.nilable(Integer)) }
-        attr_reader :line
-
-        sig { params(message: String, line: T.nilable(Integer)).void }
-        def initialize(message, line: nil)
-          @line = T.let(line, T.nilable(Integer))
-          super(message)
-        end
-      end
+      #
+      # `line` is ParseError's, and is nil where the backend reports no
+      # position -- libxml2 does not always.
+      class MalformedDocument < ParseError; end
 
       # A Set: `record?` is asked once per element in the document, which for
       # the UN is roughly 30,000 times a pass.
@@ -140,7 +131,7 @@ module ActiveSanction
       sig { params(value: T.untyped).returns(T::Set[String]) }
       def records!(value)
         names = Array(value).map { |name| -name.to_s.strip }.reject(&:empty?).uniq
-        raise ArgumentError, "records must name at least one element, e.g. records: \"INDIVIDUAL\"" if names.empty?
+        raise InvalidArgument, "records must name at least one element, e.g. records: \"INDIVIDUAL\"" if names.empty?
 
         Set.new(names).freeze
       end

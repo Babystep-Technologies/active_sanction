@@ -199,7 +199,7 @@ module ActiveSanction
         def build(value)
           return default if value.nil?
           return value if value.is_a?(Weights)
-          raise ArgumentError, "expected a #{self} or a Hash of weights, got #{value.class}" unless value.is_a?(Hash)
+          raise InvalidArgument, "expected a #{self} or a Hash of weights, got #{value.class}" unless value.is_a?(Hash)
 
           T.unsafe(default).merge(**value.to_h { |member, weight| [member.to_s.to_sym, weight] })
         end
@@ -212,7 +212,7 @@ module ActiveSanction
       sig { params(overrides: T.untyped).void }
       def initialize(**overrides)
         unknown = overrides.keys - MEMBERS
-        raise ArgumentError, "unknown weight(s): #{unknown.join(", ")}" if unknown.any?
+        raise InvalidArgument, "unknown weight(s): #{unknown.join(", ")}" if unknown.any?
 
         @weights = T.let(DEFAULTS.merge(overrides).to_h { |member, weight| [member, number!(member, weight)] }.freeze,
                          T::Hash[Symbol, Float])
@@ -251,7 +251,7 @@ module ActiveSanction
         number = begin
           Float(value)
         rescue TypeError, ArgumentError
-          raise ArgumentError, "#{member} must be a number, got #{value.inspect}"
+          raise InvalidArgument, "#{member} must be a number, got #{value.inspect}"
         end
         direction!(member, number)
         number
@@ -263,9 +263,9 @@ module ActiveSanction
       sig { params(member: Symbol, number: Float).void }
       def direction!(member, number)
         if PENALTIES.include?(member)
-          raise ArgumentError, "#{member} is a penalty and cannot be positive, got #{number}" if number.positive?
+          raise InvalidArgument, "#{member} is a penalty and cannot be positive, got #{number}" if number.positive?
         elsif number.negative?
-          raise ArgumentError, "#{member} is a boost and cannot be negative, got #{number}"
+          raise InvalidArgument, "#{member} is a boost and cannot be negative, got #{number}"
         end
       end
 
@@ -273,12 +273,12 @@ module ActiveSanction
       def validate_shares!
         NAME_SHARES.each do |share|
           weight = @weights.fetch(share)
-          raise ArgumentError, "#{share} must be between 0 and 1, got #{weight}" unless weight.between?(0.0, 1.0)
+          raise InvalidArgument, "#{share} must be between 0 and 1, got #{weight}" unless weight.between?(0.0, 1.0)
         end
         total = NAME_SHARES.sum { |share| @weights.fetch(share) }
         return if (total - 1.0).abs <= SHARE_TOLERANCE
 
-        raise ArgumentError,
+        raise InvalidArgument,
               "the name shares must sum to 1.0, got #{total.round(6)} -- " \
               "#{NAME_SHARES.map { |share| "#{share}=#{@weights.fetch(share)}" }.join(", ")}"
       end

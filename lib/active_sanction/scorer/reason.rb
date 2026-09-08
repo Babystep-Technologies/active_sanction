@@ -72,7 +72,7 @@ module ActiveSanction
       def self.from_h(hash)
         attributes = hash.to_h.transform_keys(&:to_sym)
         unknown = attributes.keys - MEMBERS
-        raise ArgumentError, "unknown Reason attribute(s): #{unknown.join(", ")}" if unknown.any?
+        raise InvalidArgument, "unknown Reason attribute(s): #{unknown.join(", ")}" if unknown.any?
 
         T.unsafe(self).new(**attributes)
       end
@@ -116,13 +116,13 @@ module ActiveSanction
         symbol = value.to_s.to_sym
         return symbol if FACTORS.include?(symbol)
 
-        raise ArgumentError, "unknown factor #{symbol.inspect}, expected one of #{FACTORS.join(", ")}"
+        raise InvalidArgument, "unknown factor #{symbol.inspect}, expected one of #{FACTORS.join(", ")}"
       end
 
       sig { params(value: T.untyped).returns(String) }
       def detail!(value)
         string = value.to_s.strip
-        raise ArgumentError, "detail is required -- a reason nobody can read is not a reason" if string.empty?
+        raise InvalidArgument, "detail is required -- a reason nobody can read is not a reason" if string.empty?
 
         -string
       end

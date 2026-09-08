@@ -106,7 +106,7 @@ RSpec.describe ActiveSanction::Sync do
   # and occasionally serve half a file.
   describe "per-source isolation" do
     def failing(key = :un_consolidated, message = "503 from the publisher")
-      FakeSyncSource.new(key, error: ActiveSanction::Error.new(message))
+      FakeSyncSource.new(key, error: ActiveSanction::FetchError.new(message, status: 503))
     end
 
     # A source whose constructor raises: a store it cannot open, a credential
@@ -114,7 +114,7 @@ RSpec.describe ActiveSanction::Sync do
     def unbuildable(name)
       Class.new do
         define_singleton_method(:key) { name }
-        def initialize = raise(ActiveSanction::Error, "no credentials")
+        def initialize = raise(ActiveSanction::ConfigurationError, "no credentials")
       end
     end
 
@@ -130,11 +130,11 @@ RSpec.describe ActiveSanction::Sync do
 
     it "reports the failure with the class and message that caused it" do
       expect(sync(failing).first)
-        .to have_attributes(status: :failed, error: "ActiveSanction::Error: 503 from the publisher")
+        .to have_attributes(status: :failed, error: "ActiveSanction::FetchError: 503 from the publisher")
     end
 
     it "keeps the exception itself for a caller that wants the backtrace" do
-      expect(sync(failing).first.exception).to be_a(ActiveSanction::Error)
+      expect(sync(failing).first.exception).to be_a(ActiveSanction::FetchError)
     end
 
     it "answers failed? and a non-zero exit code for the run" do
@@ -175,7 +175,7 @@ RSpec.describe ActiveSanction::Sync do
     def kept
       source = ofac
       sync(source)
-      source.error = ActiveSanction::Error.new("503 from the publisher")
+      source.error = ActiveSanction::FetchError.new("503 from the publisher", status: 503)
       sync(source).first
     end
 
@@ -196,7 +196,7 @@ RSpec.describe ActiveSanction::Sync do
     # Louder than a failure and rarer: a source that failed but kept its
     # previous list is stale, one with nothing stored is not screened at all.
     it "says when a failed source has nothing stored behind it" do
-      report = sync(FakeSyncSource.new(:un_consolidated, error: ActiveSanction::Error.new("503")))
+      report = sync(FakeSyncSource.new(:un_consolidated, error: ActiveSanction::FetchError.new("503", status: 503)))
 
       expect(report.unscreenable.map(&:source)).to eq(%i[un_consolidated])
     end
@@ -254,7 +254,7 @@ RSpec.describe ActiveSanction::Sync do
       logger = collecting_logger
       source = ofac
       described_class.new(sources: [source], store: store, logger: logger).call
-      source.error = ActiveSanction::Error.new("503")
+      source.error = ActiveSanction::FetchError.new("503", status: 503)
       described_class.new(sources: [source], store: store, logger: logger).call
 
       expect(logger.lines).to include(a_string_matching(/keeping the previous snapshot of 1 records/))

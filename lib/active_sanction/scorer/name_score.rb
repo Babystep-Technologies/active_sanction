@@ -224,7 +224,7 @@ module ActiveSanction
         when :token_sort then Similarity::TokenSort.call(left.tokens, right.tokens, threshold: threshold)
         when :token_set then Similarity::TokenSet.call(left.tokens, right.tokens, threshold: threshold)
         when :phonetic then phonetic(left.tokens, right.tokens)
-        else raise ArgumentError, "unknown name share #{share.inspect}"
+        else raise InvalidArgument, "unknown name share #{share.inspect}"
         end
       end
 

@@ -92,7 +92,7 @@ module ActiveSanction
       def self.from_h(hash, dir:)
         attributes = hash.to_h.transform_keys(&:to_sym)
         unknown = attributes.keys - MEMBERS
-        raise ArgumentError, "unknown Entry attribute(s): #{unknown.join(", ")}" if unknown.any?
+        raise InvalidArgument, "unknown Entry attribute(s): #{unknown.join(", ")}" if unknown.any?
 
         # `new(**hash)` past required keyword parameters is one of the few
         # things Sorbet cannot check statically. #initialize validates what
@@ -233,7 +233,7 @@ module ActiveSanction
 
       sig { params(member: Symbol, value: T.untyped).returns(Symbol) }
       def symbol!(member, value)
-        raise ArgumentError, "#{member} is required" if value.nil? || value.to_s.empty?
+        raise InvalidArgument, "#{member} is required" if value.nil? || value.to_s.empty?
 
         value.to_sym
       end
@@ -241,7 +241,7 @@ module ActiveSanction
       sig { params(member: Symbol, value: T.untyped).returns(String) }
       def string!(member, value)
         string = value.to_s.strip
-        raise ArgumentError, "#{member} is required" if string.empty?
+        raise InvalidArgument, "#{member} is required" if string.empty?
 
         -string
       end
@@ -249,7 +249,7 @@ module ActiveSanction
       sig { params(value: T.untyped).returns(Integer) }
       def size!(value)
         integer = Integer(value)
-        raise ArgumentError, "byte_size cannot be negative, got #{integer}" if integer.negative?
+        raise InvalidArgument, "byte_size cannot be negative, got #{integer}" if integer.negative?
 
         integer
       end
@@ -257,7 +257,7 @@ module ActiveSanction
       sig { params(value: T.untyped).returns(Integer) }
       def version!(value)
         integer = Integer(value)
-        raise ArgumentError, "schema_version must be positive, got #{integer}" unless integer.positive?
+        raise InvalidArgument, "schema_version must be positive, got #{integer}" unless integer.positive?
 
         integer
       end
@@ -272,7 +272,7 @@ module ActiveSanction
                when nil then Time.now
                when Time then value
                when String then Time.parse(value)
-               else raise ArgumentError, "fetched_at is not a time: #{value.inspect}"
+               else raise InvalidArgument, "fetched_at is not a time: #{value.inspect}"
                end
         time.getutc.round(6)
       end

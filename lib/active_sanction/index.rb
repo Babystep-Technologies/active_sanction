@@ -168,7 +168,7 @@ module ActiveSanction
       return source.each_entity(sources: sources, &block) if source.respond_to?(:each_entity)
       return source.each(&block) if source.respond_to?(:each)
 
-      raise ArgumentError,
+      raise InvalidArgument,
             "cannot index #{source.class}: expected a storage adapter or an enumerable of entities"
     end
     private_class_method :each_entity

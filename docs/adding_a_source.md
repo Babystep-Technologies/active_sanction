@@ -431,7 +431,7 @@ publisher text after stripping, so appending is safe and swallowing is not.
 | Class | Notes |
 | --- | --- |
 | `Name` | `value:` plus `kind:` (`:primary`, `:aka`, `:fka`, `:nka` — defaults to `:primary`), `quality:` (`:good`, `:low`, or `nil` for unstated), `script:` (a closed list; map the publisher's vocabulary onto it — OFAC's "Farsi" is `:arabic`). A blank value raises: a blank-valued name is a record that matches everything. |
-| `Address` | `street:`, `city:`, `state_province:`, `postal_code:`, `country:`, `note:`. An address that located nothing raises `ArgumentError`; rescue and drop it rather than keeping an empty one. |
+| `Address` | `street:`, `city:`, `state_province:`, `postal_code:`, `country:`, `note:`. An address that located nothing raises `InvalidArgument` (an `ArgumentError`); rescue and drop it rather than keeping an empty one. |
 | `Identifier` | `value:` plus `kind:` (`:passport`, `:national_id`, `:tax_id`, `:registration_number`, `:other`), `country:`, `issued_on:`, `expires_on:`, `note:`. `:other` is a real answer — a document we cannot classify still matches on its number. A document element with a type and no number has nothing to match on: drop it. |
 | `PartialDate` | `.parse`, `.range(from, to)`, `.new(year:, month:, day:, approximate:)`. Never collapse a year to January 1st. |
 
@@ -544,7 +544,8 @@ Read `#warnings` after `#parse`; sync orchestration reports them. Give every
 warning a line number where the parser can supply one — a 5.6 MB file is only
 debuggable if the complaint says where.
 
-**A payload that is not the list at all** raises `Parsers::ParseError`. Both
+**A payload that is not the list at all** raises `ParseError` (the toolkits
+raise it under the name `Parsers::ParseError`; it is the same class). Both
 toolkits already refuse an empty payload for you, and the delimited reader also
 gives up after enough consecutive unparseable rows, on the grounds that the
 publisher probably served an error page. Do not rescue that into an empty array.
@@ -557,6 +558,21 @@ A truncated download is the middle case. It may be worth salvaging — the XML
 reader keeps the records it read before the break and warns — and what the
 contract requires is only that half a list never comes back looking exactly like
 the whole one.
+
+Raising one of your own is fine, as long as it is in the hierarchy — a payload
+this adapter can see is wrong is a `ParseError`, and give it a locator if you
+have one:
+
+```ruby
+raise ActiveSanction::ParseError.new("the sheet has no listing column", line: 1)
+```
+
+Nothing an adapter raises may be a bare `RuntimeError`, an `ArgumentError` or an
+exception class belonging to a library it happens to parse with: the whole point
+of the [error hierarchy](../README.md#handling-errors) is that a host
+application rescues `ActiveSanction::Error` and gets your adapter's failures
+along with everything else. `#source_id` is filled in for you as the error
+leaves the adapter, so there is no need to name your own list in it.
 
 `#parse` should not rescue `ActiveSanction::Error` at all. `#sync` does not
 rescue either: one source's failure being isolated from the others is a decision

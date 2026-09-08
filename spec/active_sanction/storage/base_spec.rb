@@ -33,20 +33,22 @@ RSpec.describe ActiveSanction::Storage::Base do
   describe "what an adapter has to write" do
     it "says so when #write_snapshot is missing" do
       expect { abstract.write_snapshot(snapshot(:ofac_sdn)) }
-        .to raise_error(NotImplementedError, /must implement #write_snapshot/)
+        .to raise_error(ActiveSanction::UnsupportedError, /must implement #write_snapshot/)
     end
 
     it "says so when #read_snapshot is missing" do
-      expect { abstract.read_snapshot(:ofac_sdn) }.to raise_error(NotImplementedError, /must implement #read_snapshot/)
+      expect do
+        abstract.read_snapshot(:ofac_sdn)
+      end.to raise_error(ActiveSanction::UnsupportedError, /must implement #read_snapshot/)
     end
 
     it "says so when #delete_snapshot is missing" do
       expect { abstract.delete_snapshot(:ofac_sdn) }
-        .to raise_error(NotImplementedError, /must implement #delete_snapshot/)
+        .to raise_error(ActiveSanction::UnsupportedError, /must implement #delete_snapshot/)
     end
 
     it "says so when #sources is missing" do
-      expect { abstract.sources }.to raise_error(NotImplementedError, /must implement #sources/)
+      expect { abstract.sources }.to raise_error(ActiveSanction::UnsupportedError, /must implement #sources/)
     end
   end
 

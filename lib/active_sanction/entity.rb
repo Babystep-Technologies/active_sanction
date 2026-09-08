@@ -109,7 +109,7 @@ module ActiveSanction
     def self.from_h(hash)
       attributes = hash.to_h.transform_keys(&:to_sym)
       unknown = attributes.keys - MEMBERS
-      raise ArgumentError, "unknown Entity attribute(s): #{unknown.join(", ")}" if unknown.any?
+      raise InvalidArgument, "unknown Entity attribute(s): #{unknown.join(", ")}" if unknown.any?
 
       # `new(**hash)` past required keyword parameters is one of the few
       # things Sorbet cannot check statically. The hash is validated on the two
@@ -244,7 +244,7 @@ module ActiveSanction
 
     sig { returns(String) }
     def derived_id
-      raise ArgumentError, "id is required when source_ref is nil" if source_ref.nil?
+      raise InvalidArgument, "id is required when source_ref is nil" if source_ref.nil?
 
       # Namespaced so ids stay unique and stable across sources.
       -"#{source}:#{source_ref}"
@@ -255,12 +255,12 @@ module ActiveSanction
       type = symbol!(:type, value)
       return type if TYPES.include?(type)
 
-      raise ArgumentError, "unknown type #{type.inspect}, expected one of #{TYPES.join(", ")}"
+      raise InvalidArgument, "unknown type #{type.inspect}, expected one of #{TYPES.join(", ")}"
     end
 
     sig { params(member: Symbol, value: T.untyped).returns(Symbol) }
     def symbol!(member, value)
-      raise ArgumentError, "#{member} is required" if value.nil? || value.to_s.empty?
+      raise InvalidArgument, "#{member} is required" if value.nil? || value.to_s.empty?
 
       value.to_sym
     end
@@ -273,7 +273,7 @@ module ActiveSanction
     sig { params(member: Symbol, value: T.untyped).returns(T.untyped) }
     def list!(member, value)
       return [].freeze if value.nil?
-      raise ArgumentError, "#{member} must be an Array" unless value.is_a?(Array)
+      raise InvalidArgument, "#{member} must be an Array" unless value.is_a?(Array)
 
       value.dup.freeze
     end

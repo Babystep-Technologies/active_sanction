@@ -164,7 +164,7 @@ module ActiveSanction
         # however the publisher capitalized it this quarter.
         sig { params(cells: T::Hash[Integer, String], node: Parsers::XmlRecords::Record).returns(T::Array[Symbol]) }
         def header!(cells, node)
-          raise ParseError, "expected a header row, and row #{number(node)} is empty" if cells.empty?
+          raise ParseError.new("expected a header row, and it is empty", line: number(node)) if cells.empty?
 
           (0..T.must(cells.keys.max)).map { |index| normalize_header(cells[index], index) }
         end

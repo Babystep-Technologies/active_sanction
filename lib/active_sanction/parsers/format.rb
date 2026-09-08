@@ -98,7 +98,7 @@ module ActiveSanction
 
         Encoding.find(value.to_s)
       rescue ArgumentError
-        raise ArgumentError, "unknown encoding #{value.inspect}"
+        raise InvalidArgument, "unknown encoding #{value.inspect}"
       end
     end
   end
