@@ -93,13 +93,13 @@ module ActiveSanction
     # the bytes no longer match it. Never silently repaired -- an entry that
     # cannot prove what it holds is worse than no entry, because a caller would
     # act on it.
-    class CorruptEntry < Error; end
+    class CorruptEntry < IntegrityError; end
 
     # The bytes no longer hash to the checksum recorded beside them.
     class ChecksumMismatch < CorruptEntry; end
 
     # Nothing is stored under that source and checksum, or its blob is gone.
-    class PayloadMissing < Error; end
+    class PayloadMissing < StorageError; end
 
     sig { returns(String) }
     attr_reader :dir
@@ -130,7 +130,7 @@ module ActiveSanction
         .returns(T.nilable(Entry))
     end
     def write(source, payload = nil, **metadata, &block)
-      raise ArgumentError, "pass a payload or a block, not both" if block && payload
+      raise InvalidArgument, "pass a payload or a block, not both" if block && payload
 
       name = source!(source)
       metadata!(metadata)
@@ -282,7 +282,7 @@ module ActiveSanction
 
     sig { params(payload: T.untyped, sink: T.untyped).returns(T.untyped) }
     def copy(payload, sink)
-      raise ArgumentError, "a payload or a block is required" if payload.nil?
+      raise InvalidArgument, "a payload or a block is required" if payload.nil?
 
       payload.respond_to?(:read) ? IO.copy_stream(payload, sink) : sink.write(payload.to_s)
     end
@@ -333,8 +333,8 @@ module ActiveSanction
     def source!(source)
       name = source.to_s.strip
       unless name.match?(SOURCE_PATTERN)
-        raise ArgumentError, "#{source.inspect} is not a usable source name: it becomes a directory, " \
-                             "so it must start alphanumeric and hold only letters, digits, _ and -"
+        raise InvalidArgument, "#{source.inspect} is not a usable source name: it becomes a directory, " \
+                               "so it must start alphanumeric and hold only letters, digits, _ and -"
       end
 
       name.to_sym
@@ -345,8 +345,8 @@ module ActiveSanction
     sig { params(metadata: T::Hash[Symbol, T.untyped]).returns(T::Hash[Symbol, T.untyped]) }
     def metadata!(metadata)
       unknown = metadata.keys - Entry::PROVENANCE
-      raise ArgumentError, "unknown payload metadata: #{unknown.join(", ")}" if unknown.any?
-      raise ArgumentError, "url: is required -- a cached payload records where it came from" if
+      raise InvalidArgument, "unknown payload metadata: #{unknown.join(", ")}" if unknown.any?
+      raise InvalidArgument, "url: is required -- a cached payload records where it came from" if
         metadata[:url].to_s.strip.empty?
 
       metadata

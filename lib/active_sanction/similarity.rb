@@ -115,7 +115,7 @@ module ActiveSanction
 
     module_function
 
-    # A threshold as a Float, or an ArgumentError.
+    # A threshold as a Float, or an InvalidArgument.
     #
     # The 0..1 range is checked rather than assumed because the surrounding
     # library speaks in 0..100 -- the scorer's weights, its thresholds and
@@ -128,7 +128,7 @@ module ActiveSanction
       cutoff = threshold.to_f
       return cutoff if cutoff.between?(0.0, 1.0)
 
-      raise ArgumentError,
+      raise InvalidArgument,
             "threshold must be between 0.0 and 1.0, got #{threshold.inspect} -- " \
             "these are similarities on a 0..1 scale, not percentages"
     end

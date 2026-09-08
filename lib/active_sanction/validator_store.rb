@@ -30,7 +30,7 @@ module ActiveSanction
     # fatal rather than treated as an empty store: silently re-downloading tens
     # of megabytes on every sync is the kind of failure that hides for months,
     # and the fix -- delete the file -- is in the message.
-    class CorruptStore < Error; end
+    class CorruptStore < StorageError; end
 
     # Reads validators, or nil when nothing is stored under the key. Nil is the
     # answer to "have we ever fetched this?", so it is not conflated with a
@@ -96,7 +96,7 @@ module ActiveSanction
     sig { params(key: T.untyped).returns(String) }
     def key!(key)
       string = key.to_s.strip
-      raise ArgumentError, "a validator key is required" if string.empty?
+      raise InvalidArgument, "a validator key is required" if string.empty?
 
       -string
     end
@@ -104,13 +104,13 @@ module ActiveSanction
     # A hash of key => Validators. Subclasses may rebuild it per call.
     sig { returns(T::Hash[String, Validators]) }
     def entries
-      raise NotImplementedError, "#{self.class} must implement #entries"
+      raise UnsupportedError, "#{self.class} must implement #entries"
     end
 
     # Yields the current entries for mutation and persists the result.
-    sig { params(block: T.proc.params(all: T::Hash[String, Validators]).returns(T.untyped)).returns(T.untyped) }
-    def commit(&block)
-      raise NotImplementedError, "#{self.class} must implement #commit"
+    sig { params(_block: T.proc.params(all: T::Hash[String, Validators]).returns(T.untyped)).returns(T.untyped) }
+    def commit(&_block)
+      raise UnsupportedError, "#{self.class} must implement #commit"
     end
   end
 end

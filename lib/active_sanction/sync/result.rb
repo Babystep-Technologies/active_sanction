@@ -103,7 +103,7 @@ module ActiveSanction
       def self.from_h(hash)
         attributes = hash.to_h.transform_keys(&:to_sym)
         unknown = attributes.keys - MEMBERS
-        raise ArgumentError, "unknown Sync::Result attribute(s): #{unknown.join(", ")}" if unknown.any?
+        raise InvalidArgument, "unknown Sync::Result attribute(s): #{unknown.join(", ")}" if unknown.any?
 
         # `new(**hash)` past required keyword parameters is one of the few
         # things Sorbet cannot check statically; #initialize validates what
@@ -232,7 +232,7 @@ module ActiveSanction
         status = symbol!(:status, value)
         return status if STATUSES.include?(status)
 
-        raise ArgumentError, "status must be one of #{STATUSES.join(", ")}, got #{value.inspect}"
+        raise InvalidArgument, "status must be one of #{STATUSES.join(", ")}, got #{value.inspect}"
       end
 
       # Takes the exception the orchestrator captured, or the pair #to_h wrote
@@ -253,7 +253,7 @@ module ActiveSanction
       sig { params(value: T.untyped).returns(T.nilable(Integer)) }
       def count!(value)
         integer = integer_or_nil(value)
-        raise ArgumentError, "record_count cannot be negative, got #{integer}" if integer&.negative?
+        raise InvalidArgument, "record_count cannot be negative, got #{integer}" if integer&.negative?
 
         integer
       end
@@ -269,13 +269,13 @@ module ActiveSanction
         when nil then nil
         when Time then Time.at(value.to_i).utc
         when String then Time.at(Time.parse(value).to_i).utc
-        else raise ArgumentError, "fetched_at is not a time: #{value.inspect}"
+        else raise InvalidArgument, "fetched_at is not a time: #{value.inspect}"
         end
       end
 
       sig { params(member: Symbol, value: T.untyped).returns(Symbol) }
       def symbol!(member, value)
-        raise ArgumentError, "#{member} is required" if value.nil? || value.to_s.empty?
+        raise InvalidArgument, "#{member} is required" if value.nil? || value.to_s.empty?
 
         value.to_sym
       end

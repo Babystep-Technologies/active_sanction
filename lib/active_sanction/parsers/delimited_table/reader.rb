@@ -134,7 +134,9 @@ module ActiveSanction
         sig { params(csv: CSV).returns(T::Array[Symbol]) }
         def header!(csv)
           values = shift(csv)
-          raise ParseError, "expected a header row, read nothing usable as one" if values.nil? || values.equal?(EOF)
+          if values.nil? || values.equal?(EOF)
+            raise ParseError.new("expected a header row, read nothing usable as one", line: 1)
+          end
 
           values.map { |value| normalize_header(value) }
         end
@@ -178,10 +180,11 @@ module ActiveSanction
 
         sig { params(consecutive: Integer).void }
         def give_up!(consecutive)
-          raise ParseError,
-                "#{consecutive} consecutive rows could not be parsed. This payload is almost certainly not the " \
-                "#{table.col_sep_name} it was read as -- check the URL, and whether the publisher served an " \
-                "error page. First complaint: #{warnings.first}"
+          raise ParseError.new(
+            "#{consecutive} consecutive rows could not be parsed. This payload is almost certainly not the " \
+            "#{table.col_sep_name} it was read as -- check the URL, and whether the publisher served an " \
+            "error page. First complaint: #{warnings.first}", line: warnings.first&.line
+          )
         end
       end
     end

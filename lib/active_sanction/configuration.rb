@@ -9,13 +9,6 @@ require "active_sanction/scorer/weights"
 require "active_sanction/version"
 
 module ActiveSanction
-  # Raised when the library is asked to work with settings it cannot honour --
-  # a blank User-Agent, a negative timeout. Separate from the ArgumentErrors
-  # the value objects raise: those mean "this record is malformed", this means
-  # "this installation is misconfigured", and only one of them is fixed by
-  # editing an initializer.
-  class ConfigurationError < Error; end
-
   # Library-wide settings, set once at boot:
   #
   #   ActiveSanction.configure do |c|

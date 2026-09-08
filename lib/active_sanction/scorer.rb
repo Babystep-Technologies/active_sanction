@@ -177,7 +177,7 @@ module ActiveSanction
       [cutoff - adjustments.sum(&:contribution), 0.0].max
     end
 
-    # A threshold as a Float, or an ArgumentError.
+    # A threshold as a Float, or a QueryError.
     #
     # This is the boundary where the library changes units: everything below
     # this stage is a similarity on a 0..1 scale and everything above it is a
@@ -196,7 +196,7 @@ module ActiveSanction
       cutoff = threshold.to_f
       return cutoff if cutoff.between?(0.0, SCALE)
 
-      raise ArgumentError,
+      raise QueryError,
             "threshold must be between 0 and 100, got #{threshold.inspect} -- " \
             "a screening score is a percentage, not a similarity on a 0..1 scale"
     end

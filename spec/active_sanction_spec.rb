@@ -95,7 +95,7 @@ RSpec.describe ActiveSanction do
 
     # The whole point of the run: it reports a failure rather than raising one.
     it "captures a failing source rather than raising" do
-      failing = FakeSyncSource.new(:un_consolidated, error: ActiveSanction::Error.new("503"))
+      failing = FakeSyncSource.new(:un_consolidated, error: ActiveSanction::FetchError.new("503", status: 503))
 
       expect(described_class.sync!(failing)).to have_attributes(failed?: true, exit_code: 1)
     end

@@ -64,7 +64,7 @@ module ActiveSanction
       def self.from_h(hash)
         attributes = hash.to_h.transform_keys(&:to_sym)
         unknown = attributes.keys - MEMBERS
-        raise ArgumentError, "unknown Sync::Report attribute(s): #{unknown.join(", ")}" if unknown.any?
+        raise InvalidArgument, "unknown Sync::Report attribute(s): #{unknown.join(", ")}" if unknown.any?
 
         T.unsafe(self).new(**attributes)
       end
@@ -234,7 +234,7 @@ module ActiveSanction
                when nil then Time.now
                when Time then value
                when String then Time.parse(value)
-               else raise ArgumentError, "started_at is not a time: #{value.inspect}"
+               else raise InvalidArgument, "started_at is not a time: #{value.inspect}"
                end
         Time.at(time.to_i).utc
       end

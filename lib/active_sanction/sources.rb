@@ -36,20 +36,33 @@ module ActiveSanction
   module Sources
     # Two lists cannot answer to one name. Raised at load time, which is where
     # this collision is cheap to fix.
-    class DuplicateKey < Error; end
+    #
+    # A ConfigurationError, like the two below it: all three are an
+    # installation wired up wrong -- a key typed twice, a key typed wrong, an
+    # adapter that never declared what it is -- and none of them is fixed by
+    # waiting and trying again.
+    class DuplicateKey < ConfigurationError; end
 
     # A key nothing is registered under: a typo in `config.sources`, a CLI
     # argument, or an adapter whose file was never required.
-    class UnknownSource < Error; end
+    class UnknownSource < ConfigurationError; end
 
     # An adapter that does not declare what the contract requires, or is asked
     # for a declaration it never made.
-    class DeclarationError < Error; end
+    class DeclarationError < ConfigurationError; end
 
     # The bytes of one of a source's files could not be obtained -- the
     # publisher confirmed a copy we do not hold, and re-asking for it in full
     # did not produce one either.
-    class MissingPayload < Error; end
+    #
+    # Retryable: it is a publisher or an intermediary cache in a state it will
+    # not be in an hour from now, and the next run usually just works.
+    class MissingPayload < FetchError
+      extend T::Sig
+
+      sig { returns(T::Boolean) }
+      def retryable? = retryable_or(true)
+    end
 
     MUTEX = T.let(Mutex.new, Mutex)
     private_constant :MUTEX
@@ -152,7 +165,7 @@ module ActiveSanction
       sig { params(source: T.untyped).returns(Symbol) }
       def registrable!(source)
         unless source.respond_to?(:key) && source.respond_to?(:new)
-          raise ArgumentError, "a source must answer .key and .new, got #{source.inspect}"
+          raise InvalidArgument, "a source must answer .key and .new, got #{source.inspect}"
         end
 
         Definition.key!(source.key)

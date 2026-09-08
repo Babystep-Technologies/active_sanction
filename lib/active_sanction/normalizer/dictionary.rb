@@ -128,7 +128,8 @@ module ActiveSanction
         return nil if type.nil?
 
         unless Entity::TYPES.include?(type)
-          raise ArgumentError, "unknown entity type #{type.inspect}; expected one of #{Entity::TYPES.join(", ")} or nil"
+          raise InvalidArgument,
+                "unknown entity type #{type.inspect}; expected one of #{Entity::TYPES.join(", ")} or nil"
         end
 
         stoplist = @stoplists[type]

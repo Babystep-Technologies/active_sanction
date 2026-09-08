@@ -22,7 +22,7 @@ module ActiveSanction
     # named the source itself: screening against a list that turns out not to
     # be there has to fail loudly, because the result of screening against
     # nothing is a clean report.
-    class MissingSnapshot < Error; end
+    class MissingSnapshot < StorageError; end
 
     # A stored snapshot that cannot be trusted to be what it says it is: a
     # truncated file, bytes that no longer hash to the checksum recorded beside
@@ -35,7 +35,7 @@ module ActiveSanction
     # one, which is the most expensive thing this library can get wrong. An
     # operator can always delete the list and re-sync; nobody can recover a
     # screening decision made against a list that was quietly half there.
-    class CorruptSnapshot < Error; end
+    class CorruptSnapshot < StorageError; end
 
     # A stored snapshot written under a Snapshot::SCHEMA_VERSION this code does
     # not know how to read -- almost always because the directory was written
@@ -47,7 +47,7 @@ module ActiveSanction
     # schema will usually still deserialize -- into records missing whatever
     # the new version added, with a checksum that verifies, and with no
     # symptom other than names that stop matching.
-    class UnsupportedSchema < Error; end
+    class UnsupportedSchema < StorageError; end
   end
 end
 

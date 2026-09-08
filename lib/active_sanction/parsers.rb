@@ -18,7 +18,13 @@ module ActiveSanction
     # A payload that could not be read at all: the wrong format, a truncated
     # download, an encoding that cannot be decoded. Distinct from a Warning,
     # which is a *row* that could not be read while the rest of the file could.
-    class ParseError < Error; end
+    #
+    # The same class as ActiveSanction::ParseError, under the name the toolkits
+    # raise it by. It is declared with the rest of the public hierarchy rather
+    # than here because a caller rescuing "this list could not be read" should
+    # not have to know which of these toolkits read it -- and because a source
+    # adapter parsing a format none of them covers raises the same thing.
+    ParseError = ActiveSanction::ParseError
 
     # One row the parser could not use, kept rather than raised.
     #

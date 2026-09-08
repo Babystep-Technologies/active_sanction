@@ -115,12 +115,16 @@ module ActiveSanction
           @warnings << Warning.new(line: line, message: message)
         end
 
+        # The line the backend stopped on is carried through, because that is
+        # the whole difference between "this 25 MB file is not XML" and a
+        # complaint somebody can open an editor to.
         sig { params(error: MalformedDocument).void }
         def give_up!(error)
-          raise ParseError,
-                "no <#{table.record_names.join("> or <")}> element could be read before the document stopped " \
-                "being XML. This payload is almost certainly not the XML it was read as -- check the URL, " \
-                "and whether the publisher served an error page. #{error.message}"
+          raise ParseError.new(
+            "no <#{table.record_names.join("> or <")}> element could be read before the document stopped " \
+            "being XML. This payload is almost certainly not the XML it was read as -- check the URL, " \
+            "and whether the publisher served an error page. #{error.message}", line: error.line
+          )
         end
       end
     end

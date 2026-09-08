@@ -150,7 +150,7 @@ module ActiveSanction
       def from_h(hash)
         attributes = hash.to_h.transform_keys(&:to_sym)
         unknown = attributes.keys - MEMBERS
-        raise ArgumentError, "unknown MatchResult attribute(s): #{unknown.join(", ")}" if unknown.any?
+        raise InvalidArgument, "unknown MatchResult attribute(s): #{unknown.join(", ")}" if unknown.any?
 
         # `new(**hash)` past required keyword parameters is one of the few
         # things Sorbet cannot check statically. #initialize validates what
@@ -259,20 +259,20 @@ module ActiveSanction
     def instance!(member, klass, value)
       return value if value.is_a?(klass)
 
-      raise ArgumentError, "#{member} must be an #{klass}, got #{value.class}"
+      raise InvalidArgument, "#{member} must be an #{klass}, got #{value.class}"
     end
 
     sig { params(value: T.untyped).returns(Query) }
     def query!(value)
       return Query.build(value) unless value.nil?
 
-      raise ArgumentError, "query is required -- a hit that cannot say what was screened is half a record"
+      raise InvalidArgument, "query is required -- a hit that cannot say what was screened is half a record"
     end
 
     sig { params(value: T.untyped).returns(T::Array[Scorer::Reason]) }
     def explanation!(value)
       reasons = Array(value)
-      raise ArgumentError, "a result needs at least one reason -- the score is the explanation" if reasons.empty?
+      raise InvalidArgument, "a result needs at least one reason -- the score is the explanation" if reasons.empty?
 
       reasons.each { |reason| instance!(:explanation, Scorer::Reason, reason) }
       reasons.dup.freeze
@@ -286,7 +286,7 @@ module ActiveSanction
       computed = explanation.sum(&:contribution).round(Scorer::Reason::PRECISION).to_f
       return computed if supplied.nil? || Float(supplied).round(Scorer::Reason::PRECISION) == computed
 
-      raise ArgumentError,
+      raise InvalidArgument,
             "score #{supplied} is not what this explanation comes to (#{computed}). The score is the sum of " \
             "the reasons, so a result whose reasons no longer explain it cannot be built"
     end
@@ -294,7 +294,7 @@ module ActiveSanction
     sig { params(member: Symbol, value: T.untyped).returns(String) }
     def string!(member, value)
       string = value.to_s.strip
-      raise ArgumentError, "#{member} is required" if string.empty?
+      raise InvalidArgument, "#{member} is required" if string.empty?
 
       -string
     end
@@ -310,7 +310,7 @@ module ActiveSanction
              when nil then Time.now
              when Time then value
              when String then Time.parse(value)
-             else raise ArgumentError, "screened_at is not a time: #{value.inspect}"
+             else raise InvalidArgument, "screened_at is not a time: #{value.inspect}"
              end
       Time.at(time.to_i).utc
     end

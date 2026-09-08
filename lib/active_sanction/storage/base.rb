@@ -65,7 +65,7 @@ module ActiveSanction
       # given.
       sig { params(_snapshot: T.untyped).returns(Snapshot) }
       def write_snapshot(_snapshot)
-        raise NotImplementedError, "#{self.class} must implement #write_snapshot(snapshot)"
+        raise UnsupportedError, "#{self.class} must implement #write_snapshot(snapshot)"
       end
 
       # The stored snapshot, or nil when the source has never been synced.
@@ -77,7 +77,7 @@ module ActiveSanction
       # different states, and only one of them is safe to screen against.
       sig { params(_source: T.untyped).returns(T.nilable(Snapshot)) }
       def read_snapshot(_source)
-        raise NotImplementedError, "#{self.class} must implement #read_snapshot(source)"
+        raise UnsupportedError, "#{self.class} must implement #read_snapshot(source)"
       end
 
       # Drops a source's snapshot and returns whether there was one to drop.
@@ -85,14 +85,14 @@ module ActiveSanction
       # state the caller asked for.
       sig { params(_source: T.untyped).returns(T::Boolean) }
       def delete_snapshot(_source)
-        raise NotImplementedError, "#{self.class} must implement #delete_snapshot(source)"
+        raise UnsupportedError, "#{self.class} must implement #delete_snapshot(source)"
       end
 
       # Every source with a stored snapshot, sorted, so a CLI listing and a
       # sync summary do not reshuffle themselves between runs.
       sig { returns(T::Array[Symbol]) }
       def sources
-        raise NotImplementedError, "#{self.class} must implement #sources"
+        raise UnsupportedError, "#{self.class} must implement #sources"
       end
 
       # What is stored for a source without reading the list: fetched_at,
@@ -115,7 +115,7 @@ module ActiveSanction
       sig { params(source: T.untyped).returns(Snapshot) }
       def fetch_snapshot(source)
         key = source_key!(source)
-        read_snapshot(key) || raise(MissingSnapshot, missing_message(key))
+        read_snapshot(key) || raise(MissingSnapshot.new(missing_message(key), source_id: key))
       end
 
       # Every entity from every stored list, or from the ones named:
@@ -197,7 +197,7 @@ module ActiveSanction
       sig { params(value: T.untyped).returns(Snapshot) }
       def snapshot!(value)
         unless value.is_a?(Snapshot)
-          raise ArgumentError, "write_snapshot takes an ActiveSanction::Snapshot, got #{value.class}"
+          raise InvalidArgument, "write_snapshot takes an ActiveSanction::Snapshot, got #{value.class}"
         end
 
         value

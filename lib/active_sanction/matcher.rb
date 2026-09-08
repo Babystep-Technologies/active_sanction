@@ -92,7 +92,7 @@ module ActiveSanction
     # Separate from Storage::MissingSnapshot, which is about one named list:
     # this is an installation that has not run a sync yet, and the fix is a
     # different sentence.
-    class NotSynced < Error; end
+    class NotSynced < StorageError; end
 
     # Which lists this matcher holds, and the checksum of each. The stamp on
     # every result comes from here.
@@ -162,7 +162,7 @@ module ActiveSanction
       def requested(store, sources)
         unless sources.nil?
           keys = Array(sources).map { |key| Sources::Definition.key!(key) }.uniq
-          raise ArgumentError, "sources cannot be empty -- omit it to screen every stored list" if keys.empty?
+          raise InvalidArgument, "sources cannot be empty -- omit it to screen every stored list" if keys.empty?
 
           return keys
         end
@@ -242,7 +242,7 @@ module ActiveSanction
     # microsecond apart.
     sig { params(queries: T.untyped, overrides: T.untyped).returns(T::Array[T::Array[MatchResult]]) }
     def screen_all(queries, **overrides)
-      raise ArgumentError, "screen_all takes an Array of queries, got #{queries.class}" unless queries.is_a?(Array)
+      raise QueryError, "screen_all takes an Array of queries, got #{queries.class}" unless queries.is_a?(Array)
 
       screened_at = Time.now.utc
       queries.map { |query| run(Query.build(query, **overrides), screened_at) }
@@ -325,7 +325,7 @@ module ActiveSanction
       raise NotSynced, "a matcher needs at least one list to screen against" if checksums.empty?
 
       blank = checksums.select { |_, checksum| checksum.empty? }.keys
-      raise ArgumentError, "no snapshot checksum for #{blank.join(", ")}" if blank.any?
+      raise InvalidArgument, "no snapshot checksum for #{blank.join(", ")}" if blank.any?
 
       checksums.freeze
     end
@@ -337,9 +337,9 @@ module ActiveSanction
       integer = begin
         Integer(value)
       rescue TypeError, ArgumentError
-        raise ArgumentError, "candidate_limit must be a whole number of names, got #{value.inspect}"
+        raise InvalidArgument, "candidate_limit must be a whole number of names, got #{value.inspect}"
       end
-      raise ArgumentError, "candidate_limit must be at least 1, got #{integer}" unless integer.positive?
+      raise InvalidArgument, "candidate_limit must be at least 1, got #{integer}" unless integer.positive?
 
       integer
     end

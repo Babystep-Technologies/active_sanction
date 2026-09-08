@@ -51,12 +51,26 @@ module ActiveSanction
     # OpenSSL errors are deliberately absent: a certificate that does not
     # verify will not verify a second later either, and quietly retrying a TLS
     # failure against a government endpoint is not a behaviour worth having.
+    # See FATAL_ERRORS, which is where they go instead.
     TRANSIENT_ERRORS = T.let(
       [
         EOFError, IOError, SocketError, Net::HTTPBadResponse, Net::ProtocolError,
         Errno::ECONNABORTED, Errno::ECONNREFUSED, Errno::ECONNRESET,
         Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::EPIPE, Errno::ETIMEDOUT
       ].freeze,
+      T::Array[T.class_of(StandardError)]
+    )
+
+    # Failures translated on the first attempt rather than retried. A caller
+    # rescuing FetchError should not have to know that this client speaks
+    # `net/http`, and it certainly should not have to know that `net/http`
+    # speaks OpenSSL -- but a bad certificate is still not worth a second
+    # request, so it becomes a ConnectionError that says `retryable?` is false.
+    #
+    # Guarded because `net/http` loads OpenSSL optionally, and a Ruby built
+    # without it can still fetch a list over plain HTTP.
+    FATAL_ERRORS = T.let(
+      (defined?(::OpenSSL::SSL::SSLError) ? [::OpenSSL::SSL::SSLError] : []).freeze,
       T::Array[T.class_of(StandardError)]
     )
 
@@ -220,6 +234,8 @@ module ActiveSanction
         begin
           response = block.call
           return response unless retry_status?(response, attempt)
+        rescue *FATAL_ERRORS => e
+          raise ConnectionError.new(failure_message(uri, e, attempt), retryable: false)
         rescue Timeout::Error => e
           raise TimeoutError, failure_message(uri, e, attempt) unless attempt <= max_retries
         rescue *TRANSIENT_ERRORS => e
@@ -266,11 +282,11 @@ module ActiveSanction
     sig { params(url: T.untyped).returns(URI::Generic) }
     def uri!(url)
       uri = url.is_a?(URI::Generic) ? url : URI.parse(url.to_s)
-      raise ArgumentError, "#{url.inspect} is not an http(s) URL" unless uri.is_a?(URI::HTTP) && uri.host
+      raise InvalidArgument, "#{url.inspect} is not an http(s) URL" unless uri.is_a?(URI::HTTP) && uri.host
 
       uri
     rescue URI::InvalidURIError => e
-      raise ArgumentError, "#{url.inspect} is not a URL: #{e.message}"
+      raise InvalidArgument, "#{url.inspect} is not a URL: #{e.message}"
     end
 
     # `Location` is allowed to be relative, and publishers use that, so it is

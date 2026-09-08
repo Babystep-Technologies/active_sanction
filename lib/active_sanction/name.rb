@@ -80,7 +80,7 @@ module ActiveSanction
     def self.from_h(hash)
       attributes = hash.to_h.transform_keys(&:to_sym)
       unknown = attributes.keys - MEMBERS
-      raise ArgumentError, "unknown Name attribute(s): #{unknown.join(", ")}" if unknown.any?
+      raise InvalidArgument, "unknown Name attribute(s): #{unknown.join(", ")}" if unknown.any?
 
       # `new(**hash)` past a required keyword parameter is one of the few
       # things Sorbet cannot check statically. #initialize validates what
@@ -158,7 +158,7 @@ module ActiveSanction
     sig { params(value: T.untyped).returns(String) }
     def value!(value)
       string = value.to_s.strip
-      raise ArgumentError, "value is required" if string.empty?
+      raise InvalidArgument, "value is required" if string.empty?
 
       -string
     end
@@ -168,13 +168,13 @@ module ActiveSanction
     # and no adapter should have to remember which. A wrong value still raises.
     sig { params(member: Symbol, value: T.untyped).returns(Symbol) }
     def enum!(member, value)
-      raise ArgumentError, "#{member} is required" if value.to_s.empty?
+      raise InvalidArgument, "#{member} is required" if value.to_s.empty?
 
       symbol = value.to_s.downcase.to_sym
       permitted = ENUMS.fetch(member)
       return symbol if permitted.include?(symbol)
 
-      raise ArgumentError, "unknown #{member} #{symbol.inspect}, expected one of #{permitted.join(", ")}"
+      raise InvalidArgument, "unknown #{member} #{symbol.inspect}, expected one of #{permitted.join(", ")}"
     end
   end
 end

@@ -82,7 +82,7 @@ module ActiveSanction
       def self.from_h(hash)
         attributes = hash.to_h.transform_keys(&:to_sym)
         unknown = attributes.keys - MEMBERS
-        raise ArgumentError, "unknown Meta attribute(s): #{unknown.join(", ")}" if unknown.any?
+        raise InvalidArgument, "unknown Meta attribute(s): #{unknown.join(", ")}" if unknown.any?
 
         # `new(**hash)` past required keyword parameters is one of the few
         # things Sorbet cannot check statically. #initialize validates what
@@ -155,14 +155,14 @@ module ActiveSanction
         time = case value
                when Time then value
                when String then Time.parse(value)
-               else raise ArgumentError, "fetched_at is not a time: #{value.inspect}"
+               else raise InvalidArgument, "fetched_at is not a time: #{value.inspect}"
                end
         Time.at(time.to_i).utc
       end
 
       sig { params(member: Symbol, value: T.untyped).returns(Symbol) }
       def symbol!(member, value)
-        raise ArgumentError, "#{member} is required" if value.nil? || value.to_s.empty?
+        raise InvalidArgument, "#{member} is required" if value.nil? || value.to_s.empty?
 
         value.to_sym
       end
@@ -170,7 +170,7 @@ module ActiveSanction
       sig { params(member: Symbol, value: T.untyped).returns(String) }
       def string!(member, value)
         string = value.to_s.strip
-        raise ArgumentError, "#{member} is required" if string.empty?
+        raise InvalidArgument, "#{member} is required" if string.empty?
 
         -string
       end
@@ -178,7 +178,7 @@ module ActiveSanction
       sig { params(value: T.untyped).returns(Integer) }
       def count!(value)
         integer = Integer(value)
-        raise ArgumentError, "record_count cannot be negative, got #{integer}" if integer.negative?
+        raise InvalidArgument, "record_count cannot be negative, got #{integer}" if integer.negative?
 
         integer
       end
