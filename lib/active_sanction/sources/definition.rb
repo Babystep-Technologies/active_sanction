@@ -132,6 +132,40 @@ module ActiveSanction
         declared_urls[name.to_sym] = address!(name, address)
       end
 
+      # A lower bound this list is held to when there is nothing to compare it
+      # against -- a first sync, a new source, a store that was cleared:
+      #
+      #   floor :record_count,     400
+      #   floor :remarks_coverage, 0.90
+      #   floor :fill_addresses,   0.30
+      #
+      # The name is a Doctor check name; the value is the least it may be
+      # without the diagnosis saying so. Reads back with one argument, and
+      # every declared floor with none.
+      #
+      # These are deliberately coarse and deliberately few. A number committed
+      # here goes stale on its own, and the day somebody widens one to make a
+      # build pass is the day it stops being read -- which is why Doctor
+      # compares against the last stored snapshot instead, and uses these only
+      # where there is no snapshot to compare with. Declare a floor no
+      # published version of the list has ever come close to, and let the
+      # baseline do the real work.
+      sig { params(name: T.untyped, value: T.untyped).returns(T.untyped) }
+      def floor(name = UNSET, value = UNSET)
+        return floors if unset?(name)
+        return floors[symbol!(:floor, name)] if unset?(value)
+
+        declared_floors[symbol!(:floor, name)] = floor!(name, value)
+      end
+
+      # Every floor that applies to this adapter, inherited ones included. A
+      # subclass declaring the same name replaces its parent's, so an adapter
+      # over a list a tenth the size of its sibling's says so once.
+      sig { returns(T::Hash[Symbol, Numeric]) }
+      def floors
+        lineage.reverse.inject({}) { |all, klass| all.merge(klass.declared_floors) }.freeze
+      end
+
       # Every declared file, in declaration order, inherited ones first.
       sig { returns(T::Hash[Symbol, String]) }
       def urls
@@ -179,6 +213,14 @@ module ActiveSanction
       sig { returns(T::Hash[Symbol, String]) }
       def declared_urls
         @declared_urls ||= T.let({}, T.nilable(T::Hash[Symbol, String]))
+      end
+
+      # The floors declared on this exact class, ignoring anything inherited.
+      # Public for the same reason #declared_urls is: resolving one means
+      # walking the superclass chain asking each class what it declared.
+      sig { returns(T::Hash[Symbol, Numeric]) }
+      def declared_floors
+        @declared_floors ||= T.let({}, T.nilable(T::Hash[Symbol, Numeric]))
       end
 
       private
@@ -242,6 +284,15 @@ module ActiveSanction
         raise DeclarationError, "#{self} #{name} cannot be blank" if string.empty?
 
         -string
+      end
+
+      sig { params(name: T.untyped, value: T.untyped).returns(Numeric) }
+      def floor!(name, value)
+        raise DeclarationError, "#{self} #{name} floor must be a number, got #{value.inspect}" unless
+          value.is_a?(Numeric)
+        raise DeclarationError, "#{self} #{name} floor cannot be negative, got #{value}" if value.negative?
+
+        value
       end
 
       sig { params(name: T.untyped, value: T.untyped).returns(String) }

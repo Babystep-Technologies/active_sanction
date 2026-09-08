@@ -39,6 +39,13 @@ module ActiveSanction
           T::Hash[String, Symbol]
         )
 
+        # The SDN_Type values this record class knows how to map, as a method
+        # rather than as the constant itself: a subclass reading a list that
+        # publishes a fourth one declares its own TYPES, and the caller asking
+        # -- Ofac#column_assertions -- has only the class in hand.
+        sig { returns(T::Array[String]) }
+        def self.published_types = TYPES.keys
+
         # ALT.CSV's `alt_type`, which OFAC publishes as exactly these three.
         ALIAS_KINDS = T.let({ "aka" => :aka, "fka" => :fka, "nka" => :nka }.freeze, T::Hash[String, Symbol])
 

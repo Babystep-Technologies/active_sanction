@@ -8,6 +8,7 @@ require "active_sanction/error"
 require "active_sanction/entity"
 require "active_sanction/snapshot"
 require "active_sanction/fetcher"
+require "active_sanction/parsers"
 require "active_sanction/payload_cache"
 require "active_sanction/sources"
 require "active_sanction/sources/definition"
@@ -116,6 +117,12 @@ module ActiveSanction
       sig { params(name: T.untyped).returns(Symbol) }
       def file_key(name) = self.class.file_key(name)
 
+      # The lower bounds this list is held to when there is nothing to compare
+      # it against. See Definition#floor, and Doctor, which is the only thing
+      # that reads them.
+      sig { returns(T::Hash[Symbol, Numeric]) }
+      def floors = self.class.floors
+
       # A remark with everything this adapter appended stripped back off --
       # the publisher's own words and nothing else. Inherited, so it reads the
       # same for every source and a caller does not have to know which list a
@@ -176,6 +183,25 @@ module ActiveSanction
         raise e.in_source(declared_key)
       end
 
+      # The positional-column assertions this source's raw files satisfy, or
+      # do not. Takes what #retrieve returned, or what #snapshot would be given,
+      # and answers with one Parsers::ColumnShape::Tally per declared column.
+      #
+      # Empty here, because most publishers ship a file that names its own
+      # fields and a named field cannot be quietly swapped with the one beside
+      # it. An adapter over a headerless file overrides #column_shapes -- see
+      # Sources::Ofac, and Parsers::ColumnShape for why a declared width is not
+      # enough on its own.
+      sig { params(payloads: T.untyped, files: T.untyped).returns(T::Array[Parsers::ColumnShape::Tally]) }
+      def column_tallies(payloads = nil, **files)
+        column_shapes(parse_argument(payloads || files))
+      end
+
+      # The hook #column_tallies dispatches to, handed exactly what #parse is
+      # handed. Overridden by an adapter over a positional file.
+      sig { params(_raw: T.untyped).returns(T::Array[Parsers::ColumnShape::Tally]) }
+      def column_shapes(_raw) = []
+
       # Whether any of this source's files is due a fetch, answered locally and
       # without a request. See Fetcher#stale? for what that does and does not
       # claim.
@@ -198,6 +224,19 @@ module ActiveSanction
         "#<#{self.class} #{name} #{urls.size} url(s)>"
       end
 
+      # What #parse is handed, worked out from what #retrieve returned: the
+      # bytes for a source declaring one file, the Hash keyed by declaration
+      # name for one declaring several. Public because a caller that has
+      # already fetched -- Doctor, which parses and then reads the same
+      # payloads a second time -- has to be able to produce the same argument
+      # without knowing how many files this source declares.
+      sig { params(payloads: T.untyped).returns(T.untyped) }
+      def parse_argument(payloads)
+        return payloads if payloads.is_a?(String)
+
+        self.class.multi_url? ? payloads.to_h : payloads.to_h.values.first
+      end
+
       private
 
       # This adapter's key, or nil for one that never declared it. What
@@ -208,16 +247,6 @@ module ActiveSanction
       # and it is the boundary a caller rescues at.
       sig { returns(T.nilable(Symbol)) }
       def declared_key = self.class.declared?(:key) ? key : nil
-
-      # One declared URL, one payload: #parse gets the bytes. Several, and it
-      # gets the Hash. Bytes handed straight to #snapshot are already the
-      # former, which is what reading a fixture off disk produces.
-      sig { params(payloads: T.untyped).returns(T.untyped) }
-      def parse_argument(payloads)
-        return payloads if payloads.is_a?(String)
-
-        self.class.multi_url? ? payloads.to_h : payloads.to_h.values.first
-      end
 
       sig { params(name: Symbol, address: String, force: T::Boolean).returns(Fetcher::Result) }
       def fetch_file(name, address, force)

@@ -177,6 +177,30 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
 - `ActiveSanction.diff`: additions, delistings and amendments between two snapshots, joined by
   entity id, so a book of business is re-screened against what moved
   ([#35](https://github.com/Babystep-Technologies/active_sanction/issues/35)).
+- `ActiveSanction.doctor`: whether a source's format has drifted, aggregated out of the health
+  signals a normal fetch and parse already produce
+  ([#68](https://github.com/Babystep-Technologies/active_sanction/issues/68)). It catches the
+  format change a sync cannot see — the one where the file still parses cleanly and means
+  something different, which today nothing would notice for months.
+  - **Field fill rates per source**, the check that catches a clean parse of a changed file:
+    19,321 entities carrying zero passports looks exactly as healthy as 19,321 carrying 23,429
+    if the only thing counted is records. Measured over the records that could carry the field,
+    so a date of birth is a share of individuals.
+  - **The baseline is the last stored snapshot**, not a threshold committed per adapter — one
+    of those goes stale on its own, and the day somebody widens it to make a build pass is the
+    day it stops being read. Floors declared with `floor :remarks_coverage, 0.90` remain as a
+    coarse backstop for a run with nothing to compare against.
+  - **Column shape assertions for positional files.** OFAC ships headerless CSVs, so the
+    declared width catches a column *inserted* upstream and nothing catches one *reordered* —
+    which parses cleanly and builds entities out of shifted fields. `Parsers::ColumnShape`
+    asserts what the values are, not only how many there are.
+  - Free-text coverage, warning classes and orphaned child rows compared the same way, with the
+    severities meaning something specific: `error` is a reading no publisher could produce by
+    changing its *list*, `warn` is one a human should look at before the next sync.
+  - A serializable `Doctor::Report` with `exit_code` for cron and CI, and human-readable
+    `to_s` for the CLI verb to print. **The doctor writes nothing** — not the snapshot, not the
+    payload cache, not the conditional-GET validators — so diagnosing a source can never be the
+    reason a later sync decides it is unchanged, and nothing here repairs anything.
 - `ActiveSanction.configure`, with a working default for every setting and a
   `ConfigurationError` raised where a bad value is set rather than three hours into a sync.
 - One documented error hierarchy under `ActiveSanction::Error`, which `rescue` catches

@@ -112,6 +112,42 @@ RSpec.describe ActiveSanction do
     end
   end
 
+  describe ".doctor" do
+    def un(entities = [FakeDoctorSource.entity(:un_consolidated)])
+      FakeDoctorSource.new(:un_consolidated, entities: entities)
+    end
+
+    before { described_class.configure { |c| c.storage = synced(putin) } }
+
+    it "diagnoses the sources it is given" do
+      expect(described_class.doctor(un).sources).to eq(%i[un_consolidated])
+    end
+
+    it "reports rather than raising when a source cannot be read" do
+      failing = FakeDoctorSource.new(:un_consolidated, error: ActiveSanction::FetchError.new("503", status: 503))
+
+      expect(described_class.doctor(failing)).to have_attributes(ok?: false, exit_code: 1)
+    end
+
+    # Nothing about a diagnosis may change what is being screened against.
+    it "stores nothing" do
+      described_class.doctor(un)
+
+      expect(described_class.storage.sources).to eq([:ofac_sdn])
+    end
+
+    it "passes its options to the run" do
+      expect(described_class.doctor(un, tolerance: 0.5).first.status).to eq(:checked)
+    end
+
+    it "calls the block with each diagnosis as that source finishes" do
+      seen = []
+      described_class.doctor(un) { |diagnosis| seen << diagnosis.source }
+
+      expect(seen).to eq(%i[un_consolidated])
+    end
+  end
+
   describe ".matcher" do
     before { described_class.configure { |c| c.storage = synced(putin) } }
 

@@ -201,6 +201,43 @@ RSpec.describe ActiveSanction::Sources::OfacSdn do
     end
   end
 
+  # The declared width catches a column OFAC inserts; only these catch one it
+  # reorders, which parses cleanly and builds entities out of shifted fields.
+  describe "the shape of its positional columns" do
+    def shifted
+      raw.merge(sdn: File.binread("#{fixtures}/SDN_SHIFTED.CSV"))
+    end
+
+    def tallies(payloads) = adapter.column_tallies(payloads).to_h { |tally| [tally.name, tally] }
+
+    it "reads the published file as sound" do
+      expect(tallies(raw).values).to all(be_ok)
+    end
+
+    it "fails ent_num on a file whose columns moved one place left" do
+      expect(tallies(shifted)[:ent_num]).to have_attributes(ok?: false, matched: 0)
+    end
+
+    it "names what moved into it instead" do
+      expect(tallies(shifted)[:ent_num].sample).to include("AEROCARIBBEAN AIRLINES")
+    end
+
+    it "fails sdn_type on the same file" do
+      expect(tallies(shifted)[:sdn_type]).to have_attributes(ok?: false, matched: 0)
+    end
+
+    # A type OFAC has coined and this adapter has not mapped yet is an `info`
+    # finding and a mapping to write, not a broken file -- so the assertion on
+    # sdn_type is wide enough to survive one.
+    it "tolerates a published type the adapter does not map" do
+      expect(tallies(raw)[:sdn_type]).to have_attributes(ok?: true, matched: 4, checked: 5)
+    end
+
+    it "does not count the rows where OFAC wrote its null sentinel" do
+      expect(tallies(raw)[:sdn_type].blank).to eq(3)
+    end
+  end
+
   describe "syncing end to end" do
     let(:cache_dir) { Dir.mktmpdir("active_sanction_ofac") }
     let(:fetcher) do

@@ -31,6 +31,7 @@ require "active_sanction/match_result"
 require "active_sanction/matcher"
 require "active_sanction/sync"
 require "active_sanction/diff"
+require "active_sanction/doctor"
 require "active_sanction/sources/ofac_sdn"
 require "active_sanction/sources/ofac_consolidated"
 require "active_sanction/sources/un_consolidated"
@@ -162,6 +163,42 @@ module ActiveSanction
     # which is where all of that is documented.
     sig { params(source: T.untyped, options: T.untyped).returns(Diff) }
     def diff(source = nil, **options) = T.unsafe(Diff).call(source, **options)
+
+    # Diagnoses whether a source's format has drifted -- fetching each list,
+    # parsing it, and comparing what it measures against the version that was
+    # stored at the last sync:
+    #
+    #   report = ActiveSanction.doctor                    # every configured source
+    #   report = ActiveSanction.doctor(:ofac_sdn)         # one
+    #   report = ActiveSanction.doctor(tolerance: 0.05)   # report smaller movements
+    #
+    #   report.ok?        # => false
+    #   report.findings   # => [Doctor::Finding, ...]
+    #   puts report
+    #   exit report.exit_code
+    #
+    # The failure this exists for is the one a sync cannot see: a file that
+    # still parses cleanly and means something different. 19,321 entities
+    # carrying zero passports looks exactly as healthy as 19,321 carrying
+    # 23,429 if all anyone counts is records, and screening a passport number
+    # against the first returns a clean result for somebody who is on the list.
+    #
+    # Nothing is written -- not the snapshot, not the payload cache, not the
+    # conditional-GET validators -- so a diagnosis can never be the reason a
+    # sync skipped a list that changed, and nothing here repairs anything.
+    # Deciding that a 40% drop in record count is a delisting wave rather than
+    # a broken parse is a judgment call this library does not make. See Doctor,
+    # which is where all of that is documented.
+    #
+    # The block, if given, is called with each Doctor::Diagnosis as that source
+    # finishes.
+    sig do
+      params(sources: T.untyped, options: T.untyped,
+             block: T.nilable(T.proc.params(diagnosis: Doctor::Diagnosis).void)).returns(Doctor::Report)
+    end
+    def doctor(*sources, **options, &block)
+      T.unsafe(Doctor).new(sources: sources, **options).call(&block)
+    end
 
     # Screens a list of names, returning one array of results per query, in
     # the order they were given. See Matcher#screen_all.

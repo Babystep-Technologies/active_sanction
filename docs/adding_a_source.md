@@ -579,6 +579,53 @@ rescue either: one source's failure being isolated from the others is a decision
 about a *run*, and it belongs to sync orchestration, which needs an exception
 here to notice.
 
+### What the doctor reads, and the two hooks it offers
+
+`ActiveSanction.doctor` diagnoses whether a list still parses the way we think
+it does, and it works entirely from what an adapter already produces: the record
+count, the fill rates of every canonical field, `#warnings`, `#orphans` and
+`#remarks_coverage` where those exist. An adapter that follows the convention
+above is diagnosed with no extra work — the doctor asks what your adapter
+responds to and measures whatever it finds.
+
+Two things are worth declaring on top of that, and both are optional.
+
+**A floor**, for the run that has nothing to compare against. The doctor's real
+baseline is the snapshot the last sync stored, which never goes stale; a floor
+is a coarse backstop for a first sync, a new source, or a store that was
+cleared:
+
+```ruby
+floor :remarks_coverage, 0.90
+floor :record_count, 400
+```
+
+The name is a doctor check name (`:record_count`, `:remarks_coverage`,
+`:fill_addresses`, and so on) and the value is the least it may be without the
+diagnosis saying so. Declare few, and declare them wide. A number committed here
+goes stale on its own, and the day somebody widens one to make a build pass is
+the day it stops being read.
+
+**A column shape**, if — and only if — the publisher ships a *positional* file.
+Declaring the column names already pins the width, so a column inserted upstream
+arrives as a wrong-width row and every row warns. A column *reordered* upstream
+keeps the width, parses cleanly, and builds every record out of shifted fields;
+nothing raises and nothing warns. Assert what the values are, not only how many
+there are:
+
+```ruby
+def column_shapes(raw)
+  rows = LIST.read(raw).to_a
+  [Parsers::ColumnShape.new(name: :ent_num, matches: /\A\d+\z/, description: "numeric")]
+    .map { |shape| shape.tally(rows.map { |row| row[shape.name] }) }
+end
+```
+
+A file that names its own columns needs none of this, which is most of them.
+Pick a threshold you could defend on a published file rather than on your
+fixture: these are not validated files, and one row where somebody typed a
+letter into a numeric column is a curiosity rather than a format change.
+
 ## 8. Capture a fixture and wire up the conformance spec
 
 ### The fixture
@@ -995,6 +1042,8 @@ The example above is the easy shape. In roughly the order they bite:
 - [ ] The publisher's free text is kept verbatim; extra fields are appended with
       `Remarks.build`.
 - [ ] Unreadable rows become warnings; a payload that is not the list raises.
+- [ ] A `floor` for anything worth a coarse bound on a first sync, and
+      `#column_shapes` if the publisher ships a positional file.
 - [ ] A trimmed fixture of real bytes, one record per quirk, committed under
       `spec/fixtures/<key>/`.
 - [ ] `it_behaves_like "a sanction source"` passes, plus a spec that knows what
