@@ -372,7 +372,7 @@ RSpec.describe ActiveSanction::Storage::FileSystem do
 
       expect(described_class.new.root).to eq(File.join(root, "configured"))
     ensure
-      ActiveSanction.reset_configuration!
+      ActiveSanction.reset!
     end
 
     it "expands what it is given" do

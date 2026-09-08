@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe ActiveSanction::Scorer do
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   def name(value, kind: :primary, quality: nil)
     ActiveSanction::Name.new(value: value, kind: kind, quality: quality)

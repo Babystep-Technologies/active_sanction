@@ -82,9 +82,11 @@ module ActiveSanction
   # This is the Local backend's implementation (#56): `Backend::Local#screen`
   # is this call, and a hosted backend answers the same query with the same
   # MatchResults against data somebody else keeps fresh. Which one answered is
-  # on every result. Until Client (#55) lands, this object is the thing a
-  # server holds -- `ActiveSanction.screen` is sugar over a shared one, and a
-  # process that needs two configurations at once builds two of these.
+  # on every result. What a server holds is a Client (#55) rather than one of
+  # these directly, because a client is what pairs an index with the
+  # configuration it was built under; this stays the object to build by hand
+  # when a caller already has an index -- a spec, or a process screening one
+  # name against several list versions of the same store.
   class Matcher
     extend T::Sig
 

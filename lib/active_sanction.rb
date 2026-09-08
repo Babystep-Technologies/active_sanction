@@ -32,6 +32,7 @@ require "active_sanction/matcher"
 require "active_sanction/sync"
 require "active_sanction/diff"
 require "active_sanction/doctor"
+require "active_sanction/client"
 require "active_sanction/sources/ofac_sdn"
 require "active_sanction/sources/ofac_consolidated"
 require "active_sanction/sources/un_consolidated"
@@ -41,69 +42,120 @@ require "active_sanction/sources/uk_sanctions_list"
 require "active_sanction/sources/australia_dfat"
 
 module ActiveSanction
-  # Guards the memoized matcher. Building one indexes every stored list, so
-  # two threads racing to do it at boot is worth a lock; a constant rather
-  # than a memoized ivar because a lazily created lock is not one. See
-  # .matcher.
-  MATCHER_LOCK = T.let(Mutex.new, Mutex)
-  private_constant :MATCHER_LOCK
+  # Guards the default client. Building one is cheap, but replacing it drops
+  # a matcher that indexed every stored list, and two threads racing to
+  # `configure` at boot should not each get a different one. A constant rather
+  # than a memoized ivar, because a lazily created lock is not one.
+  CLIENT_LOCK = T.let(Mutex.new, Mutex)
+  private_constant :CLIENT_LOCK
+
+  # Where .with_configuration keeps the settings in force. Fiber-local, which
+  # is what `Thread#[]` means: two threads screening through two clients read
+  # two configurations, and neither can see the other's.
+  CONFIGURATION_KEY = :active_sanction_configuration
+  private_constant :CONFIGURATION_KEY
 
   class << self
     extend T::Sig
 
-    # Library-wide settings. Reading this before anything is configured builds
-    # the defaults, so nothing has to remember to initialize it.
-    sig { returns(Configuration) }
-    def config
-      @config ||= T.let(Configuration.new, T.nilable(Configuration))
+    # The client the module-level calls answer through, built from the
+    # defaults on first use so that nothing has to remember to initialize it.
+    #
+    #   ActiveSanction.client.screen("Vladimir Putin")   # same as ActiveSanction.screen(...)
+    #
+    # Everything below is sugar over this object. A process that needs two
+    # configurations at once -- a pinned list version for an audit re-run
+    # beside the current one for live traffic, one tenant's sources beside
+    # another's -- builds its own with `Client.new` and holds them itself;
+    # this one is what a script and the README quickstart use. See Client.
+    sig { returns(Client) }
+    def client
+      CLIENT_LOCK.synchronize { @client ||= T.let(Client.new, T.nilable(Client)) }
     end
+
+    # The settings in force: whatever .with_configuration has installed on
+    # this fiber, or the default client's.
+    #
+    # Frozen, because it belongs to a built client. `configure` is how it is
+    # changed, and it changes it by building a new client rather than by
+    # editing this one -- a settings object that could move underneath a
+    # running index is the thing Client exists to remove.
+    sig { returns(Configuration) }
+    def config = Thread.current[CONFIGURATION_KEY] || client.configuration
 
     # The one entry point an application is expected to call at boot:
     #
     #   ActiveSanction.configure do |c|
     #     c.user_agent = "my-app/1.0 (compliance@example.com)"
     #   end
+    #
+    # The block is handed a mutable copy of what is configured now, so
+    # settings accumulate across calls, and the copy is frozen into a new
+    # default client when the block returns. That replaces the held matcher,
+    # which is the behaviour a changed store or source list needs: an
+    # initializer that names a store must not leave a matcher behind that
+    # indexed a different one.
+    #
+    # Configure at boot, before anything screens. Later is honoured from the
+    # next call and does not reach what has already happened -- names folded
+    # under the old dictionary are already in an index, and scores recorded
+    # under the old weights were recorded under the old weights.
     sig { params(block: T.proc.params(config: Configuration).void).returns(Configuration) }
     def configure(&block)
-      block.call(config)
-      config
+      settings = client.configuration.dup
+      block.call(settings)
+      CLIENT_LOCK.synchronize { @client = T.let(Client.new(configuration: settings), T.nilable(Client)) }
+      settings
     end
 
-    # Mostly for tests, which need each example to start from the defaults
-    # rather than from whatever the last one set. Drops the memoized matcher
-    # too: it holds the weights, the candidate cap and the store that the
-    # configuration it was built under named.
-    sig { returns(Configuration) }
-    def reset_configuration!
-      @config = T.let(nil, T.nilable(Configuration))
-      reload!
-      config
+    # Runs a block with `configuration` in force, so that everything reached
+    # from inside it reads those settings rather than the default client's.
+    # This is how a Client makes its own User-Agent, dictionary, XML backend
+    # and query defaults reach code that was written against the module --
+    # the fetch layer, the normalizer, Query -- without every one of them
+    # having to be handed a configuration it does not otherwise want.
+    #
+    #   ActiveSanction.with_configuration(audit_client.configuration) { ... }
+    #
+    # The one limit is the one every fiber-local has: **a thread started
+    # inside the block does not inherit it**, and starts from the default
+    # client's settings. Code that fans out has to reinstall the
+    # configuration in each worker, which is what Sync does.
+    sig { params(configuration: Configuration, block: T.proc.returns(T.untyped)).returns(T.untyped) }
+    def with_configuration(configuration, &block)
+      previous = Thread.current[CONFIGURATION_KEY]
+      Thread.current[CONFIGURATION_KEY] = configuration
+      block.call
+    ensure
+      Thread.current[CONFIGURATION_KEY] = previous
     end
 
-    # Where synced lists are read from. Gzipped JSON under `storage_dir`
-    # unless the application named its own -- see Configuration#storage.
+    # Drops the default client and anything this fiber had installed, so the
+    # next call builds one from the defaults. What a suite runs between
+    # examples, and the reason a spec that configures a store does not leak it
+    # into the next one:
+    #
+    #   config.after { ActiveSanction.reset! }
+    #
+    # It clears the fiber-local on the calling thread only; a thread that
+    # exited holding one has already taken it with it.
+    sig { returns(T.self_type) }
+    def reset!
+      CLIENT_LOCK.synchronize { @client = T.let(nil, T.nilable(Client)) }
+      Thread.current[CONFIGURATION_KEY] = nil
+      self
+    end
+
+    # Where the default client's synced lists are read from. Gzipped JSON
+    # under `storage_dir` unless the application named its own -- see
+    # Configuration#storage.
     sig { returns(Storage::Base) }
-    def storage = config.storage
+    def storage = client.storage
 
-    # The shared matcher, built from the configured store on first use.
-    #
-    # Building it reads every stored list and indexes it, which takes seconds
-    # and tens of megabytes on a full corpus, so it happens once and is held.
-    # The result is immutable and safe to screen from concurrently -- see
-    # Matcher.
-    #
-    # A process that needs two configurations at once -- a pinned list version
-    # for an audit re-run beside the current one for live traffic, one tenant's
-    # sources beside another's -- builds its own matchers with
-    # `Matcher.build(store, sources: ...)` and holds them itself. That is what
-    # Client (#55) turns into a first-class object; this is the sugar a script
-    # and the README quickstart use.
+    # The default client's matcher, built from its store on first use.
+    # See Client#matcher, which is where all of it is documented.
     sig { returns(Matcher) }
-    def matcher
-      MATCHER_LOCK.synchronize do
-        @matcher ||= T.let(Matcher.build(storage, sources: config.sources), T.nilable(Matcher))
-      end
-    end
+    def matcher = client.matcher
 
     # Screens one name against every configured list:
     #
@@ -111,7 +163,12 @@ module ActiveSanction
     #
     # Sugar over .matcher, which is where everything this does is documented.
     sig { params(query: T.untyped, overrides: T.untyped).returns(T::Array[MatchResult]) }
-    def screen(query = nil, **overrides) = matcher.screen(query, **overrides)
+    def screen(query = nil, **overrides) = client.screen(query, **overrides)
+
+    # Screens a list of names, returning one array of results per query, in
+    # the order they were given. See Matcher#screen_all.
+    sig { params(queries: T.untyped, overrides: T.untyped).returns(T::Array[T::Array[MatchResult]]) }
+    def screen_all(queries, **overrides) = client.screen_all(queries, **overrides)
 
     # Fetches, parses and stores every configured list, and returns what each
     # one did:
@@ -134,17 +191,13 @@ module ActiveSanction
     # finishes -- the progress hook for a run that takes minutes.
     #
     # Drops the shared matcher when any list changed, so the next screening
-    # call is answered by what was just synced. A process holding its own
-    # matcher rebuilds it instead; see .matcher.
+    # call is answered by what was just synced. Not concurrent-safe against
+    # another sync of the same storage; see Client.
     sig do
       params(sources: T.untyped, options: T.untyped,
              block: T.nilable(T.proc.params(result: Sync::Result).void)).returns(Sync::Report)
     end
-    def sync!(*sources, **options, &block)
-      report = T.unsafe(Sync).new(sources: sources, **options).call(&block)
-      reload! if report.updated.any?
-      report
-    end
+    def sync!(*sources, **options, &block) = T.unsafe(client).sync!(*sources, **options, &block)
 
     # What changed between two snapshots of one source:
     #
@@ -162,7 +215,7 @@ module ActiveSanction
     # modification rather than as a delisting and a new listing. See Diff,
     # which is where all of that is documented.
     sig { params(source: T.untyped, options: T.untyped).returns(Diff) }
-    def diff(source = nil, **options) = T.unsafe(Diff).call(source, **options)
+    def diff(source = nil, **options) = T.unsafe(client).diff(source, **options)
 
     # Diagnoses whether a source's format has drifted -- fetching each list,
     # parsing it, and comparing what it measures against the version that was
@@ -196,14 +249,7 @@ module ActiveSanction
       params(sources: T.untyped, options: T.untyped,
              block: T.nilable(T.proc.params(diagnosis: Doctor::Diagnosis).void)).returns(Doctor::Report)
     end
-    def doctor(*sources, **options, &block)
-      T.unsafe(Doctor).new(sources: sources, **options).call(&block)
-    end
-
-    # Screens a list of names, returning one array of results per query, in
-    # the order they were given. See Matcher#screen_all.
-    sig { params(queries: T.untyped, overrides: T.untyped).returns(T::Array[T::Array[MatchResult]]) }
-    def screen_all(queries, **overrides) = matcher.screen_all(queries, **overrides)
+    def doctor(*sources, **options, &block) = T.unsafe(client).doctor(*sources, **options, &block)
 
     # Drops the shared matcher so the next screening call builds one over
     # what is stored now. What a process calls after a sync -- a matcher is
@@ -211,7 +257,7 @@ module ActiveSanction
     # many threads without a lock.
     sig { returns(T.self_type) }
     def reload!
-      MATCHER_LOCK.synchronize { @matcher = T.let(nil, T.nilable(Matcher)) }
+      client.reload!
       self
     end
   end

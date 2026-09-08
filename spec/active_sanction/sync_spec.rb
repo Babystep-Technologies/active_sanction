@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe ActiveSanction::Sync do
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   let(:store) { ActiveSanction::Storage::Memory.new }
 

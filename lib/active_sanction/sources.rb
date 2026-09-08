@@ -67,6 +67,15 @@ module ActiveSanction
     MUTEX = T.let(Mutex.new, Mutex)
     private_constant :MUTEX
 
+    # Built at load rather than memoized on first use. A lazily created Hash
+    # is itself a write, and the first two adapters to register in two threads
+    # would each create one and each keep the half of the registry the other
+    # could not see. Everything that writes to it holds MUTEX; reads do not,
+    # because a registry is written at load and read for the life of the
+    # process.
+    REGISTRY = T.let({}, T::Hash[Symbol, T.untyped])
+    private_constant :REGISTRY
+
     class << self
       extend T::Sig
 
@@ -155,9 +164,7 @@ module ActiveSanction
       private
 
       sig { returns(T::Hash[Symbol, T.untyped]) }
-      def registry
-        @registry ||= T.let({}, T.nilable(T::Hash[Symbol, T.untyped]))
-      end
+      def registry = REGISTRY
 
       sig { returns(String) }
       def list = registry.empty? ? "(nothing)" : keys.join(", ")

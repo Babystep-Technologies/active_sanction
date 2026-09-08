@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe ActiveSanction do
-  after { described_class.reset_configuration! }
+  after { described_class.reset! }
 
   def putin
     ActiveSanction::Entity.new(
@@ -187,13 +187,115 @@ RSpec.describe ActiveSanction do
     end
   end
 
-  describe ".reset_configuration!" do
+  describe ".client" do
+    it "is built from the defaults on first use, so nothing has to initialize it" do
+      expect(described_class.client).to be_a(ActiveSanction::Client)
+    end
+
+    it "is held, so every module-level call reaches one matcher" do
+      built = described_class.client
+
+      expect(described_class.client).to be(built)
+    end
+
+    # A settings object that could move underneath a built index is what the
+    # client replaced, so configuring builds a new one rather than editing this.
+    it "is replaced by configure, which is what drops a matcher built over the old store" do
+      before = described_class.client
+      described_class.configure { |c| c.storage = synced(putin) }
+
+      expect(described_class.client).not_to be(before)
+    end
+  end
+
+  describe ".config" do
+    it "is frozen, because it belongs to a built client" do
+      expect(described_class.config).to be_frozen
+    end
+
+    it "accumulates across configure calls rather than starting from the defaults each time" do
+      described_class.configure { |c| c.user_agent = "acme/1.0" }
+      described_class.configure { |c| c.max_retries = 0 }
+
+      expect(described_class.config).to have_attributes(user_agent: "acme/1.0", max_retries: 0)
+    end
+
+    # The default store is resolved when a client freezes its configuration, so
+    # a later `storage_dir` has to produce a store that reads the new one.
+    it "follows a storage_dir set after a default store had already been built" do
+      described_class.storage
+      described_class.configure { |c| c.storage_dir = "/tmp/active_sanction-spec-store" }
+
+      expect(described_class.config.storage.root).to eq("/tmp/active_sanction-spec-store")
+    end
+
+    it "keeps a store the application named, which is not derived from the directory" do
+      store = synced(putin)
+      described_class.configure { |c| c.storage = store }
+      described_class.configure { |c| c.max_retries = 0 }
+
+      expect(described_class.config.storage).to be(store)
+    end
+  end
+
+  describe ".with_configuration" do
+    it "puts a configuration in force for the block" do
+      settings = ActiveSanction::Configuration.new.tap { |c| c.user_agent = "acme/1.0" }
+
+      expect(described_class.with_configuration(settings) { described_class.config.user_agent }).to eq("acme/1.0")
+    end
+
+    it "puts back what was in force, so a client's settings do not outlive its call" do
+      described_class.with_configuration(ActiveSanction::Configuration.new) { nil }
+
+      expect(described_class.config).to be(described_class.client.configuration)
+    end
+
+    it "puts it back when the block raises" do
+      begin
+        described_class.with_configuration(ActiveSanction::Configuration.new) { raise "boom" }
+      rescue RuntimeError
+        nil
+      end
+
+      expect(described_class.config).to be(described_class.client.configuration)
+    end
+
+    # The one limit of a fiber-local, documented here because code that fans
+    # out has to reinstall the configuration itself -- which is what Sync does.
+    it "does not reach a thread started inside it" do
+      settings = ActiveSanction::Configuration.new.tap { |c| c.user_agent = "acme/1.0" }
+      seen = described_class.with_configuration(settings) { Thread.new { described_class.config.user_agent }.value }
+
+      expect(seen).to eq(ActiveSanction::Configuration::DEFAULT_USER_AGENT)
+    end
+  end
+
+  describe ".reset!" do
     it "drops the matcher too, which held the store the old configuration named" do
       described_class.configure { |c| c.storage = synced(putin) }
       described_class.matcher
-      described_class.reset_configuration!
+      described_class.reset!
 
       expect(described_class.config.storage).to be_a(ActiveSanction::Storage::FileSystem)
+    end
+
+    it "drops the default client, so the next call builds one from the defaults" do
+      described_class.configure { |c| c.storage = synced(putin) }
+      before = described_class.client
+
+      expect(described_class.reset!.client).not_to be(before)
+    end
+
+    it "clears a configuration this fiber had installed" do
+      settings = ActiveSanction::Configuration.new.tap { |c| c.user_agent = "acme/1.0" }
+      described_class.with_configuration(settings) { described_class.reset! }
+
+      expect(described_class.config.user_agent).to eq(ActiveSanction::Configuration::DEFAULT_USER_AGENT)
+    end
+
+    it "returns the module, so a suite can chain off it" do
+      expect(described_class.reset!).to be(described_class)
     end
   end
 end

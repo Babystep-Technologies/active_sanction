@@ -17,7 +17,7 @@ RSpec.describe ActiveSanction::PayloadCache do
 
   after do
     FileUtils.remove_entry(root)
-    ActiveSanction.reset_configuration!
+    ActiveSanction.reset!
   end
 
   def source_dir(source = :ofac_sdn) = File.join(dir, source.to_s)

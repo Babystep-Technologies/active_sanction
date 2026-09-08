@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe ActiveSanction::Matcher do
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   def listed(id, *names, source: :ofac_sdn, type: :individual, **rest)
     ActiveSanction::Entity.new(

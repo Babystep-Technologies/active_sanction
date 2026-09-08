@@ -118,9 +118,12 @@ Metrics/MethodLength:
 # orchestration (#34), which added `sync_concurrency` and the shared validation
 # a per-run `concurrency:` is held to, and 295 became 310 for the doctor (#68),
 # which added `doctor_tolerance` and the validation a per-run `tolerance:`
-# shares with it.
+# shares with it. 310 became 350 for the client (#55), and that one is not
+# another setting: it is `freeze`, `with`, `apply`, `.settings` and
+# `initialize_copy` -- the five methods that turn a global edited in place into
+# a value object a client can hold and hand around.
 Metrics/ClassLength:
-  Max: 310
+  Max: 350
   Exclude:
     # See the note on Metrics/CyclomaticComplexity below.
     - "lib/active_sanction/phonetics/double_metaphone.rb"
@@ -163,5 +166,11 @@ Metrics/PerceivedComplexity:
 Naming/BlockForwarding:
   EnforcedStyle: explicit
 
+# The same reason one line further on for `...`, which this cop wants for the
+# module's `sync!` and `doctor`: they forward every argument to the default
+# client unchanged, and they are the front door. An untyped forwarding method
+# there would be the one place the checker stops reading the public API.
 Style/ArgumentsForwarding:
   UseAnonymousForwarding: false
+  Exclude:
+    - "lib/active_sanction.rb"

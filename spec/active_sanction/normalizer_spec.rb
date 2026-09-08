@@ -222,7 +222,7 @@ RSpec.describe ActiveSanction::Normalizer do
   end
 
   describe "a host's own dictionary" do
-    after { ActiveSanction.reset_configuration! }
+    after { ActiveSanction.reset! }
 
     it "reaches the process-wide normalizer through the configuration" do
       ActiveSanction.configure { |c| c.normalizer_dictionary = { legal_forms: %w[OYJ] } }

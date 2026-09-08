@@ -9,7 +9,7 @@ require "tmpdir"
 # *nothing* escapes the hierarchy, and that is not a property any single
 # error's spec can hold.
 RSpec.describe ActiveSanction::Error do
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   # Whatever the block raised, for an example that has one thing to say about
   # it. `expect { }.to raise_error(Klass) { |e| ... }` is two expectations for

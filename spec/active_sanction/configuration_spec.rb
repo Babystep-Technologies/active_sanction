@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe ActiveSanction::Configuration do
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   describe "defaults" do
     it "identifies the library, since a publisher watching its logs needs something to name" do
@@ -523,6 +523,82 @@ RSpec.describe ActiveSanction::Configuration do
     end
   end
 
+  describe "#freeze" do
+    it "settles the default store on the way through, since a frozen object cannot memoize one" do
+      config = described_class.new.tap { |c| c.storage_dir = "/srv/lists" }.freeze
+
+      expect(config.storage).to be_a(ActiveSanction::Storage::FileSystem)
+    end
+
+    it "freezes the source list, so a caller holding the array cannot edit the lists a client syncs" do
+      config = described_class.new.tap { |c| c.sources = %i[ofac_sdn] }.freeze
+
+      expect { config.sources << :un_consolidated }.to raise_error(FrozenError)
+    end
+
+    it "refuses a setting after it, which is the whole point of a built client" do
+      expect { described_class.new.freeze.user_agent = "acme/1.0" }.to raise_error(FrozenError)
+    end
+  end
+
+  describe "#with" do
+    it "copies these settings with some of them changed" do
+      config = described_class.new.tap { |c| c.user_agent = "acme/1.0" }.freeze
+
+      expect(config.with(max_retries: 0)).to have_attributes(user_agent: "acme/1.0", max_retries: 0)
+    end
+
+    it "leaves the configuration it copied alone" do
+      config = described_class.new.freeze
+      config.with(max_retries: 0)
+
+      expect(config.max_retries).to eq(described_class::DEFAULT_MAX_RETRIES)
+    end
+
+    it "comes back unfrozen, so a frozen configuration is a value object rather than a dead end" do
+      expect(described_class.new.freeze.with(max_retries: 0)).not_to be_frozen
+    end
+
+    # A default store carries the directory it was built from, so a copy that
+    # moves the directory has to build its own or it reads the old one.
+    it "rebuilds the default store when the copy moves the directory" do
+      config = described_class.new.tap { |c| c.storage_dir = "/srv/lists" }.freeze
+
+      expect(config.with(storage_dir: "/srv/other").storage.root).to eq("/srv/other")
+    end
+
+    it "carries over a store the host supplied, which no directory derives" do
+      memory = ActiveSanction::Storage::Memory.new
+      config = described_class.new.tap { |c| c.storage = memory }.freeze
+
+      expect(config.with(storage_dir: "/srv/other").storage).to be(memory)
+    end
+
+    it "holds a value to the same rule the writer holds it to" do
+      expect { described_class.new.with(user_agent: " ") }
+        .to raise_error(ActiveSanction::ConfigurationError, /user_agent is required/)
+    end
+
+    # A misspelled setting that is silently dropped is an installation running
+    # on a default somebody thinks they changed.
+    it "raises on a setting it does not have, and names the ones it does" do
+      expect { described_class.new.with(user_agnet: "acme/1.0") }
+        .to raise_error(ActiveSanction::ConfigurationError, /unknown setting\(s\): user_agnet.+user_agent/m)
+    end
+  end
+
+  describe ".settings" do
+    it "is every setting a caller may name" do
+      expect(described_class.settings).to include(:user_agent, :storage, :sources, :screening_threshold)
+    end
+
+    # Read off the writers rather than listed, so a setting added to this class
+    # is accepted by `Client.new` without anything remembering to say so twice.
+    it "names nothing that is not a writer" do
+      expect(described_class.settings.reject { |name| described_class.method_defined?(:"#{name}=") }).to be_empty
+    end
+  end
+
   describe "ActiveSanction.configure" do
     it "yields the global configuration" do
       ActiveSanction.configure { |c| c.user_agent = "my-app/1.0 (compliance@example.com)" }
@@ -538,9 +614,9 @@ RSpec.describe ActiveSanction::Configuration do
       expect(ActiveSanction.config).to be_a(described_class)
     end
 
-    it "is reset back to the defaults by reset_configuration!" do
+    it "is reset back to the defaults by reset!" do
       ActiveSanction.configure { |c| c.user_agent = "my-app/1.0" }
-      ActiveSanction.reset_configuration!
+      ActiveSanction.reset!
 
       expect(ActiveSanction.config.user_agent).to eq(described_class::DEFAULT_USER_AGENT)
     end

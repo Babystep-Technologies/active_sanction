@@ -169,7 +169,7 @@ RSpec.describe ActiveSanction::Sources do
   end
 
   describe "the enabled set" do
-    after { ActiveSanction.reset_configuration! }
+    after { ActiveSanction.reset! }
 
     it "is every registered source when the application has not said otherwise" do
       list = register(source(:demo_list))

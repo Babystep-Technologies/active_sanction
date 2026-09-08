@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe ActiveSanction::Query do
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   def query(**overrides) = described_class.build(name: "Vladimir Putin", **overrides)
 

@@ -9,7 +9,7 @@ RSpec.describe ActiveSanction::Fetcher do
   let(:client) { ActiveSanction::HttpClient.new(retry_backoff: 0.001) }
   let(:fetcher) { described_class.new(client: client, store: store) }
 
-  after { ActiveSanction.reset_configuration! }
+  after { ActiveSanction.reset! }
 
   # The real OFAC download URL, and the validators it really served, since
   # every behaviour here exists for what these endpoints actually do.
