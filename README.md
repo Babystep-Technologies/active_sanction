@@ -36,6 +36,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 - **Stores.** One checksummed `Snapshot` per source, in gzipped JSON on disk, in your application's database, in memory, or in a store you write. Nothing on the query path names a concrete store.
 - **Screens.** Fold the name, retrieve candidates from an inverted index, score each with four string algorithms and a phonetic pass, adjust on dates of birth, nationalities and document numbers, and report the reasons — which sum to the score exactly.
 - **Diffs.** What changed between two syncs, so a book of business is re-screened against the handful of records that moved rather than against the whole list.
+- **Diagnoses.** Whether a list still parses the way we think it does — field fill rates, the free-text vocabulary, the shape of a positional column — measured against the version stored at the last sync, because the dangerous format change is the one where the file still parses cleanly and means something different.
 - **Stamps.** Every result carries the snapshot checksum, the matcher version, the weights and the query, so a screening decision made today can be re-derived in three years by somebody who has neither this process nor this version of the gem.
 
 ## What it does not do
@@ -45,7 +46,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 - **It screens names against lists, and nothing more.** No politically-exposed-person data, no adverse media, no beneficial ownership, no OFAC 50 Percent Rule resolution — a subsidiary that is sanctioned only by virtue of its owners is not on any of these files and will not be found here.
 - **Seven lists ship: two US, one UN, one Canada, one EU, one UK, one Australia.** If your obligations cover a jurisdiction outside that set, this gem does not cover them.
 - **Non-Latin script is not transliterated.** `Путин` does not fold to `putin`; a Cyrillic name matches a Cyrillic query and nothing else. What makes it survivable is that these publishers ship a romanized name alongside the original — see [Normalizing a name for matching](#normalizing-a-name-for-matching) for what that does and does not leave open.
-- **It does not monitor.** It syncs when you tell it to. Nothing here notices overnight that a publisher changed its format ([#68](https://github.com/Babystep-Technologies/active_sanction/issues/68), [#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)) or wakes anybody when it does.
+- **It does not monitor.** It syncs when you tell it to, and it diagnoses when you tell it to. `ActiveSanction.doctor` will notice that a publisher changed its format, but only in a job you schedule — nothing here runs overnight on its own, and nothing wakes anybody when it finds something ([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)).
 - **There is no CLI.** It is a library, called from an initializer, a rake task or a job.
 
 ## Installation
@@ -304,6 +305,7 @@ Everything has a working default; `ActiveSanction.configure` exists so that a ca
 | `stale_after` | `86_400` s | What `stale?` measures against. Does not cap how long a cached copy may be *used* — that is your policy |
 | `sources` | `nil`, meaning every registered source | `c.sources = %i[ofac_sdn un_consolidated]` |
 | `sync_concurrency` | `1` | How many *publishers* are fetched from at once, never how hard any one of them is asked |
+| `doctor_tolerance` | `0.10` | How far one of the doctor's measurements may move from the last sync before it says so. Overridden per run with `tolerance:` |
 | `xml_backend` | `:rexml` | `:nokogiri` for a host already parsing OFAC's 126 MB advanced XML. The default is stdlib so that every installation parses identically — a checksum has to mean the same thing everywhere |
 | `candidate_limit` | `200` | Names the index hands the scorer per query |
 | `screening_threshold` | `75.0` | See [Reading a score](#reading-a-score). Overridden per query with `threshold:` |
@@ -756,6 +758,65 @@ That table is `diff.to_s`; `Diff#to_h` is the same thing JSON-ready, carrying bo
 **Order is not a change, and neither is a reordered alias.** Two snapshots of the same file compare equal whatever order the publisher emitted it in, and the collection fields inside a record — names, addresses, identifiers, dates of birth, nationalities, programs — are compared by membership rather than by position. The one thing that is never decided for the host is which amendments are too small to bother re-screening: a corrected passport number and a reworded remark reach the scorer by different paths, and a library that filtered them would be choosing which sanctions hits it is willing to miss.
 
 **Nothing here reads OFAC's `/changes/latest`.** OFAC serves a delta feed of its own, and a diff has to describe the two list versions *we hold* — a run that skipped a day, or held a stale list because a fetch failed, is not on either end of the publisher's delta. Cross-checking a computed diff against that feed is worth doing, since it is how a parser regression that quietly drops records gets caught, but it belongs in the OFAC adapter as one publisher's answer rather than in the general shape of a diff.
+
+### Noticing when a publisher has changed its format
+
+Sanctions lists change format on three clocks. A whole-format migration is announced years ahead: the host this library fetches from is itself the result of one. A column added or an element renamed happens quietly, in months. A new document label or a new national ID type happens continuously, weekly, as new countries are designated.
+
+Only the first of those fails loudly. The dangerous ones are the changes where **the file still parses cleanly and means something different** — 19,321 entities carrying zero passports looks exactly as healthy as 19,321 carrying 23,429 if the only thing anyone counts is records, and screening a passport number against the first returns a clean result for somebody who is on the list. Nothing in a sync would notice that for months.
+
+```ruby
+report = ActiveSanction.doctor                    # every configured source
+report = ActiveSanction.doctor(:ofac_sdn)         # one
+report = ActiveSanction.doctor(tolerance: 0.05)   # report smaller movements
+
+report.ok?                              # => false
+report.findings                         # => [Doctor::Finding, ...]
+report[:ofac_sdn].severity              # => :warn
+report[:ofac_sdn].profile.fill          # => { dates_of_birth: 0.12, identifiers: 0.34, ... }
+exit report.exit_code                   # 1 on any error; exit_code(on: :warn) for a build
+```
+
+```
+3 sources in 41.07s: 2 with findings, 1 unreadable
+ofac_sdn         WARN  3 findings
+  warn   remarks coverage 71.4% (was 97.3%): "Passport No. #####" x 1,880 unrecognized
+  warn   individuals with a date of birth 12% (was 61%) of 11,704
+  info   unknown SDN_Type "syndicate"; treated as an organization (41 rows)
+un_consolidated  OK
+eu_fsf           ERROR  1 finding
+  error  could not be read: ActiveSanction::HttpClient::TimeoutError: execution expired
+```
+
+That table is `report.to_s`, and as with a sync report it is a rendering rather than the thing itself: `Doctor::Report#to_h` round-trips through JSON, so a host alerts on a finding without scraping a log.
+
+**The signals mostly existed already.** `Parsers::Warning`, orphaned child rows, an unknown `SDN_Type`, an empty payload, `RemarksParser::Coverage`, the snapshot checksum. Each of them was visible per-adapter and only to somebody who already suspected a problem. This is aggregation, severity and a baseline over what a normal fetch and parse already produce — not a second pipeline running beside the first.
+
+**The baseline is the last stored snapshot, not a committed threshold.** A bound written into an adapter ("expect ~19,321 rows ±2,000") goes stale on its own, and the day somebody widens one to make a build pass is the day it stops being read. The previous snapshot never goes stale, costs nothing to maintain, and catches what a fixed bound cannot: a fill rate that drifted from 61% to 12% is invisible to any threshold wide enough to have survived three years of a list growing. Committed floors survive only as a coarse backstop for the run that has nothing to compare against, declared per adapter and deliberately few:
+
+```ruby
+class Ofac < ActiveSanction::Sources::Base
+  floor :remarks_coverage, 0.90
+end
+```
+
+**Fill rates are the check that catches a clean parse of a changed file.** Record counts do not move when a publisher renames an element; the share of records carrying each field does. A date of birth is measured over individuals alone, because an organization never has one and including them would make the rate a function of how many companies a designation round happened to name; everything else is measured over every record, because a list whose organizations lost their registration numbers has failed in exactly the way one whose people lost their passports has.
+
+**A swapped column is invisible to a declared width.** OFAC ships three headerless CSVs, so the adapter declares the column names — which pins the width, so a column *inserted* upstream arrives as a wrong-width row and every row says so. A column *reordered* upstream keeps the width, parses cleanly, and builds 19,321 entities out of shifted fields. So the values are asserted separately from the row: `ent_num` is numeric on essentially every row of OFAC's file, and a version of that file where it holds company names is not one to screen against.
+
+**What separates a `warn` from an `error` is not the size of the number.** It is whether the reading can be explained by the *list* changing rather than by the *file* changing. A third of the records disappearing is a `warn`, because a delisting wave looks exactly like a truncated download and deciding automatically that it was the first is how a compliance tool ends up quietly screening against a list it has thrown half of away. A column that used to hold numbers and now holds company names is an `error`, and so is every record on a list losing a field all of them carried, because nothing a government does to its list produces either.
+
+**The doctor never writes anything.** Not the snapshot, not the payload cache, not the conditional-GET validators — each adapter it builds gets a fetcher over an in-memory validator store and no cache. That costs a full download of every list on every run, and buys two things worth more: a diagnosis is always of bytes the publisher is serving now rather than of a 304, and a doctor run before a sync can never be the reason that sync decides a list it has not seen is unchanged. Nothing is repaired either, because deciding that a 40% drop is a delisting wave rather than a broken parse is a judgment call.
+
+**Some of what a run measures cannot come from storage.** Fill rates and record counts are recomputable from a snapshot written months ago, which is what makes the last sync usable as a baseline for free. Warning classes and free-text coverage exist only while a parse is running. A job that wants those compared week to week keeps its own report and hands it back:
+
+```ruby
+yesterday = JSON.parse(File.read("doctor.json"))
+report = ActiveSanction.doctor(baseline: ActiveSanction::Doctor::Report.from_h(yesterday))
+File.write("doctor.json", JSON.generate(report.to_h))
+```
+
+**The real deployment is a nightly job, not a command somebody remembers to type.** A `doctor` invoked by hand only confirms a regression that was already suspected; the whole value here is noticing one nobody suspected, which means something has to run it when nobody is looking and alert when it says something. `exit_code` is what makes cron and CI do the second half.
 
 ### Normalizing a name for matching
 

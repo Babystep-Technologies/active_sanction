@@ -48,6 +48,16 @@ module ActiveSanction
       authority "U.S. Department of the Treasury, Office of Foreign Assets Control"
       format :csv
 
+      # The one floor either OFAC list commits to, and only for the run that
+      # has no previous snapshot to compare against. RemarksParser reads about
+      # 97% of the SDN file's segments; 90% is a long way below anything the
+      # file has done and still far above what a re-spelled document label
+      # would leave. There is deliberately no floor on the record count: the
+      # SDN list has roughly tripled since 2010, so any bound wide enough to
+      # have survived that is too wide to catch a truncated download, and the
+      # previous snapshot catches one for nothing. See Definition#floor.
+      floor :remarks_coverage, 0.90
+
       # OFAC serves Windows-1252, not UTF-8, and says nothing about it in a
       # header. Read as UTF-8 the accented names in the list -- and there are
       # thousands -- arrive as replacement characters.
@@ -86,6 +96,10 @@ module ActiveSanction
         Parsers::DelimitedTable
       )
 
+      # OFAC's join key. Every row of all six files carries one, and it is the
+      # only column on the primary file whose *values* have a shape.
+      ENT_NUM = T.let(/\A\d+\z/, Regexp)
+
       # Rows that could not be read, and child rows that matched no entity.
       # Populated by #parse and read afterwards -- sync orchestration (#34)
       # reports them, and a nonzero orphan count is the signal that the three
@@ -121,6 +135,42 @@ module ActiveSanction
         @warnings = join.warnings + @unmapped
         @orphans = join.orphans
         entities
+      end
+
+      # What the two assertable columns of the primary file hold.
+      #
+      # The width declared in PRIMARY_COLUMNS catches a column OFAC *inserts*:
+      # every row arrives the wrong width and every row says so. Nothing about
+      # the width catches one OFAC *reorders*, which parses cleanly and builds
+      # 19,321 entities out of shifted fields. These are what catches that.
+      #
+      # Two of twelve, because ten of the columns are free text a government
+      # writes for people and there is nothing to assert about them. See
+      # Parsers::ColumnShape.
+      #
+      # `sdn_type` is held to three quarters rather than the 99% `ent_num` is,
+      # and the difference is what each one would cost to get wrong. OFAC does
+      # publish types this adapter has never seen -- that is what
+      # Record#unknown_type? exists for, and a new one is an `info` finding and
+      # a mapping to write, not a broken file. Demanding 99% would turn the
+      # week OFAC coins a word into an `error` on a list that is entirely fine,
+      # and a diagnostic that cries wolf about a healthy list is one nobody
+      # reads the week it is right. What three quarters still catches is the
+      # only thing worth an error here: a column that has stopped being the
+      # type column at all, which reads as zero.
+      sig { returns(T::Array[Parsers::ColumnShape]) }
+      def column_assertions
+        [Parsers::ColumnShape.new(name: :ent_num, matches: ENT_NUM, description: "numeric"),
+         Parsers::ColumnShape.new(name: :sdn_type, allowing: record_class.published_types, at_least: 0.75,
+                                  description: "a published SDN_Type")]
+      end
+
+      # One extra pass over the primary file, for the doctor and nothing else.
+      # It is the same reader the parse used, asked a different question.
+      sig { override.params(raw: T.untyped).returns(T::Array[Parsers::ColumnShape::Tally]) }
+      def column_shapes(raw)
+        rows = PRIMARY.read(raw[primary_file]).to_a
+        column_assertions.map { |shape| shape.tally(rows.map { |row| row[shape.name] }) }
       end
 
       # The declaration name of the file carrying one row per entity -- `:sdn`

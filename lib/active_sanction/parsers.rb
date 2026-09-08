@@ -85,6 +85,7 @@ module ActiveSanction
   end
 end
 
+require "active_sanction/parsers/column_shape"
 require "active_sanction/parsers/delimited_table"
 require "active_sanction/parsers/spreadsheet"
 require "active_sanction/parsers/xml_records"

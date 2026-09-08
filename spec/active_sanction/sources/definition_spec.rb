@@ -146,6 +146,48 @@ RSpec.describe ActiveSanction::Sources::Definition do
     end
   end
 
+  # The coarse backstop for a run with no previous snapshot to compare
+  # against. Deliberately few and deliberately wide: see Definition#floor.
+  describe "floors" do
+    def bounded
+      Class.new(ActiveSanction::Sources::Base) do
+        key :ofac_sdn
+        floor :remarks_coverage, 0.90
+        floor :record_count, 400
+      end
+    end
+
+    it "reads every declared floor back with no argument" do
+      expect(bounded.floors).to eq({ remarks_coverage: 0.90, record_count: 400 })
+    end
+
+    it "reads one back by name" do
+      expect(bounded.floor(:remarks_coverage)).to eq(0.90)
+    end
+
+    it "answers nil for a floor that was never declared" do
+      expect(bounded.floor(:fill_addresses)).to be_nil
+    end
+
+    it "has none by default" do
+      expect(Class.new(ActiveSanction::Sources::Base) { key :ofac_sdn }.floors).to eq({})
+    end
+
+    it "refuses a floor that is not a number" do
+      expect { Class.new(ActiveSanction::Sources::Base) { floor :record_count, "a few" } }
+        .to raise_error(ActiveSanction::Sources::DeclarationError, /must be a number/)
+    end
+
+    it "refuses a negative floor" do
+      expect { Class.new(ActiveSanction::Sources::Base) { floor :record_count, -1 } }
+        .to raise_error(ActiveSanction::Sources::DeclarationError, /cannot be negative/)
+    end
+
+    it "reads on an instance as well, beside the other declarations" do
+      expect(bounded.new.floors).to eq({ remarks_coverage: 0.90, record_count: 400 })
+    end
+  end
+
   describe "inheritance" do
     def publisher
       Class.new(ActiveSanction::Sources::Base) do
@@ -175,6 +217,17 @@ RSpec.describe ActiveSanction::Sources::Definition do
       end
 
       expect(parent.urls.keys).to eq([:sdn])
+    end
+
+    # An adapter over a list a tenth the size of its sibling's says so once.
+    it "lets a subclass replace an inherited floor" do
+      parent = Class.new(ActiveSanction::Sources::Base) { floor :record_count, 15_000 }
+      child = Class.new(parent) do
+        key :ofac_consolidated
+        floor :record_count, 400
+      end
+
+      expect([parent.floors[:record_count], child.floors[:record_count]]).to eq([15_000, 400])
     end
 
     it "lets a subclass point a file at a mirror" do

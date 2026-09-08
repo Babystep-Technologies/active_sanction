@@ -70,6 +70,28 @@ RSpec.describe ActiveSanction::Configuration do
     end
   end
 
+  describe "#doctor_tolerance=" do
+    # These lists move by single-digit percentages between syncs, while the
+    # changes the doctor is looking for halve a fill rate.
+    it "reports a movement of more than a tenth by default" do
+      expect(described_class.new.doctor_tolerance).to eq(0.10)
+    end
+
+    it "takes a share" do
+      expect(described_class.new.tap { |config| config.doctor_tolerance = 0.05 }.doctor_tolerance).to eq(0.05)
+    end
+
+    it "refuses a percentage written as a whole number" do
+      expect { described_class.new.doctor_tolerance = 10 }
+        .to raise_error(ActiveSanction::ConfigurationError, /between 0 and 1/)
+    end
+
+    it "refuses a tolerance that is not a number" do
+      expect { described_class.new.doctor_tolerance = "a bit" }
+        .to raise_error(ActiveSanction::ConfigurationError, /between 0 and 1/)
+    end
+  end
+
   describe "#candidate_limit=" do
     it "takes a whole number of names" do
       expect(described_class.new.tap { |config| config.candidate_limit = 50 }.candidate_limit).to eq(50)

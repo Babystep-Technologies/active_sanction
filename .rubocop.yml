@@ -75,6 +75,10 @@ Metrics/AbcSize:
     # Configuration#initialize is the same shape as a value object's: one
     # `T.let` per setting the library has, and nothing else.
     - "lib/active_sanction/configuration.rb"
+    # Doctor::Profile#initialize is the same shape again: ten members, each of
+    # them a `T.let` and a coercion, and the whole of what one is measures how
+    # many things there are to measure about a list.
+    - "lib/active_sanction/doctor/profile.rb"
     - "lib/active_sanction/storage/active_record/reader.rb"
     - "lib/active_sanction/storage/active_record/writer.rb"
     # A transcription rather than a design -- see the note on
@@ -112,18 +116,22 @@ Metrics/MethodLength:
 # which added three: the store lists are read from, and the threshold and
 # result limit a screening call defaults to. 275 became 295 for sync
 # orchestration (#34), which added `sync_concurrency` and the shared validation
-# a per-run `concurrency:` is held to.
+# a per-run `concurrency:` is held to, and 295 became 310 for the doctor (#68),
+# which added `doctor_tolerance` and the validation a per-run `tolerance:`
+# shares with it.
 Metrics/ClassLength:
-  Max: 295
+  Max: 310
   Exclude:
     # See the note on Metrics/CyclomaticComplexity below.
     - "lib/active_sanction/phonetics/double_metaphone.rb"
 
 # The same rule for the one module that carries as much declaration as a class:
 # Sources::Definition is a reader and a writer for every declaration a source
-# adapter makes, each of which now carries a signature.
+# adapter makes, each of which now carries a signature. 130 became 150 for the
+# doctor (#68), which added `floor` -- a reader, a writer, an inheritance merge
+# and a validation, the same four lines every other declaration costs.
 Metrics/ModuleLength:
-  Max: 130
+  Max: 150
 
 # The one file in the library that is a transcription rather than a design.
 #

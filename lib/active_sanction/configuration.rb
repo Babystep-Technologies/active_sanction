@@ -85,6 +85,16 @@ module ActiveSanction
     # at once, not on how fast any one of them is asked.
     DEFAULT_SYNC_CONCURRENCY = T.let(1, Integer)
 
+    # How far one of Doctor's measurements may move from what it was at the
+    # last sync before the run says so. A tenth, because these lists move by
+    # single-digit percentages between syncs -- a designation round is dozens
+    # of records against tens of thousands -- while the changes this is looking
+    # for halve a fill rate. Tightening it finds drift sooner and reports more
+    # of the movement that is just the list changing; loosening it does the
+    # reverse, and a diagnostic nobody reads because it always says something
+    # is worse than one that says slightly less.
+    DEFAULT_DOCTOR_TOLERANCE = T.let(0.10, Float)
+
     # The launch lists change roughly daily at most, so a source last confirmed
     # within a day is not worth asking about again when a caller is only trying
     # to decide whether a sync is due. This is what #stale? measures against;
@@ -191,6 +201,10 @@ module ActiveSanction
     sig { returns(Symbol) }
     attr_reader :xml_backend
 
+    # See DEFAULT_DOCTOR_TOLERANCE. A per-run `tolerance:` overrides it.
+    sig { returns(Float) }
+    attr_reader :doctor_tolerance
+
     # See DEFAULT_SYNC_CONCURRENCY. A per-run `concurrency:` overrides it.
     sig { returns(Integer) }
     attr_reader :sync_concurrency
@@ -238,6 +252,7 @@ module ActiveSanction
       @sources = T.let(DEFAULT_SOURCES, T.nilable(T::Array[Symbol]))
       @xml_backend = T.let(DEFAULT_XML_BACKEND, Symbol)
       @sync_concurrency = T.let(DEFAULT_SYNC_CONCURRENCY, Integer)
+      @doctor_tolerance = T.let(DEFAULT_DOCTOR_TOLERANCE, Float)
       @candidate_limit = T.let(DEFAULT_CANDIDATE_LIMIT, Integer)
       @screening_threshold = T.let(DEFAULT_SCREENING_THRESHOLD, Float)
       @screening_limit = T.let(DEFAULT_SCREENING_LIMIT, Integer)
@@ -330,6 +345,11 @@ module ActiveSanction
     sig { params(value: T.untyped).void }
     def sync_concurrency=(value)
       @sync_concurrency = self.class.sync_concurrency!(value)
+    end
+
+    sig { params(value: T.untyped).void }
+    def doctor_tolerance=(value)
+      @doctor_tolerance = self.class.doctor_tolerance!(value)
     end
 
     # Raising this trades milliseconds for recall and lowering it does the
@@ -510,6 +530,23 @@ module ActiveSanction
       raise ConfigurationError, "sync_concurrency must be at least 1, got #{integer}" unless integer.positive?
 
       integer
+    end
+
+    # Shared with Doctor, so a per-run `tolerance:` is held to the same rule as
+    # the configured default. A share of what a measurement was, so 1.0 is
+    # "report nothing short of a doubling or a disappearance" and 0.0 is
+    # "report every movement at all", both of which are legitimate settings for
+    # somebody and neither of which is a default.
+    sig { params(value: T.untyped).returns(Float) }
+    def self.doctor_tolerance!(value)
+      ratio = begin
+        Float(value)
+      rescue TypeError, ArgumentError
+        raise ConfigurationError, "doctor_tolerance must be a share between 0 and 1, got #{value.inspect}"
+      end
+      return ratio if ratio.between?(0.0, 1.0)
+
+      raise ConfigurationError, "doctor_tolerance must be a share between 0 and 1, got #{value.inspect}"
     end
 
     # Shared by HttpClient, so a client built with an explicit `user_agent:`
