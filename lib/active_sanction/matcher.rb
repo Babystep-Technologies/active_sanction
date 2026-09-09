@@ -101,6 +101,18 @@ module ActiveSanction
     sig { returns(T::Hash[Symbol, String]) }
     attr_reader :snapshots
 
+    # The lists in here that arrived cryptographically attested -- read from a
+    # signed bundle (#57) that verified under a key this installation supplied
+    # -- sorted. Usually empty, because a list this installation fetched and
+    # parsed itself is not attested by anybody.
+    #
+    # Kept beside `snapshots` rather than folded into it because it is a fact
+    # about a different thing: a checksum says which list version answered, and
+    # this says who vouched for it. Every result the matcher produces carries
+    # both. See MatchResult#verified?.
+    sig { returns(T::Array[Symbol]) }
+    attr_reader :verified
+
     sig { returns(Index) }
     attr_reader :index
 
@@ -147,12 +159,17 @@ module ActiveSanction
         store ||= ActiveSanction.config.storage
         builder = Index::Builder.new
         checksums = T.let({}, T::Hash[Symbol, String])
+        attested = T.let([], T::Array[Symbol])
         requested(store, sources).each do |key|
           snapshot = store.fetch_snapshot(key)
           checksums[key] = snapshot.checksum
+          # Read off the very snapshot that was indexed, for the reason its
+          # checksum is: a store asked again afterwards could answer about a
+          # different list.
+          attested << key if snapshot.trusted?
           snapshot.entities.each { |entity| builder.add(entity) }
         end
-        new(index: builder.build, snapshots: checksums, weights: weights,
+        new(index: builder.build, snapshots: checksums, verified: attested, weights: weights,
             candidate_limit: candidate_limit, backend: backend)
       end
 
@@ -187,11 +204,13 @@ module ActiveSanction
     # one name against several list versions, or a spec.
     sig do
       params(index: Index, snapshots: T.untyped, weights: T.untyped, candidate_limit: T.untyped,
-             backend: T.untyped).void
+             backend: T.untyped, verified: T.untyped).void
     end
-    def initialize(index:, snapshots:, weights: nil, candidate_limit: nil, backend: MatchResult::DEFAULT_BACKEND)
+    def initialize(index:, snapshots:, weights: nil, candidate_limit: nil, backend: MatchResult::DEFAULT_BACKEND,
+                   verified: nil)
       @index = index
       @snapshots = T.let(snapshots!(snapshots), T::Hash[Symbol, String])
+      @verified = T.let(verified!(verified), T::Array[Symbol])
       raise NotSynced, "the lists given hold no names to screen against" if index.empty?
 
       @weights = T.let(Scorer::Weights.build(weights), Scorer::Weights)
@@ -261,6 +280,11 @@ module ActiveSanction
     sig { params(source: T.untyped).returns(T.nilable(String)) }
     def snapshot_id(source) = snapshots[Sources::Definition.key!(source)]
 
+    # Whether the list this matcher holds for a source was attested. What every
+    # result off that list records.
+    sig { params(source: T.untyped).returns(T::Boolean) }
+    def verified?(source) = verified.include?(Sources::Definition.key!(source))
+
     # How many names are screened against. Names rather than entities -- see
     # Index#size.
     sig { returns(Integer) }
@@ -282,7 +306,10 @@ module ActiveSanction
       scored(query)
         .sort_by { |result| [-result.score, result.source.to_s, result.entity.id] }
         .first(query.limit)
-        .map { |result| MatchResult.from_scorer(result, snapshot_id: snapshots.fetch(result.source), **stamp) }
+        .map do |result|
+          MatchResult.from_scorer(result, snapshot_id: snapshots.fetch(result.source),
+                                          verified: verified.include?(result.source), **stamp)
+        end
     end
 
     # Every entity the index retrieved, scored once.
@@ -330,6 +357,18 @@ module ActiveSanction
       raise InvalidArgument, "no snapshot checksum for #{blank.join(", ")}" if blank.any?
 
       checksums.freeze
+    end
+
+    # Only lists this matcher actually holds, sorted. A source named here that
+    # is not in `snapshots` is a caller building a stamp out of a list nothing
+    # was screened against.
+    sig { params(value: T.untyped).returns(T::Array[Symbol]) }
+    def verified!(value)
+      keys = Array(value).map { |source| Sources::Definition.key!(source) }.uniq.sort
+      missing = keys - snapshots.keys
+      raise InvalidArgument, "verified names #{missing.join(", ")}, which this matcher does not hold" if missing.any?
+
+      keys.freeze
     end
 
     sig { params(value: T.untyped).returns(Integer) }

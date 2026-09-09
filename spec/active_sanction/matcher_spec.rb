@@ -340,4 +340,47 @@ RSpec.describe ActiveSanction::Matcher do
       expect(found).to all(eq(1))
     end
   end
+
+  # Which list version answered is one question and who vouched for it is
+  # another. A matcher records both, and stamps both onto every result.
+  describe "the lists that arrived attested" do
+    def verified_store(*entities)
+      ActiveSanction::Storage::Memory.new.tap do |memory|
+        memory.write_snapshot(ActiveSanction::Snapshot.new(source: :ofac_sdn, entities: entities, trusted: true))
+      end
+    end
+
+    it "holds nothing attested for a list this installation synced itself" do
+      expect(matcher(putin).verified).to be_empty
+    end
+
+    it "records a list that came out of a verified bundle" do
+      expect(described_class.build(verified_store(putin)).verified).to eq(%i[ofac_sdn])
+    end
+
+    it "answers per source" do
+      built = described_class.build(verified_store(putin))
+
+      expect([built.verified?(:ofac_sdn), built.verified?(:un_consolidated)]).to eq([true, false])
+    end
+
+    it "stamps every result off an attested list" do
+      built = described_class.build(verified_store(putin))
+
+      expect(built.screen(name: "Vladimir Putin").map(&:verified?)).to eq([true])
+    end
+
+    it "stamps every result off a list nobody vouched for" do
+      expect(matcher(putin).screen(name: "Vladimir Putin").map(&:verified?)).to eq([false])
+    end
+
+    it "refuses to be told a list it does not hold was verified" do
+      built = lambda do
+        described_class.new(index: ActiveSanction::Index.build([putin]), snapshots: { ofac_sdn: "sha256:1" },
+                            verified: %i[eu_fsf])
+      end
+
+      expect(&built).to raise_error(ActiveSanction::InvalidArgument, /does not hold/)
+    end
+  end
 end

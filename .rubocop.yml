@@ -82,6 +82,11 @@ Metrics/AbcSize:
     # them a `T.let` and a coercion, and the whole of what one is measures how
     # many things there are to measure about a list.
     - "lib/active_sanction/doctor/profile.rb"
+    # And once more for Bundle::Header (#57), which is thirteen: everything a
+    # bundle says about itself before its records are read. The count is the
+    # format's, not this constructor's -- a field the specification names is a
+    # field that has to be validated here.
+    - "lib/active_sanction/snapshot/bundle/header.rb"
     - "lib/active_sanction/storage/active_record/reader.rb"
     - "lib/active_sanction/storage/active_record/writer.rb"
     # A transcription rather than a design -- see the note on

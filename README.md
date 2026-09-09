@@ -34,10 +34,11 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 - **Fetches.** Conditional GET on ETag and Last-Modified, bounded redirects, retries with backoff, a checksum-verified cache of the raw payloads, and a User-Agent that identifies you to the publisher.
 - **Parses.** Seven lists today, into one `Entity`: names and aliases with their kind and quality, dates of birth as `PartialDate` (year-only, approximate and ranged dates are all real on these lists), addresses, document numbers, nationalities, programs — and the publisher's own text kept verbatim in `remarks` whether the parser understood it or not.
 - **Stores.** One checksummed `Snapshot` per source, in gzipped JSON on disk, in your application's database, in memory, or in a store you write. Nothing on the query path names a concrete store.
+- **Publishes.** Any stored list, as one signed, versioned, byte-for-byte reproducible file that another machine loads and trusts without reaching the publisher — for an air-gapped installation, or for the afternoon a government endpoint is down. The [format is specified](docs/bundle_format.md) in enough detail to be implemented outside Ruby.
 - **Screens.** Fold the name, retrieve candidates from an inverted index, score each with four string algorithms and a phonetic pass, adjust on dates of birth, nationalities and document numbers, and report the reasons — which sum to the score exactly.
 - **Diffs.** What changed between two syncs, so a book of business is re-screened against the handful of records that moved rather than against the whole list.
 - **Diagnoses.** Whether a list still parses the way we think it does — field fill rates, the free-text vocabulary, the shape of a positional column — measured against the version stored at the last sync, because the dangerous format change is the one where the file still parses cleanly and means something different.
-- **Stamps.** Every result carries the snapshot checksum, the matcher version, the weights and the query, so a screening decision made today can be re-derived in three years by somebody who has neither this process nor this version of the gem.
+- **Stamps.** Every result carries the snapshot checksum, the matcher version, the weights, the query, and whether the list that answered was a signed bundle that verified — so a screening decision made today can be re-derived in three years by somebody who has neither this process nor this version of the gem.
 
 ## What it does not do
 
@@ -262,6 +263,8 @@ $ rails db:migrate
 ```
 
 Every adapter refuses to return anything partial: a snapshot's checksum is re-derived from the records that came back, so a truncated file, a hand-edited row or a dropped record raises `Storage::CorruptSnapshot` rather than screening a customer against a list that is quietly missing people. A source nobody has synced reads back as `nil` and never as an empty list. The details are in [Storing what a sync produced](#storing-what-a-sync-produced) and the three sections after it.
+
+A store is where this machine keeps its lists. To move one *between* machines — to an air-gapped host, or off a mirror on the afternoon a publisher is down — export it as a signed bundle: one file, one command, and a signature an auditor can check. See [Publishing a list as a signed bundle](#publishing-a-list-as-a-signed-bundle).
 
 ## Performance
 
@@ -614,7 +617,7 @@ ActiveSanction.configure { |c| c.storage_dir = "/srv/lists" }  # or globally
 
 `storage_dir` is deliberately not under `cache_dir`. Everything in the cache directory can be fetched again and a user is entitled to delete it; a stored snapshot cannot be fetched again, because publishers overwrite their files in place and the list version a past decision was screened against exists only here.
 
-**The layout is private.** What is on disk is optimized for local reading and rewriting and is expected to change; the portable, cross-machine representation is the bundle format, which has its own stability contract. As it stands, each source gets a directory holding a `meta.json` sidecar and one gzipped list:
+**The layout is private.** What is on disk is optimized for local reading and rewriting and is expected to change; the portable, cross-machine representation is [the bundle format](#publishing-a-list-as-a-signed-bundle), which has its own stability contract. As it stands, each source gets a directory holding a `meta.json` sidecar and one gzipped list:
 
 ```
 ~/.active_sanction/ofac_sdn/meta.json
@@ -636,6 +639,62 @@ store.read_snapshot(:ofac_sdn)   # => raises Storage::CorruptSnapshot, naming th
 A snapshot written by a newer `active_sanction` raises `Storage::UnsupportedSchema` instead, and does so from the sidecar before the list is inflated — a newer schema will usually still deserialize, into records missing whatever it added, with a checksum that verifies and no symptom other than names that stop matching.
 
 Many readers and one writer, across processes, is the arrangement it is built for: a scheduled sync replacing a list while web workers screen against it. Committing is a rename, so a reader sees the whole previous generation or the whole new one. Two processes syncing the *same* source at once is not supported and nothing here makes it safe.
+
+### Publishing a list as a signed bundle
+
+A store is where *this* machine keeps its lists. A bundle is one list in one file that a **different** machine can load and trust without ever reaching the publisher.
+
+```ruby
+ActiveSanction.export(:ofac_sdn, to: "ofac_sdn.asb", sign_with: private_key)
+
+# ...on another host, in another datacentre, next week
+snapshot = ActiveSanction.import("ofac_sdn.asb", verify_with: public_key)
+snapshot.trusted?   # => true
+```
+
+Three situations need that file, and a directory of gzipped JSON cannot serve any of them. **Publishers go down** — government endpoints break, change format and rate-limit, and a bundle produced once and distributed is the difference between a bad afternoon at Treasury and a failed deploy for everyone downstream. **Air-gapped and privacy-sensitive installations** will not send subject names to a third-party API but will happily consume fresh data; a file serves them and a request/response API cannot. And **an audit asks a question a checksum cannot answer**: a checksum proves a list is internally intact, a signature proves it is the one that was published.
+
+The format is public API and specified in [`docs/bundle_format.md`](docs/bundle_format.md) in enough detail to be implemented outside Ruby. Anyone can produce one, from any source, with no key and no licence. The first three lines are text, so a file explains itself before anything is decompressed:
+
+```console
+$ head -3 ofac_sdn.asb
+ACTIVESANCTION-BUNDLE/1
+{"format_version":1,"gem_version":"0.1.0","generator":"active_sanction/0.1.0","source":"ofac_sdn",...}
+ecdsa-sha256 MEUCIQD0kBCtXzE9Ej0oHefYtbi...
+```
+
+**The same snapshot always produces the same bundle.** Records are ordered by the fingerprint the snapshot checksum is built from rather than by whatever order a publisher's file arrived in, the header's keys have a fixed order, the compression level is stated by the specification rather than taken from a build's default, and there is deliberately no written-at timestamp anywhere in the file. Two mirrors that bundled the same list can be held against each other.
+
+**The signature covers the header line, and the header covers the records.** It carries a SHA-256 over the payload, so signing a few hundred bytes stands for all 19,015 records — which means a verifier settles who published a bundle *before inflating any of it*, and verification costs the same for OFAC as for the EU. RSA and EC keys, through `openssl` and nothing else; `ed25519` is reserved for a later version rather than half-supported.
+
+Verification is opt-in, and the three ways it can fail are three different errors, because they have three different fixes:
+
+```ruby
+ActiveSanction.import("ofac_sdn.asb")                          # unsigned or unchecked: fine, and not attested
+ActiveSanction.import("ofac_sdn.asb", verify_with: public_key)
+
+# => Snapshot::Bundle::Corrupt             a byte was flipped, or a record edited — fetch it again
+# => Snapshot::Bundle::UntrustedSignature  intact, and signed by somebody else — do not screen against it
+# => Snapshot::Bundle::Unsigned            nobody signed it, and you asked — a subclass of the above
+# => Snapshot::Bundle::UnsupportedFormat   written by a newer active_sanction — upgrade the gem
+```
+
+Every one of those raises before anything is stored, and nothing partial is ever returned. A bundle that decompresses to more than its header declares is refused part-way through rather than absorbed.
+
+**What verified means downstream.** A snapshot that came out of a checked bundle reports `trusted?`, the matcher records which of its lists did, and every result says so:
+
+```ruby
+ActiveSanction.screen("Vladimir Putin").first.verified?   # => true
+```
+
+That survives for as long as the snapshot does, and no longer:
+
+```ruby
+store.write_snapshot(snapshot)
+store.read_snapshot(:ofac_sdn).trusted?   # => false
+```
+
+Deliberately, and it is the honest answer. A signature attests to the bytes of a bundle; once those records have been rewritten into a store's own gzipped JSON or its own table, nothing signed covers what is on disk, and a stored flag claiming otherwise would be this library laundering an attestation it no longer holds. An installation that wants `verified?` on its results holds the imported snapshot in memory — `client.with(storage: ActiveSanction::Storage::Memory.new)` — rather than round-tripping it through a directory. What a store guarantees is its own: the checksum, re-derived on every read.
 
 ### Storing lists in the host's database
 

@@ -12,6 +12,7 @@ require "active_sanction/identifier"
 require "active_sanction/partial_date"
 require "active_sanction/entity"
 require "active_sanction/snapshot"
+require "active_sanction/snapshot/bundle"
 require "active_sanction/http_client"
 require "active_sanction/validators"
 require "active_sanction/validator_store"
@@ -250,6 +251,32 @@ module ActiveSanction
              block: T.nilable(T.proc.params(diagnosis: Doctor::Diagnosis).void)).returns(Doctor::Report)
     end
     def doctor(*sources, **options, &block) = T.unsafe(client).doctor(*sources, **options, &block)
+
+    # Writes one stored list to a portable, optionally signed bundle file:
+    #
+    #   ActiveSanction.export(:ofac_sdn, to: "ofac_sdn.asb")
+    #   ActiveSanction.export(:ofac_sdn, to: "ofac_sdn.asb", sign_with: private_key)
+    #
+    # One file, produced once, that another machine loads and screens against
+    # without reaching the publisher at all -- which is what an air-gapped
+    # installation needs, and what a deploy needs on the afternoon OFAC is
+    # down. See Snapshot::Bundle, and docs/bundle_format.md, which specifies
+    # the format well enough to be implemented outside Ruby.
+    sig { params(source: T.untyped, options: T.untyped).returns(Snapshot::Bundle::Header) }
+    def export(source, **options) = T.unsafe(client).export(source, **options)
+
+    # Loads a bundle into the configured store and returns the snapshot it
+    # held:
+    #
+    #   snapshot = ActiveSanction.import("ofac_sdn.asb", verify_with: public_key)
+    #   snapshot.trusted?   # => true
+    #
+    # A tampered bundle raises, a bundle signed by an unknown key raises
+    # something different, and both happen before anything is stored. See
+    # Client#import, which is where the one subtlety -- verification does not
+    # survive a write to disk -- is documented.
+    sig { params(path: T.untyped, options: T.untyped).returns(Snapshot) }
+    def import(path, **options) = T.unsafe(client).import(path, **options)
 
     # Drops the shared matcher so the next screening call builds one over
     # what is stored now. What a process calls after a sync -- a matcher is

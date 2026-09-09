@@ -198,4 +198,36 @@ RSpec.describe ActiveSanction::MatchResult do
       expect(result.inspect).to include("91.2", "PUTIN, Vladimir Vladimirovich", "ofac_sdn:1")
     end
   end
+
+  # The sixth field of the stamp, and the only one about where the data came
+  # from. See MatchResult#verified?.
+  describe "#verified?" do
+    it "is false for a list this installation fetched and parsed itself" do
+      expect(result.verified?).to be(false)
+    end
+
+    it "is true for a hit off a bundle that verified" do
+      expect(result(verified: true).verified?).to be(true)
+    end
+
+    it "is part of the documented shape" do
+      expect(result(verified: true).to_h).to include(verified: true)
+    end
+
+    it "survives the round-trip through JSON" do
+      rebuilt = described_class.from_h(JSON.parse(JSON.generate(result(verified: true).to_h)))
+
+      expect(rebuilt.verified?).to be(true)
+    end
+
+    # An audit record written before this field existed is still readable, and
+    # reads as what it was: unattested.
+    it "defaults to false for a record that does not carry it" do
+      expect(described_class.from_h(result.to_h.except(:verified)).verified?).to be(false)
+    end
+
+    it "tells two otherwise identical records apart" do
+      expect(result(verified: true)).not_to eq(result)
+    end
+  end
 end
