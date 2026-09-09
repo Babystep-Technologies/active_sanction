@@ -216,6 +216,56 @@ module ActiveSanction
       with_configuration { T.unsafe(Diff).call(source, store: storage, **options) }
     end
 
+    # Writes one of this client's lists to a portable bundle file, and returns
+    # the Bundle::Header it wrote:
+    #
+    #   client.export(:ofac_sdn, to: "ofac_sdn.asb")
+    #   client.export(:ofac_sdn, to: "ofac_sdn.asb", sign_with: private_key)
+    #   client.export(snapshot,  to: "ofac_sdn.asb")   # one just synced, unstored
+    #
+    # The file that comes out is the unit of distribution: another machine loads
+    # it with #import and screens against it without ever reaching the
+    # publisher. See Snapshot::Bundle, and docs/bundle_format.md.
+    sig do
+      params(source: T.untyped, to: T.untyped, sign_with: T.untyped,
+             generator: T.untyped).returns(Snapshot::Bundle::Header)
+    end
+    def export(source, to:, sign_with: nil, generator: nil)
+      snapshot = source.is_a?(Snapshot) ? source : with_configuration { storage.fetch_snapshot(source) }
+      ::File.open(to.to_s, "wb") do |io|
+        Snapshot::Bundle.write(snapshot, io: io, sign_with: sign_with, generator: generator)
+      end
+    end
+
+    # Loads a bundle into this client's store and returns the Snapshot it held:
+    #
+    #   client.import("ofac_sdn.asb")                        # unverified, and usable
+    #   client.import("ofac_sdn.asb", verify_with: public_key)
+    #
+    # With a key, a bundle that was not signed by its holder raises rather than
+    # being stored -- an unverified list is a fine thing to screen against, and
+    # a list that failed a verification somebody asked for is not.
+    #
+    # Drops this client's matcher, so the next screening call is answered by
+    # what was just imported.
+    #
+    # ### What comes back is trusted; what is stored is not
+    #
+    # The snapshot returned reports `trusted?` when it verified. Reading the
+    # same list back out of a FileSystem or ActiveRecord store afterwards does
+    # not: a signature attests to the bundle's bytes, not to the copy this gem
+    # rewrote into its own layout. An installation that wants
+    # `MatchResult#verified?` on its results holds the imported snapshot in
+    # memory -- `client.with(storage: ActiveSanction::Storage::Memory.new)` --
+    # rather than round-tripping it through a directory. See Snapshot#trusted?.
+    sig { params(path: T.untyped, verify_with: T.untyped).returns(Snapshot) }
+    def import(path, verify_with: nil)
+      snapshot = ::File.open(path.to_s, "rb") { |io| Snapshot::Bundle.read(io, verify_with: verify_with) }
+      with_configuration { storage.write_snapshot(snapshot) }
+      reload!
+      snapshot
+    end
+
     # Diagnoses whether one of this client's sources has changed format,
     # against the version its store holds. Writes nothing. See Doctor.
     sig do

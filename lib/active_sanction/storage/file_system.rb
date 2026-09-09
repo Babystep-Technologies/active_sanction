@@ -39,9 +39,9 @@ module ActiveSanction
     # Under #62 the contents of `root` are `@api private`. What is on disk is
     # optimized for reading and rewriting locally, and it is expected to change
     # -- the portable, cross-machine, signature-verified representation is the
-    # bundle format (#57), which has its own stability contract. An application
-    # that reads these files itself makes every future storage optimization a
-    # breaking change for it.
+    # bundle format (#57), which has its own stability contract and is specified
+    # in docs/bundle_format.md. An application that reads these files itself
+    # makes every future storage optimization a breaking change for it.
     #
     # As it stands:
     #

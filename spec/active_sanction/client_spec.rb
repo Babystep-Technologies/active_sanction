@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "openssl"
+require "tmpdir"
+
 RSpec.describe ActiveSanction::Client do
   after do
     ActiveSanction.reset!
@@ -358,6 +361,124 @@ RSpec.describe ActiveSanction::Client do
       client.matcher
 
       expect(client.inspect).to include("every registered source", "loaded")
+    end
+  end
+
+  # The two halves of distribution: one machine writes a file, another loads
+  # it and screens against it without ever reaching the publisher. See
+  # Snapshot::Bundle, and docs/bundle_format.md.
+  describe "#export and #import" do
+    around do |example|
+      Dir.mktmpdir("active_sanction-bundle") do |dir|
+        @dir = dir
+        example.run
+      end
+    end
+
+    attr_reader :dir
+
+    let(:key) { OpenSSL::PKey::EC.generate("prime256v1") }
+    let(:path) { File.join(dir, "ofac_sdn.asb") }
+    let(:exporter) { described_class.new(storage: store(ofac_sdn: [putin])) }
+    let(:importer) { described_class.new(storage: ActiveSanction::Storage::Memory.new) }
+
+    it "writes the list a store holds, and answers what it wrote" do
+      header = exporter.export(:ofac_sdn, to: path)
+
+      expect([header.source, header.record_count]).to eq([:ofac_sdn, 1])
+    end
+
+    it "writes a snapshot it was handed, for a list that was just synced" do
+      snapshot = exporter.storage.read_snapshot(:ofac_sdn)
+
+      expect(exporter.export(snapshot, to: path).snapshot_checksum).to eq(snapshot.checksum)
+    end
+
+    it "raises for a list the store has never held" do
+      expect { exporter.export(:eu_fsf, to: path) }.to raise_error(ActiveSanction::Storage::MissingSnapshot)
+    end
+
+    it "loads the same list on the other side" do
+      exporter.export(:ofac_sdn, to: path)
+
+      expect(importer.import(path).checksum).to eq(exporter.storage.read_snapshot(:ofac_sdn).checksum)
+    end
+
+    it "puts what it loaded into the store" do
+      exporter.export(:ofac_sdn, to: path)
+      importer.import(path)
+
+      expect(importer.storage.sources).to eq(%i[ofac_sdn])
+    end
+
+    it "screens against what was imported" do
+      exporter.export(:ofac_sdn, to: path)
+      importer.import(path)
+
+      expect(importer.screen(name: "Vladimir Putin").map(&:source)).to eq(%i[ofac_sdn])
+    end
+
+    it "drops a matcher built before the import" do
+      exporter.export(:ofac_sdn, to: path)
+      importer.import(path)
+
+      expect(importer).not_to be_loaded
+    end
+
+    it "reports a bundle that verified as attested" do
+      exporter.export(:ofac_sdn, to: path, sign_with: key)
+
+      expect(importer.import(path, verify_with: key).trusted?).to be(true)
+    end
+
+    it "stamps every result off it as verified" do
+      exporter.export(:ofac_sdn, to: path, sign_with: key)
+      importer.import(path, verify_with: key)
+
+      expect(importer.screen(name: "Vladimir Putin").map(&:verified?)).to eq([true])
+    end
+
+    it "refuses a bundle signed by somebody else" do
+      exporter.export(:ofac_sdn, to: path, sign_with: key)
+
+      expect { importer.import(path, verify_with: OpenSSL::PKey::EC.generate("prime256v1")) }
+        .to raise_error(ActiveSanction::Snapshot::Bundle::UntrustedSignature)
+    end
+
+    # A list that failed a verification somebody asked for is not one to fall
+    # back on quietly.
+    it "stores nothing when verification fails" do
+      exporter.export(:ofac_sdn, to: path, sign_with: key)
+      begin
+        importer.import(path, verify_with: OpenSSL::PKey::EC.generate("prime256v1"))
+      rescue ActiveSanction::Snapshot::Bundle::UntrustedSignature
+        nil
+      end
+
+      expect(importer.storage).to be_empty
+    end
+
+    it "loads an unsigned bundle, unattested" do
+      exporter.export(:ofac_sdn, to: path)
+
+      expect(importer.import(path).trusted?).to be(false)
+    end
+
+    # Verification attests to a bundle's bytes, not to the copy a store
+    # rewrites into its own layout -- see Snapshot#trusted?.
+    it "does not claim a list is attested once a store has rewritten it" do
+      exporter.export(:ofac_sdn, to: path, sign_with: key)
+      file_store = ActiveSanction::Storage::FileSystem.new(root: File.join(dir, "store"))
+      described_class.new(storage: file_store).import(path, verify_with: key)
+
+      expect(file_store.read_snapshot(:ofac_sdn).trusted?).to be(false)
+    end
+
+    it "is reachable from the module, through the default client" do
+      ActiveSanction.configure { |config| config.storage = store(ofac_sdn: [putin]) }
+      ActiveSanction.export(:ofac_sdn, to: path)
+
+      expect(ActiveSanction.import(path).record_count).to eq(1)
     end
   end
 end

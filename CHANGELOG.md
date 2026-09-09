@@ -136,6 +136,27 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
   already loaded it ([#25](https://github.com/Babystep-Technologies/active_sanction/issues/25)).
 - The shared `"a storage adapter"` conformance group, and a spec that holds it to being able
   to fail.
+- **The bundle format**: one list in one file that a different machine loads and trusts without
+  reaching the publisher, specified byte for byte in
+  [`docs/bundle_format.md`](docs/bundle_format.md) so that it can be produced and read outside
+  Ruby ([#57](https://github.com/Babystep-Technologies/active_sanction/issues/57)).
+  `ActiveSanction.export` writes one and `.import` loads it, over
+  `Snapshot::Bundle.write`/`.read`. Deterministic — the same snapshot always produces the same
+  bytes, since records are ordered by content, header keys have a fixed order, the compression
+  level is named by the specification and nothing in the file says when it was written — so two
+  mirrors of one list are comparable.
+- Detached signatures over a bundle, `openssl` and nothing else. The signature covers the
+  header, which carries a digest of every record, so an unknown signer is refused *before* a
+  byte of what they sent is decompressed. Verification is opt-in and unsigned bundles stay
+  fully usable; a tampered file, a file signed by the wrong key, an unsigned file somebody
+  asked to verify, and a file from a newer gem each raise a different error, because each has a
+  different fix.
+- `Snapshot#trusted?` and `MatchResult#verified?`, so a screening decision records whether the
+  list that answered it was attested. Deliberately in-memory: a signature covers a bundle's
+  bytes, not the copy a store rewrites into its own layout, so `trusted?` does not survive a
+  write to disk. `MatchResult` gains `verified` as the sixth field of its reproducibility
+  stamp — an addition to the serialized shape, which a record written without it reads back
+  as `false`.
 
 #### Matching
 

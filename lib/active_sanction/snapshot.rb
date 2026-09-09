@@ -111,15 +111,27 @@ module ActiveSanction
     end
     private_class_method :build_entity
 
+    # The content address of one entity: the SHA-256 of its serialized form.
+    #
+    # What #checksum is built out of, and what the bundle format (#57) sorts a
+    # payload by -- one definition rather than two, because an order that
+    # disagreed with the checksum's would be reproducible in a way nothing here
+    # could check.
+    #
+    # @api private
+    sig { params(entity: T.untyped).returns(String) }
+    def self.fingerprint(entity) = Digest::SHA256.hexdigest(JSON.generate(entity.to_h))
+
     # `checksum` and `record_count` are derived, not supplied. Passing them --
     # which is what .from_h does with a stored snapshot -- asserts what the
     # content should be, and construction fails if it is not.
     sig do
       params(source: T.untyped, entities: T.untyped, fetched_at: T.untyped, checksum: T.untyped,
-             record_count: T.untyped, schema_version: T.untyped, source_version: T.untyped).void
+             record_count: T.untyped, schema_version: T.untyped, source_version: T.untyped,
+             trusted: T.untyped).void
     end
     def initialize(source:, entities:, fetched_at: nil, checksum: nil, record_count: nil,
-                   schema_version: SCHEMA_VERSION, source_version: nil)
+                   schema_version: SCHEMA_VERSION, source_version: nil, trusted: false)
       @source = T.let(symbol!(:source, source), Symbol)
       @entities = T.let(entities!(entities), T::Array[T.untyped])
       @fetched_at = T.let(time!(fetched_at), Time)
@@ -127,11 +139,44 @@ module ActiveSanction
       @source_version = T.let(string_or_nil(source_version), T.nilable(String))
       @record_count = T.let(count!(record_count), Integer)
       @checksum = T.let(checksum!(checksum), String)
+      @trusted = T.let(trusted == true, T::Boolean)
       freeze
     end
 
     sig { returns(T::Boolean) }
     def empty? = entities.empty?
+
+    # Whether this snapshot's *provenance* was verified: it came out of a
+    # bundle (#57) whose signature checked out under a public key the caller
+    # supplied. False for everything else, including a list this process
+    # fetched itself -- a sync proves that bytes parsed, not who published
+    # them.
+    #
+    # ### Why it is not a member
+    #
+    # It is out of MEMBERS, out of #to_h, out of the checksum and out of
+    # equality, because it is not a fact about the content. Two snapshots
+    # holding the same entities are the same list version whether or not one
+    # of them arrived signed, and a checksum that said otherwise would report
+    # a new list every time somebody imported one.
+    #
+    # ### It does not survive storage
+    #
+    #   store.write_snapshot(bundle_snapshot)
+    #   store.read_snapshot(:ofac_sdn).trusted?   # => false
+    #
+    # Deliberately, and it is the honest answer. A signature attests to the
+    # bytes of a bundle file; once those entities have been rewritten into a
+    # store's own gzipped JSON or its own table, nothing signed covers what is
+    # on disk, and a stored flag claiming otherwise would be the library
+    # laundering an attestation it no longer holds. What a store guarantees is
+    # its own -- the checksum, re-derived on every read.
+    #
+    # So a process that wants `MatchResult#verified?` to be true keeps the
+    # bundle's snapshot in memory: Storage::Memory holds the object it was
+    # given, and Matcher reads this off the very snapshot it indexed.
+    sig { returns(T::Boolean) }
+    def trusted? = @trusted
 
     sig { returns(T::Hash[Symbol, T.untyped]) }
     def to_h
@@ -164,7 +209,8 @@ module ActiveSanction
 
     sig { returns(String) }
     def inspect
-      "#<#{self.class} #{source} #{record_count} entities #{checksum} fetched_at=#{fetched_at.iso8601}>"
+      "#<#{self.class} #{source} #{record_count} entities #{checksum} " \
+        "fetched_at=#{fetched_at.iso8601}#{" verified" if trusted?}>"
     end
 
     private
@@ -182,7 +228,7 @@ module ActiveSanction
     def compute_checksum
       digest = Digest::SHA256.new
       digest << "#{schema_version}\n#{source}\n"
-      entities.map { |entity| Digest::SHA256.hexdigest(JSON.generate(entity.to_h)) }
+      entities.map { |entity| Snapshot.fingerprint(entity) }
               .sort
               .each { |fingerprint| digest << fingerprint << "\n" }
       -"#{ALGORITHM}:#{digest.hexdigest}"

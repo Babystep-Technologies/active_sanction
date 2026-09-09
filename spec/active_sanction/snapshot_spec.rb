@@ -261,4 +261,50 @@ RSpec.describe ActiveSanction::Snapshot do
       expect({ snapshot => :screened }[described_class.from_h(snapshot.to_h)]).to eq(:screened)
     end
   end
+
+  # Provenance rather than content: a signed bundle (#57) that verified is the
+  # only thing that sets it. See Snapshot#trusted?.
+  describe "#trusted?" do
+    let(:verified) do
+      described_class.new(source: :ofac_sdn, entities: entities, fetched_at: fetched_at,
+                          source_version: "2026-08-28", trusted: true)
+    end
+
+    it "is false for a list this process fetched and parsed itself" do
+      expect(snapshot.trusted?).to be(false)
+    end
+
+    it "is true for one that arrived attested" do
+      expect(verified.trusted?).to be(true)
+    end
+
+    # It is not a fact about the content, so none of the three things that are
+    # about content may move when it changes.
+    it "does not change the checksum" do
+      expect(verified.checksum).to eq(snapshot.checksum)
+    end
+
+    it "does not change the serialized form" do
+      expect(verified.to_h).to eq(snapshot.to_h)
+    end
+
+    it "does not make two snapshots of one list unequal" do
+      expect(verified).to eq(snapshot)
+    end
+
+    # A signature attests to a bundle's bytes. Once those records have been
+    # rewritten into a store's own layout, nothing signed covers what is there.
+    it "does not survive serialization" do
+      expect(described_class.from_h(verified.to_h).trusted?).to be(false)
+    end
+
+    it "cannot be asserted by a stored hash" do
+      expect { described_class.from_h(snapshot.to_h.merge(trusted: true)) }
+        .to raise_error(ActiveSanction::InvalidArgument, /unknown Snapshot attribute/)
+    end
+
+    it "says so in #inspect, where an operator looks" do
+      expect(verified.inspect).to end_with(" verified>")
+    end
+  end
 end

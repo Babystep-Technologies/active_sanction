@@ -23,6 +23,7 @@ module ActiveSanction
   #   result.explanation      # => [Reason, ...], summing to the score
   #   result.snapshot_id      # => "sha256:9f86d081884c7d65..."
   #   result.matcher_version  # => "1"
+  #   result.verified?        # => false, unless the list came from a signed bundle
   #   result.screened_at      # => 2026-09-06 11:04:02 UTC
   #
   # ### This is the most permanent object in the library
@@ -57,6 +58,10 @@ module ActiveSanction
   # the same call against data somebody else keeps fresh, and an audit record
   # has to say which one answered.
   #
+  # `verified` is the sixth, and it is the only one about *provenance* rather
+  # than about scoring: whether the list this hit came off was a signed bundle
+  # (#57) that checked out under a key this installation holds. See #verified?.
+  #
   # ### Constructible without the local scorer, on purpose
   #
   # `.from_scorer` is the convenience the Local backend uses. `.new` takes
@@ -78,7 +83,8 @@ module ActiveSanction
     # Canonical member order, matching the layout #to_h produces and the
     # documented JSON shape.
     MEMBERS = T.let(
-      %i[score entity matched_name explanation query weights snapshot_id matcher_version backend screened_at].freeze,
+      %i[score entity matched_name explanation query weights snapshot_id matcher_version backend verified
+         screened_at].freeze,
       T::Array[Symbol]
     )
 
@@ -123,6 +129,20 @@ module ActiveSanction
     sig { returns(Symbol) }
     attr_reader :backend
 
+    # Whether the list this hit came off was cryptographically attested: it was
+    # loaded from a signed bundle (#57) that verified under a public key the
+    # installation supplied. False for a list this installation fetched and
+    # parsed itself, which is not a lesser answer -- it is a different claim.
+    #
+    # The sixth field of the reproducibility stamp, and the only one that is
+    # about where the data came from rather than about how it was scored. "We
+    # screened against OFAC" and "we screened against the OFAC bundle Treasury's
+    # mirror signed on 28 August" are different sentences in front of an
+    # examiner, and a result that could not tell them apart would leave the
+    # difference to somebody's memory.
+    sig { returns(T::Boolean) }
+    def verified? = @verified
+
     # UTC, truncated to the second, which is the precision #to_h serializes.
     sig { returns(Time) }
     attr_reader :screened_at
@@ -134,13 +154,14 @@ module ActiveSanction
       # Matcher builds every result with.
       sig do
         params(result: Scorer::Result, query: Query, snapshot_id: T.untyped, weights: Scorer::Weights,
-               screened_at: T.untyped, backend: T.untyped, matcher_version: T.untyped).returns(MatchResult)
+               screened_at: T.untyped, backend: T.untyped, matcher_version: T.untyped,
+               verified: T.untyped).returns(MatchResult)
       end
       def from_scorer(result, query:, snapshot_id:, weights:, screened_at: nil, backend: DEFAULT_BACKEND,
-                      matcher_version: nil)
+                      matcher_version: nil, verified: false)
         new(entity: result.entity, matched_name: result.name, explanation: result.explanation,
             score: result.score, query: query, weights: weights, snapshot_id: snapshot_id,
-            screened_at: screened_at, backend: backend, matcher_version: matcher_version)
+            screened_at: screened_at, backend: backend, matcher_version: matcher_version, verified: verified)
       end
 
       # Rebuilds a result from #to_h output, accepting string keys so a record
@@ -186,10 +207,10 @@ module ActiveSanction
     sig do
       params(entity: T.untyped, matched_name: T.untyped, explanation: T.untyped, query: T.untyped,
              weights: T.untyped, snapshot_id: T.untyped, score: T.untyped, matcher_version: T.untyped,
-             backend: T.untyped, screened_at: T.untyped).void
+             backend: T.untyped, verified: T.untyped, screened_at: T.untyped).void
     end
     def initialize(entity:, matched_name:, explanation:, query:, weights:, snapshot_id:, score: nil,
-                   matcher_version: nil, backend: DEFAULT_BACKEND, screened_at: nil)
+                   matcher_version: nil, backend: DEFAULT_BACKEND, verified: false, screened_at: nil)
       @entity = T.let(instance!(:entity, Entity, entity), Entity)
       @matched_name = T.let(instance!(:matched_name, Name, matched_name), Name)
       @explanation = T.let(explanation!(explanation), T::Array[Scorer::Reason])
@@ -198,6 +219,7 @@ module ActiveSanction
       @snapshot_id = T.let(string!(:snapshot_id, snapshot_id), String)
       @matcher_version = T.let(string!(:matcher_version, matcher_version || MATCHER_VERSION), String)
       @backend = T.let(symbol!(:backend, backend || DEFAULT_BACKEND), Symbol)
+      @verified = T.let(verified == true, T::Boolean)
       @screened_at = T.let(time!(screened_at), Time)
       @score = T.let(score!(score), Float)
       freeze
@@ -235,6 +257,7 @@ module ActiveSanction
         snapshot_id: snapshot_id,
         matcher_version: matcher_version,
         backend: backend,
+        verified: verified?,
         screened_at: screened_at.iso8601
       }
     end
