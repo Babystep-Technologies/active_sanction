@@ -198,6 +198,36 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
 - `ActiveSanction.diff`: additions, delistings and amendments between two snapshots, joined by
   entity id, so a book of business is re-screened against what moved
   ([#35](https://github.com/Babystep-Technologies/active_sanction/issues/35)).
+- `ActiveSanction.rescreen`: who a list change affects, which is the step that turns a diff
+  into an alert ([#60](https://github.com/Babystep-Technologies/active_sanction/issues/60)).
+  Screening a customer once is a checkbox; the obligation is ongoing, and the naive way to meet
+  it — every subject against every record, every night — costs the whole book times the whole
+  corpus. This costs the book times the handful of records that moved: 10,000 subjects against
+  a typical daily OFAC diff in 1.2 s, against 54 s to screen the same book against the whole
+  list.
+  - `Subject`, a book entry: the host's own stable id plus every evidence field `screen`
+    accepts, in every spelling it accepts them in. An alert names a customer rather than a
+    name, because a book screened by position cannot survive being filtered, streamed in
+    batches, or containing the same name twice.
+  - `Rescreen::Alert` classifies what happened to *the subject's match* — `newly_listed`,
+    `delisted`, `details_changed` — and carries a full `MatchResult` for each side of the
+    change, each stamped with the checksum of the list version it was scored against. Both
+    checksums are on the alert itself, so keeping one is keeping enough to derive the run
+    again, and the prior score is what lets it say a subject moved from 71 to 94 rather than
+    only that it now matches. It round-trips through `to_h` / `from_h` like a `MatchResult`.
+  - **A delisting raises an alert too.** It is a change of status a compliance team has to
+    record, and it is the half a re-screen against new records only would miss.
+  - **An amendment that does not move the score still raises one.** A program added or an
+    address corrected changes what a hit means without changing what it scores, and filtering
+    those would be deciding which sanctions hits a host is willing to miss.
+  - **A large book streams past a small diff.** Subjects are read one at a time and only alerts
+    are kept, the block is called with each alert as it is raised, and one `Rescreen` is
+    reusable across batches so its index is built once. Nothing here touches the matcher: a
+    rescreen indexes the diff and nothing else, so applying one never costs an index build over
+    the whole corpus.
+  - **An empty diff does no work at all** — not one subject is folded — which is what makes
+    rescreening after every sync affordable. A first sync is a baseline rather than a list of
+    additions, so it raises nothing either.
 - `ActiveSanction.doctor`: whether a source's format has drifted, aggregated out of the health
   signals a normal fetch and parse already produce
   ([#68](https://github.com/Babystep-Technologies/active_sanction/issues/68)). It catches the
@@ -270,6 +300,9 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
 
 #### Measurement and tooling
 
+- `rake benchmark:rescreen`, which measures applying a diff to a book of business against the
+  naive full rescreen it replaces, and sweeps how the cost moves with how much the list did
+  ([#60](https://github.com/Babystep-Technologies/active_sanction/issues/60)).
 - `rake benchmark:accuracy` and `rake benchmark:latency`, an 87-query labeled set, and a
   **committed** accuracy report — a diff in
   [`benchmark/results/accuracy.md`](benchmark/results/accuracy.md) is a change in what this

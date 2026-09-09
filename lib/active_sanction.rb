@@ -30,8 +30,10 @@ require "active_sanction/scorer"
 require "active_sanction/query"
 require "active_sanction/match_result"
 require "active_sanction/matcher"
+require "active_sanction/subject"
 require "active_sanction/sync"
 require "active_sanction/diff"
+require "active_sanction/rescreen"
 require "active_sanction/doctor"
 require "active_sanction/client"
 require "active_sanction/sources/ofac_sdn"
@@ -217,6 +219,39 @@ module ActiveSanction
     # which is where all of that is documented.
     sig { params(source: T.untyped, options: T.untyped).returns(Diff) }
     def diff(source = nil, **options) = T.unsafe(client).diff(source, **options)
+
+    # Applies a snapshot diff to a book of subjects, and returns the alerts:
+    #
+    #   book = [
+    #     ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin", date_of_birth: "1952-10-07"),
+    #     ActiveSanction::Subject.new(id: "cust_2", name: "Jane Miller")
+    #   ]
+    #
+    #   alerts = ActiveSanction.rescreen(book, diff: diff, threshold: 75)
+    #
+    #   alerts.first.subject_id      # => "cust_1"
+    #   alerts.first.change          # => :newly_listed | :delisted | :details_changed
+    #   alerts.first.result          # => a full MatchResult, with its explanation
+    #   alerts.first.previous_score  # => what it scored against the old list version
+    #
+    # Screening answers about a name; this answers about a book of business,
+    # and it is the step that turns a diff into an alert. The cost is the book
+    # times the handful of records that moved rather than the book times the
+    # whole corpus, which is what makes rescreening after every sync
+    # affordable -- an empty diff scores nothing at all.
+    #
+    # A delisting raises an alert too: it is a change of status a compliance
+    # team has to record, and it is the one that lets a customer back through
+    # the door. The block, if given, is called with each alert as it is
+    # raised, so a large book streams past a small diff without accumulating
+    # anything. See Rescreen, which is where all of that is documented.
+    sig do
+      params(subjects: T.untyped, diff: T.untyped, options: T.untyped,
+             block: T.nilable(T.proc.params(alert: Rescreen::Alert).void)).returns(T::Array[Rescreen::Alert])
+    end
+    def rescreen(subjects, diff:, **options, &block)
+      T.unsafe(client).rescreen(subjects, diff: diff, **options, &block)
+    end
 
     # Diagnoses whether a source's format has drifted -- fetching each list,
     # parsing it, and comparing what it measures against the version that was

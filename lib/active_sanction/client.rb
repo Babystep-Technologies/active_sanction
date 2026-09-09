@@ -216,6 +216,31 @@ module ActiveSanction
       with_configuration { T.unsafe(Diff).call(source, store: storage, **options) }
     end
 
+    # Applies a snapshot diff to a book of subjects, and returns the alerts:
+    #
+    #   diff   = client.diff(:ofac_sdn, from: yesterdays_snapshot)
+    #   alerts = client.rescreen(book, diff: diff, threshold: 75)
+    #
+    #   alerts.first.subject_id   # => "cust_1"
+    #   alerts.first.change       # => :newly_listed
+    #
+    # Who a list change affects, which is the step that turns a diff into an
+    # alert. Costs the book times the handful of records that moved rather
+    # than the book times the whole corpus, and does not touch this client's
+    # matcher -- a rescreen indexes the diff and nothing else. A host
+    # streaming a large book builds one Rescreen and calls it per batch, so
+    # that index is built once; see Rescreen, which is where all of it is
+    # documented.
+    sig do
+      params(subjects: T.untyped, diff: T.untyped, options: T.untyped,
+             block: T.nilable(T.proc.params(alert: Rescreen::Alert).void)).returns(T::Array[Rescreen::Alert])
+    end
+    def rescreen(subjects, diff:, **options, &block)
+      with_configuration do
+        T.unsafe(Rescreen).call(subjects, diff: diff, backend: backend, **options, &block)
+      end
+    end
+
     # Writes one of this client's lists to a portable bundle file, and returns
     # the Bundle::Header it wrote:
     #

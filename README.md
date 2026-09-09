@@ -37,6 +37,7 @@ ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: 
 - **Publishes.** Any stored list, as one signed, versioned, byte-for-byte reproducible file that another machine loads and trusts without reaching the publisher — for an air-gapped installation, or for the afternoon a government endpoint is down. The [format is specified](docs/bundle_format.md) in enough detail to be implemented outside Ruby.
 - **Screens.** Fold the name, retrieve candidates from an inverted index, score each with four string algorithms and a phonetic pass, adjust on dates of birth, nationalities and document numbers, and report the reasons — which sum to the score exactly.
 - **Diffs.** What changed between two syncs, so a book of business is re-screened against the handful of records that moved rather than against the whole list.
+- **Rescreens.** Applies that diff to a book of business and reports who it affects — newly listed, delisted, or listed under details that moved — with the prior score, both snapshot checksums, and the caller's own id on every alert.
 - **Diagnoses.** Whether a list still parses the way we think it does — field fill rates, the free-text vocabulary, the shape of a positional column — measured against the version stored at the last sync, because the dangerous format change is the one where the file still parses cleanly and means something different.
 - **Stamps.** Every result carries the snapshot checksum, the matcher version, the weights, the query, and whether the list that answered was a signed bundle that verified — so a screening decision made today can be re-derived in three years by somebody who has neither this process nor this version of the gem.
 
@@ -268,7 +269,7 @@ A store is where this machine keeps its lists. To move one *between* machines �
 
 ## Performance
 
-Numbers from `rake benchmark:latency` and `rake benchmark:index` on the machine they were last run on, against a corpus the size of the real lists — 47,051 indexed names over 27,000 entities. Your own are one command away; these are here so you can size a deployment before installing anything.
+Numbers from `rake benchmark:latency`, `rake benchmark:index` and `rake benchmark:rescreen` on the machine they were last run on, against a corpus the size of the real lists — 47,051 indexed names over 27,000 entities. Your own are one command away; these are here so you can size a deployment before installing anything.
 
 | | |
 |---|---|
@@ -277,6 +278,7 @@ Numbers from `rake benchmark:latency` and `rake benchmark:index` on the machine 
 | Screening, p95 / p99 | 47.9 ms / 85.7 ms |
 | Screening with no threshold | 51.4 ms p50 — a threshold is roughly two thirds of the cost, and changes no score |
 | YJIT | Roughly halves the scoring cost. `RUBYOPT=--yjit` |
+| Rescreening 10,000 subjects against a typical daily diff | **1.2 s** — against 54 s to screen the same book against the whole list. See [Rescreening a book of business](#rescreening-a-book-of-business-against-a-diff) |
 | A sync where nothing changed | One conditional request per file, no download and no parse |
 | A full OFAC SDN sync | Three files downloaded, joined across 19,321 entities, and 88,827 remarks segments parsed. The expensive half is the parse, which is exactly what a 304 skips |
 
@@ -822,7 +824,89 @@ That table is `diff.to_s`; `Diff#to_h` is the same thing JSON-ready, carrying bo
 
 **Order is not a change, and neither is a reordered alias.** Two snapshots of the same file compare equal whatever order the publisher emitted it in, and the collection fields inside a record — names, addresses, identifiers, dates of birth, nationalities, programs — are compared by membership rather than by position. The one thing that is never decided for the host is which amendments are too small to bother re-screening: a corrected passport number and a reworded remark reach the scorer by different paths, and a library that filtered them would be choosing which sanctions hits it is willing to miss.
 
+Applying that diff to a book of business is the next step, and it is [`ActiveSanction.rescreen`](#rescreening-a-book-of-business-against-a-diff).
+
 **Nothing here reads OFAC's `/changes/latest`.** OFAC serves a delta feed of its own, and a diff has to describe the two list versions *we hold* — a run that skipped a day, or held a stale list because a fetch failed, is not on either end of the publisher's delta. Cross-checking a computed diff against that feed is worth doing, since it is how a parser regression that quietly drops records gets caught, but it belongs in the OFAC adapter as one publisher's answer rather than in the general shape of a diff.
+
+### Rescreening a book of business against a diff
+
+A diff says what changed in the list. This says **who that change affects**, which is the step that turns a diff into an alert.
+
+```ruby
+book = [
+  ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin", date_of_birth: "1952-10-07"),
+  ActiveSanction::Subject.new(id: "cust_2", name: "Jane Miller")
+]
+
+alerts = ActiveSanction.rescreen(book, diff: diff, threshold: 75)
+
+alerts.first.subject_id      # => "cust_1", the caller's own id
+alerts.first.change          # => :newly_listed | :delisted | :details_changed
+alerts.first.result          # => MatchResult, scored against the record as the new list has it
+alerts.first.previous_score  # => 71.0 — what it scored against the old list version
+alerts.first.score           # => 94.1
+```
+
+```
+cust_1  newly listed  ofac_sdn:41234  PUTIN, Vladimir Vladimirovich  71.0 -> 94.1
+```
+
+**Screening a customer once is a checkbox; the obligation is ongoing.** Somebody cleared last month may be listed today, and a delisting matters just as much. The naive way to keep a book current — every subject against every record, every night — costs the whole book times the whole corpus, and it is why services that do it that way do it weekly instead. Rescreening against the diff costs the book times *the handful of records that moved*.
+
+**An alert names a customer, not a name.** A book screened as an array of names comes back as an array somebody has to re-join by position, which works exactly until the book is filtered, streamed in batches, or contains the same name twice — and two customers called Jane Miller is not a corner case. So `Subject` carries the host's own id, unread and uninterpreted, and it travels onto every alert. Everything else on it is what `screen` takes, in every spelling `screen` takes it: `date_of_birth:` or `dates_of_birth:`, `country:`, `countries:` or `nationalities:`.
+
+**What `change` says is what happened to *this subject's match*, not to the record's paperwork.**
+
+| | |
+|---|---|
+| `:newly_listed` | it did not reach the threshold against this record before and does now — because the record is new, or because an amendment gave an existing record the alias, the identifier or the date of birth that brought the subject over the line. Both are the same event for a compliance team |
+| `:delisted` | it did reach the threshold before and does not now — because the record was withdrawn, or because an amendment moved it out of range. This is the half a re-screen against new records only would miss, and the half that lets a customer back through the door |
+| `:details_changed` | it matched before, it matches now, and the record moved underneath it |
+
+`alert.fields` is empty when the record itself arrived or left, and names the fields that moved when it was amended — so which of the two routes an alert took is a fact on it rather than a guess.
+
+**A `details_changed` alert is raised even when the score did not move.** A program added or an address corrected changes what a hit *means* without changing what it scores, and a library that decided such a change was too small to report would be deciding which sanctions hits a host is willing to miss. The same rule `diff.changed` follows, one layer up.
+
+**Both list versions are on every alert.** `previous_result` and `result` are full `MatchResult`s, each stamped with the checksum of the version it was scored against, so an alert is defensible the way a screening decision is: the explanation is on it, and it adds up. Either side may be absent — a newly listed record has no previous side and a withdrawn one has no current side — which is what lets an alert say a subject moved from 71 to 94 rather than merely that it now matches. `snapshot_id` and `previous_snapshot_id` are on the alert itself, so keeping one is keeping enough to derive the whole run again.
+
+```ruby
+JSON.generate(alert.to_h)                                     # into a case management system
+ActiveSanction::Rescreen::Alert.from_h(JSON.parse(json))      # == alert, years later
+```
+
+**A large book is streamed past a small diff.** Nothing about the book is held: subjects are read one at a time and only alerts are kept, so memory is a function of how much the list moved rather than of how many customers there are. Build one `Rescreen` and call it per batch, so its index is built once:
+
+```ruby
+rescreening = ActiveSanction::Rescreen.new(diff: diff, threshold: 75)
+
+Customer.find_in_batches(batch_size: 1_000) do |batch|
+  rescreening.call(batch.map { |c| { id: c.id, name: c.name, dob: c.born_on } }) do |alert|
+    ComplianceAlert.create!(alert.to_h)
+  end
+end
+```
+
+**One diff, one list.** A diff describes a pair of versions of a single source, so a host that syncs seven lists runs seven rescreens — one per source that moved, each raising alerts against the same book. A source that a sync reported unchanged has nothing to apply.
+
+**A rescreen never touches the matcher.** It indexes the diff and nothing else, so applying one does not cost an index build over the whole corpus, and a process that has never screened anything can rescreen without paying for one. It also means the run is more sensitive than the equivalent full screen, not less: the candidate cap that binds over 47,000 names cannot bind over a few dozen.
+
+**An empty diff does no work at all** — not one subject is folded. A sync that changed nothing costs nothing to rescreen against, which is what makes rescreening after every sync affordable. A first sync is a baseline rather than 19,015 new listings, so it raises nothing either; the right response to one is a deliberate full screening run with `screen_all`.
+
+**Per-subject thresholds are supported, because risk-based screening is ordinary.** A subject that names its own is screened at it; everything else takes the run's. What a `Subject` will not take is `sources:` or `limit:` — the diff names the list, and an alert dropped for being eleventh is a sanctions hit nobody sees. Both are refused rather than ignored.
+
+**What this does not do is remember anything.** There is no alert store, no deduplication against what was raised yesterday, and no disposition — see [What it does not do](#what-it-does-not-do). Two runs over the same diff produce the same alerts in the same order, which is the property that makes them re-derivable and the reason the queue they go into belongs to the host. And a rescreen cannot find what was already there: a subject matching a record that did not change is not in a diff at all.
+
+From `rake benchmark:rescreen`, on the machine it was last run on, against the corpus the rest of these numbers use:
+
+| | |
+|---|---|
+| 10,000 subjects against a typical daily diff (12 added, 4 removed, 5 amended) | **1.2 s**, YJIT — 124 µs a subject |
+| The same book screened against the whole list instead | **54 s**, ~44× the cost |
+| 10,000 subjects where every one is named like somebody on a list | 3.0 s — the ceiling, not a realistic book |
+| Building the `Rescreen` | 4 ms for 39 names. It scales with the diff, not the corpus |
+| A day a publisher reissues 2,000 records | 35 s. Rescreening is cheap because lists move slowly, and stops being cheap when one does not |
+
+Most of the per-subject cost is describing each name in the three feature spaces the index is keyed on, which is paid whether or not anything matches — so the number moves with the size of the book far more than with the size of the diff.
 
 ### Noticing when a publisher has changed its format
 
@@ -1148,6 +1232,7 @@ pass or fail, so they are not part of `rake`:
     $ bundle exec rake benchmark:scorer              # scoring latency, and what a threshold buys
     $ bundle exec rake benchmark:accuracy            # precision, recall and F1 against the labeled set
     $ bundle exec rake benchmark:latency             # what a whole screening call costs
+    $ bundle exec rake benchmark:rescreen            # applying a diff to a book, against the naive full rescreen
     $ RUBYOPT=--yjit bundle exec rake benchmark:similarity
 
 Each timed one prints the Ruby and JIT it ran under, because that is most of
