@@ -66,6 +66,20 @@ RSpec.describe ActiveSanction do
     end
   end
 
+  describe ".rescreen" do
+    before { described_class.configure { |c| c.storage = synced(putin) } }
+
+    it "applies a diff to a book through the default client" do
+      changes = described_class.diff(:ofac_sdn, from: ActiveSanction::Snapshot.new(source: :ofac_sdn, entities: []))
+      book = [ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin"),
+              ActiveSanction::Subject.new(id: "cust_2", name: "Jane Wilson of Dorset")]
+
+      alerts = described_class.rescreen(book, diff: changes, threshold: 75)
+
+      expect(alerts.map { |alert| [alert.subject_id, alert.change] }).to eq([["cust_1", :newly_listed]])
+    end
+  end
+
   describe ".sync!" do
     def un(entities = [FakeSyncSource.entity(:un_consolidated)])
       FakeSyncSource.new(:un_consolidated, entities: entities)

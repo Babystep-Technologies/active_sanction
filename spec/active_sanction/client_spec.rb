@@ -314,6 +314,40 @@ RSpec.describe ActiveSanction::Client do
     end
   end
 
+  describe "#rescreen" do
+    def snapshot(entities) = ActiveSanction::Snapshot.new(source: :ofac_sdn, entities: entities)
+
+    it "applies a diff to a book, and stamps the client's backend onto every alert" do
+      client = described_class.new(storage: store(ofac_sdn: [putin]), backend: :hosted)
+      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([putin]))
+      book = [ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin")]
+
+      alerts = client.rescreen(book, diff: changes, threshold: 75)
+
+      expect(alerts.map { |alert| [alert.subject_id, alert.change, alert.result.backend] })
+        .to eq([["cust_1", :newly_listed, :hosted]])
+    end
+
+    # A rescreen indexes the diff and nothing else: applying one must not cost
+    # an index build over the whole corpus.
+    it "does not build the client's matcher" do
+      client = described_class.new(storage: both)
+      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([putin]))
+
+      client.rescreen([ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin")], diff: changes)
+
+      expect(client.loaded?).to be(false)
+    end
+
+    it "screens under its own configuration" do
+      client = described_class.new(storage: both, screening_threshold: 99)
+      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([putin]))
+
+      expect(client.rescreen([ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin")], diff: changes))
+        .to be_empty
+    end
+  end
+
   describe "#reload!" do
     it "drops the held matcher so the next call builds one over what is stored now" do
       client = described_class.new(storage: both)

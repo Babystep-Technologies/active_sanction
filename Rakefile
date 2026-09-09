@@ -86,6 +86,11 @@ namespace :benchmark do
   task :latency do
     ruby "benchmark/latency.rb"
   end
+
+  desc "Time applying a snapshot diff to a book of business, against the naive full rescreen (#60)"
+  task :rescreen do
+    ruby "benchmark/rescreen.rb"
+  end
 end
 
 task default: %i[spec rubocop typecheck]
