@@ -1097,7 +1097,7 @@ It is applied to the whole score rather than to the name, which matters: a subje
 
 #### What 75 is set from
 
-The default was a guess until `rake benchmark:accuracy` measured it. Against 87 labeled queries — real published records queried the way a customer record spells them, plus the common names and near misses that must not alert — F1 peaks at exactly the number this library ships, and [Reading a score](#reading-a-score) is what each choice around it costs.
+The default was a guess until `rake benchmark:accuracy` measured it. Against the labeled set described in [Reading a score](#reading-a-score), F1 peaks at exactly the number this library ships, and that section has the curve and what each choice around it costs.
 
 That the two agree is the whole argument for the number, and it is worth being clear about what it is not: F1 weighs a miss and a false alert equally and a sanctions screen does not. The default sits at the peak rather than above it, and `threshold:` stays per query for the host that has to be more careful still.
 
