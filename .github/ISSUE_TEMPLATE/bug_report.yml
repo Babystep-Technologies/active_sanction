@@ -1,0 +1,85 @@
+name: Bug report
+description: Something the library does that it should not, or fails to do
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        **If this is a name the matcher gets wrong, use the "Match quality"
+        form instead** — it asks for the things that turn a wrong score into a
+        regression test. **If it is a security issue, do not file it here:**
+        see [SECURITY.md](https://github.com/Babystep-Technologies/active_sanction/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: The smallest thing that reproduces it
+      description: >-
+        Ruby, ideally runnable. A published record that triggers it is more
+        useful than a synthetic one, and naming it discloses nothing — it is
+        already on a government website.
+      render: ruby
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: The error, in full
+      description: >-
+        Message and backtrace, unedited. Errors in this gem carry structured
+        attributes; `error.to_h` prints them.
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: active_sanction version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: ruby
+    attributes:
+      label: Ruby version
+      description: "`ruby -v`, including the platform"
+      placeholder: "ruby 3.4.1 (2024-12-25) [arm64-darwin24]"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Which list, if it is about one
+      multiple: true
+      options:
+        - ofac_sdn
+        - ofac_consolidated
+        - un_consolidated
+        - canada_sema
+        - eu_fsf
+        - uk_sanctions_list
+        - australia_dfat
+        - a source of my own
+        - not about a particular list
+    validations:
+      required: false
+
+  - type: input
+    id: storage
+    attributes:
+      label: Which storage, if it is about one
+      placeholder: "Storage::FileSystem, Storage::Memory, or one of my own"
+    validations:
+      required: false

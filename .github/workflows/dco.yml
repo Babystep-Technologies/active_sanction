@@ -1,0 +1,101 @@
+name: DCO
+
+# Contributions are accepted under the Developer Certificate of Origin (#61),
+# which means every commit carries a `Signed-off-by:` trailer naming its
+# author. That is one `-s` flag for a contributor and it gives clean provenance
+# for every contribution without the drive-by friction a CLA imposes -- so the
+# check has to be cheap to satisfy and has to say how, which is most of what
+# the script below is doing.
+#
+# Only pull requests: the trunk's own history predates the policy, and a check
+# that retroactively fails `main` would be red forever with nothing anybody can
+# do about it.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-off-by:
+    name: Signed-off-by
+    runs-on: ubuntu-latest
+
+    steps:
+      # `fetch-depth: 0` because the check reads a commit range: a shallow
+      # clone has the head and not the base it has to be compared against.
+      # Nothing else here needs the history, and nothing here needs a Ruby --
+      # this is git and a shell, so the job costs seconds.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The two SHAs come from the event payload rather than being interpolated
+      # into the script, which is the habit that keeps a branch name from ever
+      # being read as shell.
+      - name: Every commit is signed off by its author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          unsigned=0
+
+          # Merge commits are skipped. A contributor does not write one -- git
+          # does, or the forge does when a branch is updated -- and requiring a
+          # certification on a commit nobody authored certifies nothing.
+          while read -r sha; do
+            [ -n "$sha" ] || continue
+
+            subject=$(git show -s --format='%s' "$sha")
+            author=$(git show -s --format='%ae' "$sha" | tr '[:upper:]' '[:lower:]')
+
+            # Every sign-off address in the message, lowercased. Matching on
+            # the address rather than the whole line is deliberate: the name is
+            # free text that a contributor may spell differently between their
+            # git config and their sign-off, and the address is the part that
+            # identifies who certified the patch.
+            signoffs=$(git show -s --format='%B' "$sha" |
+              sed -n 's/^[[:space:]]*[Ss]igned-off-by:.*<\(.*\)>[[:space:]]*$/\1/p' |
+              tr '[:upper:]' '[:lower:]')
+
+            if printf '%s\n' "$signoffs" | grep -qxF "$author"; then
+              printf '  ok       %s  %s\n' "${sha:0:9}" "$subject"
+            else
+              unsigned=$((unsigned + 1))
+              printf '  MISSING  %s  %s\n' "${sha:0:9}" "$subject"
+              echo "::error::Commit ${sha:0:9} has no Signed-off-by line matching its author <${author}>."
+            fi
+          done < <(git rev-list --no-merges "${BASE}..${HEAD}")
+
+          if [ "$unsigned" -eq 0 ]; then
+            echo
+            echo "Every commit is signed off."
+            exit 0
+          fi
+
+          cat <<'MESSAGE'
+
+          ---------------------------------------------------------------
+          This project accepts contributions under the Developer
+          Certificate of Origin: https://developercertificate.org
+
+          Each commit above needs a trailer naming its author:
+
+              Signed-off-by: Your Name <your.email@example.com>
+
+          Git writes it for you with `git commit -s`. The address must
+          match the commit author's, because the sign-off is what records
+          who certified the contribution.
+
+          To sign off commits you have already pushed:
+
+              git rebase --signoff origin/main
+              git push --force-with-lease
+
+          There is no CLA to sign. See CONTRIBUTING.md.
+          ---------------------------------------------------------------
+          MESSAGE
+
+          exit 1

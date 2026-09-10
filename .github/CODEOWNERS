@@ -1,0 +1,15 @@
+# Review is required from a maintainer on everything, which for now is one
+# person. The point of the file is not the routing -- it is that a pull request
+# arrives with a reviewer already on it rather than waiting for somebody to
+# notice, and that the list is a diff when it changes.
+* @marshallshen
+
+# Called out separately so a change to any of them is never an incidental part
+# of a larger review: the licence, who certifies contributions, how a
+# vulnerability is reported, and what CI is allowed to do on this repository's
+# behalf are the four things that get expensive to get wrong.
+/LICENSE.txt        @marshallshen
+/CONTRIBUTING.md    @marshallshen
+/SECURITY.md        @marshallshen
+/CODE_OF_CONDUCT.md @marshallshen
+/.github/           @marshallshen
