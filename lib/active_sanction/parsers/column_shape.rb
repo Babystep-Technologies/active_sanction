@@ -53,11 +53,14 @@ module ActiveSanction
     class ColumnShape
       extend T::Sig
 
+      # @api private
       DEFAULT_AT_LEAST = T.let(0.99, Float)
 
       # Unmatched values kept as evidence. Enough to recognize what is in the
       # column instead, and few enough that a whole shifted file does not
       # arrive in a report someone has to read.
+      #
+      # @api private
       SAMPLE_SIZE = T.let(3, Integer)
 
       sig { returns(Symbol) }
@@ -192,6 +195,8 @@ module ActiveSanction
       # deliberately keeping the values it rejected: "ent_num is numeric on 0%
       # of rows" says a column moved, and the sample says which one moved into
       # it.
+      #
+      # @api private
       class Tally
         extend T::Sig
 

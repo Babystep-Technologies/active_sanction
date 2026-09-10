@@ -55,15 +55,20 @@ module ActiveSanction
 
       url :main, "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
 
+      # @api private
       INDIVIDUAL = T.let("INDIVIDUAL", String)
+      # @api private
       ENTITY = T.let("ENTITY", String)
 
+      # @api private
       LIST = T.let(Parsers::XmlRecords.new(records: [INDIVIDUAL, ENTITY]), Parsers::XmlRecords)
 
       # The generation timestamp the UN stamps on the document element. More
       # precise than the Last-Modified header Base falls back to, and it is the
       # string that appears on the UN's own site, so it is the one an examiner
       # asking "which version was this screened against" will recognise.
+      #
+      # @api private
       GENERATED_AT = T.let("dateGenerated", String)
 
       # Records that could not be used. Read after #parse; sync orchestration

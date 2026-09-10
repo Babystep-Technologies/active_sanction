@@ -76,14 +76,19 @@ module ActiveSanction
 
       # Where the shipped lists are, and the file name of each: `legal_forms`
       # is `dictionaries/legal_forms.txt`.
+      #
+      # @api private
       DIRECTORY = T.let(File.expand_path("dictionaries", __dir__), String)
 
+      # @api private
       LISTS = T.let(%i[legal_forms honorifics organization_stopwords particles].freeze, T::Array[Symbol])
 
       # Which lists are stripped from which entity type. A type absent here --
       # `vessel`, `aircraft` -- is folded and left alone: a ship's name is not
       # a company's, and the tokens that would be dropped from one carry
       # meaning in the other.
+      #
+      # @api private
       STRIPPED = T.let({
         individual: %i[honorifics].freeze,
         organization: %i[legal_forms organization_stopwords].freeze
@@ -229,6 +234,8 @@ module ActiveSanction
 
       # Last, because building it runs #initialize, which calls every private
       # method below.
+      #
+      # @api private
       DEFAULT = T.let(from_files, Dictionary)
       private_constant :DEFAULT
     end

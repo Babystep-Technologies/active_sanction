@@ -36,6 +36,8 @@ module ActiveSanction
       # says it holds 48 MB and keeps producing bytes at 49 MB is either damaged
       # or built to exhaust whoever opens it, and either way there is nothing to
       # gain by decompressing the rest of it.
+      #
+      # @api private
       module Payload
         extend T::Sig
         extend T::Helpers

@@ -41,6 +41,8 @@ module ActiveSanction
     # declarations from Definition, fetch and cache and checksum from Base,
     # reading and joining from Parsers. It required no change to any of them,
     # which is the property M4 exists to prove.
+    #
+    # @api private
     class Ofac < Base
       extend T::Sig
 

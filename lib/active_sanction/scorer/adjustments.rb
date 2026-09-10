@@ -74,6 +74,8 @@ module ActiveSanction
     # the score is what it is before meeting the ones that adjusted it. The
     # order is also what makes a score reproducible to the last decimal --
     # see Scorer on why the sum has to be taken the same way every time.
+    #
+    # @api private
     module Adjustments
       extend T::Sig
 

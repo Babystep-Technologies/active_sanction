@@ -34,6 +34,8 @@ module ActiveSanction
       # A match is dropped wherever it appears, not only at the end. OFAC
       # writes both "GAZPROM PAO" and "PJSC GAZPROM", and a rule that only
       # looked at the tail would fold one of them and not the other.
+      #
+      # @api private
       class Stoplist
         extend T::Sig
 

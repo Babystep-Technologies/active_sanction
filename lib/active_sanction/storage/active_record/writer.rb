@@ -27,6 +27,8 @@ module ActiveSanction
       # "optional" in the issue. So the entities go in first, and one ordered
       # `pluck` of their ids follows: one extra query per sync, against a
       # method that works everywhere.
+      #
+      # @api private
       class Writer
         extend T::Sig
 

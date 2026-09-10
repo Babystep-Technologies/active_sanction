@@ -94,31 +94,46 @@ module ActiveSanction
       # Bumped when the container changes shape. Readers refuse anything above
       # what they know rather than guessing, which is the whole reason it is on
       # the first line of the file.
+      #
+      # @api private
       FORMAT_VERSION = T.let(1, Integer)
 
       # Formats this code can read. A bundle below the version it writes still
       # round-trips; one above it does not, and says so.
+      #
+      # @api private
       READABLE_FORMAT_VERSIONS = T.let(1..FORMAT_VERSION, T::Range[Integer])
 
       # Snapshot schemas this code can read, held to the same range
       # Storage::FileSystem holds a stored list to.
+      #
+      # @api private
       READABLE_SCHEMA_VERSIONS = T.let(1..Snapshot::SCHEMA_VERSION, T::Range[Integer])
 
+      # @api private
       MAGIC = T.let("ACTIVESANCTION-BUNDLE", String)
 
+      # @api private
       MAGIC_PATTERN = T.let(%r{\A#{MAGIC}/(\d+)\z}, Regexp)
 
       # The conventional extension, and what the CLI-shaped helpers default to.
+      #
+      # @api private
       EXTENSION = T.let(".asb", String)
 
       # How the records are laid out, and how they are packed. Named in the
       # header of every bundle so that a v1 reader can refuse a v1 file that
       # uses something it has never heard of, rather than misreading it.
+      #
+      # @api private
       ENCODING = T.let("ndjson", String)
+      # @api private
       COMPRESSION = T.let("deflate", String)
 
       # The longest any of the three text lines may be. A malformed file must
       # not be read as one 400 MB line before anything notices it is malformed.
+      #
+      # @api private
       MAX_LINE_BYTES = T.let(64 * 1024, Integer)
 
       # This bundle is not what it says it is: it does not begin like a bundle,

@@ -121,6 +121,7 @@ module ActiveSanction
       # each format stays the same however many times the list is refreshed.
       url :main, "https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml"
 
+      # @api private
       DESIGNATION = T.let("Designation", String)
 
       # The FCDO's own generation date, which it publishes as an element
@@ -128,8 +129,11 @@ module ActiveSanction
       # Named as a record so that the one pass over the payload reads it on the
       # way past -- it is the first child of `<Designations>` -- instead of the
       # adapter parsing 21.8 MB twice to answer which version this was.
+      #
+      # @api private
       GENERATED_AT = T.let("DateGenerated", String)
 
+      # @api private
       LIST = T.let(Parsers::XmlRecords.new(records: [DESIGNATION, GENERATED_AT]), Parsers::XmlRecords)
 
       # Records that could not be used, and fields that could not be read.

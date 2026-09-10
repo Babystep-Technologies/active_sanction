@@ -103,6 +103,8 @@ module ActiveSanction
       # those are the Indic vowel signs, which are letters in every sense that
       # matters here, and dropping them would fold `का` and `कि` onto the same
       # consonant.
+      #
+      # @api private
       MARKS = T.let(/[\p{Mn}\p{Me}]/, Regexp)
 
       # The Latin letters NFKD leaves untouched, because they are letters in
@@ -115,6 +117,8 @@ module ActiveSanction
       #
       # Applied after casefolding, so the table only has to carry lowercase
       # keys. `ß` is absent because casefolding already turns it into `ss`.
+      #
+      # @api private
       TRANSLITERATIONS = T.let(
         {
           "æ" => "ae", "œ" => "oe", "ø" => "o", "ð" => "d", "þ" => "th",
@@ -124,6 +128,7 @@ module ActiveSanction
         T::Hash[String, String]
       )
 
+      # @api private
       TRANSLITERABLE = T.let(Regexp.union(TRANSLITERATIONS.keys), Regexp)
 
       # Everything that is not a letter, a digit or whitespace, which covers
@@ -136,6 +141,8 @@ module ActiveSanction
       # `Sanʻa` and `Qurʼan` with these where OFAC writes a plain apostrophe or
       # nothing at all, and a mark that survives here is a token no query will
       # ever be typed with.
+      #
+      # @api private
       PUNCTUATION = T.let(/[^[:alnum:][:space:]]|[ʔʕʰ-˿]/, Regexp)
 
       # The publisher's string, untouched. This is what a hit is reported in.

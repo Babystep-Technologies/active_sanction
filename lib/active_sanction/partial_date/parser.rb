@@ -14,6 +14,8 @@ module ActiveSanction
     # Returns nil on anything it cannot read, per the issue: a birth date is one
     # field on a record, and an unanticipated string should not abort the import
     # of the entity around it. Callers decide whether that is worth reporting.
+    #
+    # @api private
     module Parser
       extend T::Sig
 

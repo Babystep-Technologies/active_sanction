@@ -34,6 +34,8 @@ module ActiveSanction
       # is `m/d/yyyy`, and 2,711 are the *year* the person was born written as a
       # plain number under the General format. Read without the styles they are
       # the same thing, and one of the two readings is wrong for every row.
+      #
+      # @api private
       class Workbook
         extend T::Sig
 

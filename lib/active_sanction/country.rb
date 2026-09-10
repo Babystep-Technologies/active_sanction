@@ -56,9 +56,12 @@ module ActiveSanction
   module Country
     extend T::Sig
 
+    # @api private
     TABLE = T.let(File.expand_path("countries.txt", __dir__), String)
 
     # `<alpha-2>|<alpha-3>|<ISO name>|<alias>...`
+    #
+    # @api private
     SEPARATOR = T.let("|", String)
 
     class << self
@@ -152,7 +155,9 @@ module ActiveSanction
     # synchronize reading a file. Private because the two readers above are
     # the way to reach them.
     codes, names = read
+    # @api private
     CODES = T.let(codes, T::Hash[String, String])
+    # @api private
     NAMES = T.let(names, T::Hash[String, String])
     private_constant :CODES, :NAMES
   end

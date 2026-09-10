@@ -51,10 +51,13 @@ module ActiveSanction
       thai devanagari bengali tamil myanmar khmer armenian georgian ethiopic syriac
     ].freeze, T::Array[Symbol])
 
+    # @api private
     ENUMS = T.let({ kind: KINDS, quality: QUALITIES, script: SCRIPTS }.freeze, T::Hash[Symbol, T::Array[Symbol]])
 
     # Canonical member order. Snapshot (#8) checksums the serialized form, so
     # #to_h must lay its keys out the same way every time.
+    #
+    # @api private
     MEMBERS = T.let(%i[value kind quality script].freeze, T::Array[Symbol])
 
     # The publisher's own string, stripped of surrounding whitespace and

@@ -48,6 +48,8 @@ module ActiveSanction
       # 65,000 rows hanging off them, and row-at-a-time saves with callbacks
       # turn seconds into minutes. Deletion is Row::Snapshot#discard!, which
       # drops the children in bulk and then the parent.
+      #
+      # @api private
       module Row
         # Abstract, so a host can point the sanctions tables at a database
         # other than its application's without touching ActiveRecord::Base:
@@ -57,12 +59,16 @@ module ActiveSanction
         # Left unconnected here, so it inherits whatever ActiveRecord::Base is
         # connected to -- the right default, because the common case is a Rails
         # application with one database.
+        #
+        # @api private
         class Base < ::ActiveRecord::Base
           self.abstract_class = true
         end
 
         # `active_sanction_snapshots` -- one row per synced list, carrying the
         # checksum the whole list is rebuilt against.
+        #
+        # @api private
         class Snapshot < Base
           extend T::Sig
 
@@ -87,6 +93,8 @@ module ActiveSanction
 
         # `active_sanction_entities` -- one row per record on a list, with its
         # names, addresses and identifiers hanging off it.
+        #
+        # @api private
         class Entity < Base
           self.table_name = "active_sanction_entities"
 
@@ -103,6 +111,8 @@ module ActiveSanction
 
         # `active_sanction_names` -- one row per name variant, primary or alias.
         # `normalized_value` is the indexed column the prefilter probes.
+        #
+        # @api private
         class Name < Base
           self.table_name = "active_sanction_names"
 
@@ -125,6 +135,8 @@ module ActiveSanction
 
         # `active_sanction_addresses` -- one row per published address. Not a
         # prefilter path: addresses on these lists are too partial to probe on.
+        #
+        # @api private
         class Address < Base
           self.table_name = "active_sanction_addresses"
 
@@ -135,6 +147,8 @@ module ActiveSanction
         # `active_sanction_identifiers` -- one row per document number, keyed on
         # ActiveSanction::Identifier#normalized_value so that two publishers'
         # punctuation of the same passport finds each other.
+        #
+        # @api private
         class Identifier < Base
           self.table_name = "active_sanction_identifiers"
 
@@ -152,6 +166,8 @@ module ActiveSanction
 
         # Parents before children: the order a write inserts in, and the
         # reverse of the order a delete removes in.
+        #
+        # @api private
         ALL = T.let([Snapshot, Entity, Name, Address, Identifier].freeze, T::Array[T.untyped])
       end
     end

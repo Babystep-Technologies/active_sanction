@@ -47,6 +47,8 @@ module ActiveSanction
       # Excel serial dates do not come through here at all: they arrive as
       # ISO 8601 from the spreadsheet reader, which knows the cell's format,
       # and PartialDate::Parser reads those directly.
+      #
+      # @api private
       module PublishedDate
         extend T::Sig
 

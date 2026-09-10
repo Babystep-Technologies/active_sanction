@@ -42,6 +42,7 @@ module ActiveSanction
     class Meta
       extend T::Sig
 
+      # @api private
       MEMBERS = T.let(
         %i[source fetched_at checksum record_count schema_version source_version].freeze,
         T::Array[Symbol]

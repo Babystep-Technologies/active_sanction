@@ -43,6 +43,8 @@ module ActiveSanction
       # published -- is exactly the false precision PartialDate exists to
       # prevent. It reads as nil and the adapter keeps the published string in
       # `remarks` instead.
+      #
+      # @api private
       module PublishedDate
         extend T::Sig
 

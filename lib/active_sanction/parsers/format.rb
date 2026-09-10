@@ -17,6 +17,8 @@ module ActiveSanction
     # (Not to be confused with `Sources::Definition#format`, which is the
     # publisher-facing label -- :csv, :xml -- that a CLI prints. This is the
     # machinery behind reading either one.)
+    #
+    # @api private
     module Format
       extend T::Sig
       extend T::Helpers

@@ -50,6 +50,8 @@ module ActiveSanction
       # file, not on the run. Changing NORMALIZE, SEPARATOR or LENGTH re-ids
       # every Canadian record ever stored, which makes each of them a versioned
       # decision rather than a cleanup.
+      #
+      # @api private
       module SourceRef
         extend T::Sig
 

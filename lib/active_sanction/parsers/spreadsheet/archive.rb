@@ -41,6 +41,8 @@ module ActiveSanction
       # that on some writes. So sizes and offsets are taken from the central
       # directory, which is authoritative, and the local header is read only for
       # the two lengths that say where the entry's bytes actually begin.
+      #
+      # @api private
       class Archive
         extend T::Sig
 

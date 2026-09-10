@@ -44,14 +44,19 @@ module ActiveSanction
     #
     # v2 added Entity#dates_of_birth, which the UN adapter (#21) needed and the
     # canonical model had no slot for.
+    #
+    # @api private
     SCHEMA_VERSION = T.let(2, Integer)
 
     # Canonical member order, matching the layout #to_h must produce.
+    #
+    # @api private
     MEMBERS = T.let(
       %i[source entities fetched_at checksum record_count schema_version source_version].freeze,
       T::Array[Symbol]
     )
 
+    # @api private
     ALGORITHM = T.let("sha256", String)
 
     sig { returns(Symbol) }

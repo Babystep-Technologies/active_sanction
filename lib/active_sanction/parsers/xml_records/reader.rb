@@ -20,6 +20,8 @@ module ActiveSanction
       # Re-enumerating re-parses from the start, which also resets #warnings --
       # so `reader.count` followed by `reader.warnings` reports the warnings
       # from the counting pass, not from two passes appended together.
+      #
+      # @api private
       class Reader
         extend T::Sig
         extend T::Generic

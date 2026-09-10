@@ -42,10 +42,14 @@ module ActiveSanction
     # is derived rather than stored: a stored copy can disagree with the value
     # it describes, and then two records that mean the same thing checksum
     # apart.
+    #
+    # @api private
     MEMBERS = T.let(%i[kind value country issued_on expires_on note].freeze, T::Array[Symbol])
 
     # Everything a number is not: spaces, hyphens, slashes, dots. OFAC writes
     # `AB-123 456` where the UN writes `AB123456`, and neither is more correct.
+    #
+    # @api private
     INSIGNIFICANT = T.let(/[^[:alnum:]]+/, Regexp)
 
     sig { returns(Symbol) }

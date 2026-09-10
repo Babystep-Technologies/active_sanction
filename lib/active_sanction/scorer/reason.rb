@@ -46,12 +46,17 @@ module ActiveSanction
       #
       # Closed, so a typo is caught where the reason is built rather than
       # reaching a report as a factor nothing renders.
+      #
+      # @api private
       FACTORS = T.let(%i[name alias_quality identifier dob nationality clamp].freeze, T::Array[Symbol])
 
       # One decimal place, which is the precision a screening score is read at
       # -- see the note on adding up above.
+      #
+      # @api private
       PRECISION = T.let(1, Integer)
 
+      # @api private
       MEMBERS = T.let(%i[factor detail contribution].freeze, T::Array[Symbol])
 
       sig { returns(Symbol) }

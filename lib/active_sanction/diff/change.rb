@@ -50,6 +50,8 @@ module ActiveSanction
       extend T::Sig
 
       # Compared by membership. See the class comment.
+      #
+      # @api private
       COLLECTIONS = T.let(
         %i[names addresses identifiers dates_of_birth nationalities programs].freeze,
         T::Array[Symbol]
@@ -60,10 +62,14 @@ module ActiveSanction
       # cannot differ here; nothing else is excluded, including `source` --
       # a record whose source moved under a stable id is a bug worth seeing
       # rather than one worth hiding.
+      #
+      # @api private
       FIELDS = T.let((Entity::MEMBERS - %i[id]).freeze, T::Array[Symbol])
 
       # How much of a scalar's value a summary line prints before it truncates.
       # Remarks are prose and run to paragraphs.
+      #
+      # @api private
       DISPLAY_WIDTH = T.let(40, Integer)
 
       # The entity as the new snapshot has it.

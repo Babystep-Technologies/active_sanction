@@ -34,6 +34,8 @@ module ActiveSanction
 
     # Canonical member order. Snapshot (#8) checksums the serialized form, so
     # #to_h must lay its keys out the same way every time.
+    #
+    # @api private
     MEMBERS = T.let(%i[
       id source source_ref type names addresses identifiers dates_of_birth
       nationalities programs listed_on remarks
@@ -48,6 +50,8 @@ module ActiveSanction
     # DOB matched the discarded one is exactly the failure this library exists
     # to prevent. The scorer (#32) reads them the way PartialDate#overlaps?
     # already reads a single imprecise date: any of them matching is a match.
+    #
+    # @api private
     DATE_MEMBERS = T.let(%i[dates_of_birth].freeze, T::Array[Symbol])
 
     # Which class rebuilds each nested member from a hash. The names are
@@ -56,6 +60,8 @@ module ActiveSanction
     # that, deliberately. What the checker holds instead is the other end:
     # #initialize declares all four member types, so a hash that rebuilds into
     # the wrong thing is caught where the entity is built rather than here.
+    #
+    # @api private
     COLLECTION_TYPES = T.let({
       names: "ActiveSanction::Name",
       addresses: "ActiveSanction::Address",
@@ -63,6 +69,7 @@ module ActiveSanction
       dates_of_birth: "ActiveSanction::PartialDate"
     }.freeze, T::Hash[Symbol, String])
 
+    # @api private
     SCALAR_TYPES = T.let({ listed_on: "ActiveSanction::PartialDate" }.freeze, T::Hash[Symbol, String])
 
     # Namespaced, and never nil: #initialize derives one from the source and

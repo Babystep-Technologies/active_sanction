@@ -3,9 +3,11 @@
 --readme README.md
 --output-dir doc
 --no-private
+--hide-api private
 --protected
 lib/**/*.rb
 -
 CHANGELOG.md
 docs/adding_a_source.md
+docs/api_stability.md
 LICENSE.txt

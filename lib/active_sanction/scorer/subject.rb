@@ -71,6 +71,7 @@ module ActiveSanction
     class Subject
       extend T::Sig
 
+      # @api private
       MEMBERS = T.let(%i[name type dates_of_birth nationalities identifiers].freeze, T::Array[Symbol])
 
       # The folded name every comparison runs against.

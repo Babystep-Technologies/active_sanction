@@ -102,16 +102,21 @@ module ActiveSanction
 
       # Split out so #token= can rebuild the URL around a rotated value. See
       # the class comment for why the token is not a credential.
+      #
+      # @api private
       ENDPOINT = T.let(
         "https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content", String
       )
 
+      # @api private
       PUBLIC_TOKEN = T.let("dG9rZW4tMjAxNw", String)
 
       url :main, "#{ENDPOINT}?token=#{PUBLIC_TOKEN}"
 
+      # @api private
       SANCTION_ENTITY = T.let("sanctionEntity", String)
 
+      # @api private
       LIST = T.let(Parsers::XmlRecords.new(records: SANCTION_ENTITY), Parsers::XmlRecords)
 
       # The generation timestamp the Commission stamps on the document element,
@@ -119,6 +124,8 @@ module ActiveSanction
       # falls back to, and the string the FSF download page itself shows, so it
       # is the one an examiner asking "which version was this screened
       # against" will recognise.
+      #
+      # @api private
       GENERATED_AT = T.let("generationDate", String)
 
       # Re-points the list at the same endpoint with a different token, for the

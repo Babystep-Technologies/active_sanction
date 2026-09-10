@@ -52,6 +52,7 @@ module ActiveSanction
       # their positions here.
       SEVERITIES = T.let(%i[info warn error].freeze, T::Array[Symbol])
 
+      # @api private
       MEMBERS = T.let(%i[source severity check message observed baseline].freeze, T::Array[Symbol])
 
       sig { returns(Symbol) }

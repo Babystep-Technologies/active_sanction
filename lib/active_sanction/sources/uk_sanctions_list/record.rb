@@ -47,6 +47,8 @@ module ActiveSanction
       # them is the official name, so a variation is filed as `:aka`, which is
       # what leaves `Entity#primary_name` answering with the name the FCDO
       # actually designated.
+      #
+      # @api private
       class Record
         extend T::Sig
 

@@ -136,6 +136,8 @@ module ActiveSanction
     # that appears on both sides verbatim, which on a real match is most of
     # them, so Double Metaphone runs on the tokens that actually differ.
     #
+    #
+    # @api private
     module NameScore
       extend T::Sig
       extend T::Helpers

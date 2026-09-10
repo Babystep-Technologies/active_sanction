@@ -20,6 +20,8 @@ module ActiveSanction
       # It is also what makes the toolkit streaming rather than DOM-based: the
       # stack only ever holds one record's depth, so a 126 MB file costs the
       # memory of its largest single record and not of itself.
+      #
+      # @api private
       class Builder
         extend T::Sig
 

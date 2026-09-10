@@ -81,8 +81,10 @@ module ActiveSanction
           "https://www.international.gc.ca/world-monde/assets/office_docs/" \
           "international_relations-relations_internationales/sanctions/sema-lmes.xml"
 
+      # @api private
       RECORD = T.let("record", String)
 
+      # @api private
       LIST = T.let(Parsers::XmlRecords.new(records: RECORD), Parsers::XmlRecords)
 
       # Records that could not be used, and fields that could not be read.

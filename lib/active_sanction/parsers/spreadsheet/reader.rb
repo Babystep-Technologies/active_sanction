@@ -22,6 +22,8 @@ module ActiveSanction
       # so `reader.count` followed by `reader.warnings` reports the warnings
       # from the counting pass, not from two passes appended together. The ZIP
       # is unpacked once and reused across passes.
+      #
+      # @api private
       class Reader
         extend T::Sig
         extend T::Generic

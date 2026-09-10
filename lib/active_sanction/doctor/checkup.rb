@@ -48,6 +48,8 @@ module ActiveSanction
 
       # A field's fill rate reads better as a sentence than as a name, and the
       # sentence is what an operator scans at three in the morning.
+      #
+      # @api private
       FIELD_PHRASES = T.let({
         names: "a name",
         aliases: "an alternate name",
@@ -62,6 +64,8 @@ module ActiveSanction
       # Warning classes reported per source. A parse that has gone wrong
       # produces one warning per row, and 19,000 findings help nobody read
       # the one that matters.
+      #
+      # @api private
       TOP_WARNINGS = T.let(5, Integer)
 
       sig { returns(Symbol) }

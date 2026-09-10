@@ -31,6 +31,8 @@ module ActiveSanction
     # #to_h must lay its keys out the same way every time. `precision` is
     # derived rather than stored: a stored copy can disagree with the fields it
     # describes, and then two records that mean the same thing checksum apart.
+    #
+    # @api private
     MEMBERS = T.let(%i[year month day from to approximate].freeze, T::Array[Symbol])
 
     # "Circa 1962" and "1963" are the same claim about a person, made by two
@@ -38,6 +40,8 @@ module ActiveSanction
     # literal bounds would call that a conflict and penalize a true match, so
     # comparison -- and only comparison, never #to_h or #to_s -- widens an
     # approximate date by a year on each side.
+    #
+    # @api private
     APPROXIMATE_SLACK_YEARS = 1
 
     # A point date carries year/month/day and no endpoints; a range carries its

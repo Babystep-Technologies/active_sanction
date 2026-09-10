@@ -88,6 +88,8 @@ module ActiveSanction
 
       # The sub-lists, spelled the way OFAC's own `/sanctions-lists` endpoint
       # spells them -- which is what a report has to print beside a hit.
+      #
+      # @api private
       NAMES = T.let({
         ssi: "Sectoral Sanctions Identifications List",
         cmic: "Non-SDN CMIC List",
@@ -104,6 +106,8 @@ module ActiveSanction
       # it says nothing about which non-SDN list they are on. FSE-IR and FSE-SY
       # are carried because the FSE list is one OFAC still publishes and can
       # refill, though nothing is on it today.
+      #
+      # @api private
       LISTS = T.let({
         "UKRAINE-EO13662" => :ssi,
         "UKRAINE-EO13685" => :ssi,
@@ -137,6 +141,8 @@ module ActiveSanction
       # OFAC published is on the entity verbatim for anyone who needs to look
       # closer -- but it is an error, and nothing in the CSVs distinguishes
       # those three from the 89 rows carrying the identical program pair.
+      #
+      # @api private
       SHARED = T.let(
         { "RUSSIA-EO14024" => { with: :ssi, alone: :ns_mbs } }.freeze,
         T::Hash[String, T::Hash[Symbol, Symbol]]

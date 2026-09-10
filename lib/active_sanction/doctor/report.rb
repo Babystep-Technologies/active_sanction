@@ -50,8 +50,10 @@ module ActiveSanction
       extend T::Generic
       include Enumerable
 
+      # @api private
       Elem = type_member { { fixed: Diagnosis } }
 
+      # @api private
       MEMBERS = T.let(%i[diagnoses started_at duration].freeze, T::Array[Symbol])
 
       sig { returns(T::Array[Diagnosis]) }

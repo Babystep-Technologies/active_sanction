@@ -38,6 +38,8 @@ module ActiveSanction
   # (#23, #24) owns those, and a fetch layer that quietly handed back a
   # previous payload would make it impossible to tell a list that did not
   # change from a sync that did not run.
+  #
+  # @api private
   class Fetcher
     extend T::Sig
 

@@ -50,6 +50,7 @@ module ActiveSanction
       extend T::Sig
       include Format
 
+      # @api private
       SEPARATOR_NAMES = T.let(
         { "," => "CSV", "\t" => "TSV", "|" => "pipe-delimited text",
           ";" => "semicolon-delimited text" }.freeze,

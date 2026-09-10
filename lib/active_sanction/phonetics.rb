@@ -31,6 +31,8 @@ module ActiveSanction
   # -- and it is also why it cannot be blended with the other four. A shared
   # key is evidence, at the strength #32 decides. It is never a match on its
   # own: `HSN` is the key for `HUSSEIN`, and equally for `HASSAN`.
+  #
+  # @api private
   module Phonetics
   end
 end

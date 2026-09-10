@@ -67,6 +67,8 @@ module ActiveSanction
       # here, the doubled form first, so unescaping does not itself turn one
       # into the other. The Australian list carries them in 205 cells, all
       # carriage returns inside a birth date, an address or a place of birth.
+      #
+      # @api private
       ESCAPE = T.let(/_x005F_(_x[0-9A-Fa-f]{4}_)|_x([0-9A-Fa-f]{4})_/, Regexp)
 
       # nil where the sheet names its own columns -- see #headers?.

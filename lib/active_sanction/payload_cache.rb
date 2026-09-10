@@ -70,6 +70,8 @@ module ActiveSanction
   # must keep every version it ever screened against should copy payloads out
   # to its own retention storage; this directory is under `~/.cache` and a user
   # is entitled to delete it. Storage of the parsed record is #23 and #24.
+  #
+  # @api private
   class PayloadCache
     extend T::Sig
 
@@ -93,12 +95,18 @@ module ActiveSanction
     # the bytes no longer match it. Never silently repaired -- an entry that
     # cannot prove what it holds is worse than no entry, because a caller would
     # act on it.
+    #
+    # @api public
     class CorruptEntry < IntegrityError; end
 
     # The bytes no longer hash to the checksum recorded beside them.
+    #
+    # @api public
     class ChecksumMismatch < CorruptEntry; end
 
     # Nothing is stored under that source and checksum, or its blob is gone.
+    #
+    # @api public
     class PayloadMissing < StorageError; end
 
     sig { returns(String) }

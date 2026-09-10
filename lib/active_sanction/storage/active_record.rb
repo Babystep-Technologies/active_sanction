@@ -82,19 +82,27 @@ module ActiveSanction
 
       # Snapshot versions this code can read. Anything above the version it
       # writes was produced by a newer gem.
+      #
+      # @api private
       READABLE_SCHEMA_VERSIONS = T.let(1..Snapshot::SCHEMA_VERSION, T::Range[Integer])
 
       # Rows per `insert_all`. Big enough that a full OFAC sync is a few dozen
       # statements rather than 19,015, small enough that no single statement is
       # megabytes of SQL a database has to parse in one piece.
+      #
+      # @api private
       DEFAULT_BATCH_SIZE = T.let(1_000, Integer)
 
       # What `normalized_value` is declared as, because it is indexed and MySQL
       # will not index an unbounded column. Comfortably past the longest name
       # any of the launch lists publishes.
+      #
+      # @api private
       PREFILTER_KEY_LIMIT = T.let(512, Integer)
 
+      # @api private
       COMBINING_MARKS = T.let(/\p{Mn}+/, Regexp)
+      # @api private
       NON_ALPHANUMERIC = T.let(/[^[:alnum:]]+/, Regexp)
 
       # The key a name is filed under in `active_sanction_names.normalized_value`

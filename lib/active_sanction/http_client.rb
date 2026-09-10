@@ -37,11 +37,15 @@ module ActiveSanction
   # Bodies come back as the server sent them, with no transcoding: OFAC's CSV
   # and the UN's XML disagree about encoding, and guessing here would corrupt
   # one of them. Parsers (#14, #15) declare what they expect.
+  #
+  # @api private
   class HttpClient
     extend T::Sig
 
     # 303 is included even though it is defined to change the method, because
     # this client only ever issues GET and so already complies.
+    #
+    # @api private
     REDIRECT_STATUSES = T.let([301, 302, 303, 307, 308].freeze, T::Array[Integer])
 
     # Failures worth trying again. A 4xx is never in here: a 403 for a missing
@@ -52,6 +56,8 @@ module ActiveSanction
     # verify will not verify a second later either, and quietly retrying a TLS
     # failure against a government endpoint is not a behaviour worth having.
     # See FATAL_ERRORS, which is where they go instead.
+    #
+    # @api private
     TRANSIENT_ERRORS = T.let(
       [
         EOFError, IOError, SocketError, Net::HTTPBadResponse, Net::ProtocolError,
@@ -69,6 +75,8 @@ module ActiveSanction
     #
     # Guarded because `net/http` loads OpenSSL optionally, and a Ruby built
     # without it can still fetch a list over plain HTTP.
+    #
+    # @api private
     FATAL_ERRORS = T.let(
       (defined?(::OpenSSL::SSL::SSLError) ? [::OpenSSL::SSL::SSLError] : []).freeze,
       T::Array[T.class_of(StandardError)]

@@ -107,19 +107,29 @@ module ActiveSanction
       extend T::Sig
 
       # The five shares of the blended name score. They sum to 1.
+      #
+      # @api private
       NAME_SHARES = T.let(%i[jaro_winkler levenshtein token_sort token_set phonetic].freeze, T::Array[Symbol])
 
       # Points added to the name score. Anything listed in PENALTIES must be
       # zero or negative; everything else here must be zero or positive.
+      #
+      # @api private
       ADJUSTMENTS = T.let(%i[
         low_quality_alias identifier_match dob_exact dob_overlap dob_conflict
         nationality_match nationality_conflict
       ].freeze, T::Array[Symbol])
 
+      # @api private
       PENALTIES = T.let(%i[low_quality_alias dob_conflict nationality_conflict].freeze, T::Array[Symbol])
 
+      # @api private
       MEMBERS = T.let((NAME_SHARES + ADJUSTMENTS).freeze, T::Array[Symbol])
 
+      # Every weight this library ships, and the numbers the committed
+      # accuracy report was measured with. A host tuning one starts from
+      # here, changes what it means to and leaves the rest alone -- the
+      # shares are held to summing to 1.0, so they move in pairs.
       DEFAULTS = T.let({
         jaro_winkler: 0.15,
         levenshtein: 0.10,
@@ -138,6 +148,8 @@ module ActiveSanction
       # Floating point addition of five decimal fractions does not land on 1.0
       # exactly, and refusing a set of shares over the last bit of a Float
       # would be refusing arithmetic rather than a misconfiguration.
+      #
+      # @api private
       SHARE_TOLERANCE = T.let(1e-9, Float)
 
       # Spelled out rather than defined from MEMBERS in a loop, because a
@@ -285,6 +297,8 @@ module ActiveSanction
 
       # Last, because building it runs #initialize, which calls every private
       # method above.
+      #
+      # @api private
       DEFAULT = T.let(new, Weights)
       private_constant :DEFAULT
     end

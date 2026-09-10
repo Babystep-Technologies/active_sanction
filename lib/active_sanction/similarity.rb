@@ -99,6 +99,8 @@ module ActiveSanction
   # much it is worth differs: Levenshtein's is tight, Jaro-Winkler's is loose
   # because the prefix bonus can add 0.4 to anything, and TokenSet has none at
   # all, because a name that is a subset of another scores 1.0 at any length.
+  #
+  # @api private
   module Similarity
     extend T::Sig
     extend T::Helpers

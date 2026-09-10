@@ -31,10 +31,14 @@ module ActiveSanction
     # Canonical member order, from the most specific part of an address to the
     # least. Snapshot (#8) checksums the serialized form, so #to_h must lay its
     # keys out the same way every time.
+    #
+    # @api private
     MEMBERS = T.let(%i[street city state_province postal_code country note].freeze, T::Array[Symbol])
 
     # `note` is an annotation about the address rather than a part of it, so it
     # is rendered apart from the rest by #to_s.
+    #
+    # @api private
     PARTS = T.let((MEMBERS - %i[note]).freeze, T::Array[Symbol])
 
     # Every field is nilable because the publishers populate wildly different

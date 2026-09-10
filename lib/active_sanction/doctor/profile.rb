@@ -59,6 +59,8 @@ module ActiveSanction
       # Which records each field's fill rate is measured over. `:all` is every
       # record in the list; a type name is that type alone. See the class
       # comment.
+      #
+      # @api private
       FIELDS = T.let({
         names: :all,
         aliases: :all,
@@ -72,18 +74,25 @@ module ActiveSanction
 
       # How a field's fill rate reads in a sentence: "individuals with a date
       # of birth 12% (was 61%)".
+      #
+      # @api private
       COHORT_NAMES = T.let({ all: "records", individual: "individuals", organization: "organizations",
                              vessel: "vessels", aircraft: "aircraft" }.freeze, T::Hash[Symbol, String])
 
       # The longest a shaped warning is kept at. A malformed row is frequently
       # malformed because it is enormous, and the complaint about it carries a
       # snippet.
+      #
+      # @api private
       SHAPE_LENGTH = T.let(100, Integer)
 
       # Unrecognized free-text shapes kept per profile. Enough to name what
       # changed; not a histogram of a whole file.
+      #
+      # @api private
       TOP_UNRECOGNIZED = T.let(5, Integer)
 
+      # @api private
       MEMBERS = T.let(%i[
         source record_count checksum cohorts fill warnings orphans remarks_coverage
         unrecognized columns

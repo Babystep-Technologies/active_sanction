@@ -73,9 +73,13 @@ module ActiveSanction
     extend T::Sig
 
     # The canonical spelling of every field, and the shape `#to_h` emits.
+    #
+    # @api private
     MEMBERS = T.let((%i[id] + Scorer::Subject::MEMBERS + %i[threshold]).freeze, T::Array[Symbol])
 
     # Search options a rescreen settles for itself. See the class comment.
+    #
+    # @api private
     REFUSED = T.let(
       {
         sources: "the diff being applied names the list -- a rescreen runs against one pair of list versions",

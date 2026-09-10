@@ -34,6 +34,7 @@ module ActiveSanction
   class Validators
     extend T::Sig
 
+    # @api private
     MEMBERS = T.let(%i[url etag last_modified checked_at updated_at].freeze, T::Array[Symbol])
 
     # The URL that was requested, not the one that finally answered -- see the

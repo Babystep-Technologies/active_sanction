@@ -63,6 +63,8 @@ module ActiveSanction
     extend T::Sig
 
     # The canonical spelling of every field, and the shape `#to_h` emits.
+    #
+    # @api private
     MEMBERS = T.let(
       %i[name type dates_of_birth nationalities identifiers sources threshold limit].freeze,
       T::Array[Symbol]
@@ -70,6 +72,8 @@ module ActiveSanction
 
     # The spellings a caller may write instead, and what each one means. See
     # the note above.
+    #
+    # @api private
     ALIASES = T.let(
       {
         date_of_birth: :dates_of_birth, dob: :dates_of_birth, dobs: :dates_of_birth,
@@ -83,6 +87,8 @@ module ActiveSanction
     # one, which is what makes `identifier: { kind: :passport, value: "AB-1" }`
     # a single identifier: `Array(hash)` reads a Hash as a list of its pairs,
     # and a caller naming one document would get two nonsense identifiers back.
+    #
+    # @api private
     COLLECTIONS = T.let(%i[dates_of_birth nationalities identifiers sources].freeze, T::Array[Symbol])
 
     # The evidence, folded once. Every comparison in a screening run happens

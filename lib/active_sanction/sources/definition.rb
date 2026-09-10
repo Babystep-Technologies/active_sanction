@@ -59,14 +59,18 @@ module ActiveSanction
       # the superclass chain through an untyped local instead.)
       requires_ancestor { Kernel }
 
+      # @api private
       UNSET = T.let(Object.new.freeze, Object)
       private_constant :UNSET
 
       # Keys are typed by people -- into an initializer, into a CLI argument --
       # stored in snapshots, and used as directory names by the payload cache.
       # Lowercase snake_case is the intersection of all of that.
+      #
+      # @api private
       KEY_PATTERN = T.let(/\A[a-z][a-z0-9_]*\z/, Regexp)
 
+      # @api private
       URL_SCHEMES = T.let(%w[http https].freeze, T::Array[String])
 
       # Shared with the registry, so a source registered without going through
