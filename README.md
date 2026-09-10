@@ -155,13 +155,13 @@ That is the whole of the working library. Everything below is either a fact abou
 | `uk_sanctions_list` | UK | FCDO | ~6,334 | one XML file, 21.8 MB | Whenever a designation is made, amended or revoked |
 | `australia_dfat` | AU | DFAT / Australian Sanctions Office | ~3,906 | one XLSX workbook, 1.3 MB | As the Foreign Minister designates, and as the UN amends a regime |
 
-Record counts are as of the fixtures this gem was written against; the live files move. No publisher commits to a schedule, and none of them announce a change out of band, which is why every fetch here is conditional: asking daily costs one request per file on the days nothing happened. Sync on your own risk appetite rather than on a publisher's calendar.
+Record counts are as of the fixtures this gem was written against; the live files move. So does every count in this README: approximate in prose, and illustrative rather than captured inside console output. `.github/baselines` holds what the canary last measured. No publisher commits to a schedule, and none of them announce a change out of band, which is why every fetch here is conditional: asking daily costs one request per file on the days nothing happened. Sync on your own risk appetite rather than on a publisher's calendar.
 
 ### Known data limitations, per source
 
 These are the facts a screening policy has to be built on. They are properties of what the government publishes, not of this parser, and none of them can be fixed downstream.
 
-**Both OFAC lists — every secondary identifier is free text.** The SDN CSVs have no column for date of birth, place of birth, nationality or passport number. All of it — 88,827 semicolon-delimited segments across 19,015 records — is prose in one `Remarks` field, written for a person reading a page. `Sources::Ofac::RemarksParser` reads it heuristically and currently recognizes **97.3%** of those segments. Extraction is additive: a segment nobody has taught it yet costs structure and never content, because `Entity#remarks` keeps the publisher's whole string either way. `source.remarks_coverage` reports the number for the file you actually fetched, and it is worth watching — a drop in it is a publisher changing how it writes.
+**Both OFAC lists — every secondary identifier is free text.** The SDN CSVs have no column for date of birth, place of birth, nationality or passport number. All of it — 88,827 semicolon-delimited segments, measured against the September 2026 list — is prose in one `Remarks` field, written for a person reading a page. `Sources::Ofac::RemarksParser` reads it heuristically and currently recognizes **97.3%** of those segments. Extraction is additive: a segment nobody has taught it yet costs structure and never content, because `Entity#remarks` keeps the publisher's whole string either way. `source.remarks_coverage` reports the number for the file you actually fetched, and it is worth watching — a drop in it is a publisher changing how it writes.
 
 **`ofac_consolidated` — sub-list attribution is derived, and is exact for 478 of 481 records.** OFAC ships six lists (SSI, CMIC, NS-PLC, NS-MBS, CAPTA, FSE) in one file with no column saying which is which, so the program code is what `OfacConsolidated.lists` maps. The three records it does not get exactly right are all `RUSSIA-EO14024` — Gazprom, Transneft and Rosselkhozbank are on both SSI and NS-MBS and come out marked SSI only. A hit is still a hit; which of two US lists it names may be incomplete.
 
@@ -411,7 +411,7 @@ The group is `spec/support/shared_examples/sanction_source.rb`, with its options
 
 ### Reading OFAC's free text
 
-The US SDN list publishes no date of birth, place of birth, nationality or passport column. All of it — 88,827 semicolon-delimited segments across 19,015 records — is prose in one `Remarks` field, written for a person reading a page:
+The US SDN list publishes no date of birth, place of birth, nationality or passport column. All of it — 88,827 semicolon-delimited segments, measured against the September 2026 list — is prose in one `Remarks` field, written for a person reading a page:
 
     DOB 10 Dec 1948; POB Egypt; nationality Egypt; Passport 123456 (Egypt) expires 12 Dec 2015
 
@@ -608,7 +608,7 @@ A source nobody has synced reads back as `nil` and never as an empty snapshot: "
 
 ### The default store: gzipped JSON in a directory
 
-`Storage::FileSystem` is what an installation gets without provisioning anything. `zlib` and `json` are stdlib, so persisting 19,015 OFAC records costs a directory — which is what makes the same library usable from a cron job, a CLI, a CI run, and an air-gapped host that only ever receives a copied directory.
+`Storage::FileSystem` is what an installation gets without provisioning anything. `zlib` and `json` are stdlib, so persisting the whole SDN list costs a directory — which is what makes the same library usable from a cron job, a CLI, a CI run, and an air-gapped host that only ever receives a copied directory.
 
 ```ruby
 store = ActiveSanction::Storage::FileSystem.new                # ~/.active_sanction
@@ -667,7 +667,7 @@ ecdsa-sha256 MEUCIQD0kBCtXzE9Ej0oHefYtbi...
 
 **The same snapshot always produces the same bundle.** Records are ordered by the fingerprint the snapshot checksum is built from rather than by whatever order a publisher's file arrived in, the header's keys have a fixed order, the compression level is stated by the specification rather than taken from a build's default, and there is deliberately no written-at timestamp anywhere in the file. Two mirrors that bundled the same list can be held against each other.
 
-**The signature covers the header line, and the header covers the records.** It carries a SHA-256 over the payload, so signing a few hundred bytes stands for all 19,015 records — which means a verifier settles who published a bundle *before inflating any of it*, and verification costs the same for OFAC as for the EU. RSA and EC keys, through `openssl` and nothing else; `ed25519` is reserved for a later version rather than half-supported.
+**The signature covers the header line, and the header covers the records.** It carries a SHA-256 over the payload, so signing a few hundred bytes stands for every record in the list — which means a verifier settles who published a bundle *before inflating any of it*, and verification costs the same for OFAC as for the EU. RSA and EC keys, through `openssl` and nothing else; `ed25519` is reserved for a later version rather than half-supported.
 
 Verification is opt-in, and the three ways it can fail are three different errors, because they have three different fixes:
 
@@ -712,7 +712,7 @@ store = ActiveSanction::Storage::ActiveRecord.new
 store.write_snapshot(ActiveSanction::Sources[:ofac_sdn].new.sync)
 ```
 
-**What the database buys is the prefilter.** Scoring 19,015 OFAC records against one name in Ruby is the cost the matcher wants to avoid paying, and an indexed equality probe narrows that to a handful of candidates before any of them are loaded:
+**What the database buys is the prefilter.** Scoring the whole SDN list against one name in Ruby is the cost the matcher wants to avoid paying, and an indexed equality probe narrows that to a handful of candidates before any of them are loaded:
 
 ```ruby
 ActiveSanction::Storage::ActiveRecord::Row::Name.matching("Aiman al-Zawahiri").pluck(:entity_id)
@@ -721,7 +721,7 @@ ActiveSanction::Storage::ActiveRecord::Row::Identifier.matching("AB-123 456").pl
 
 So unlike the filesystem layout, the schema here is public: five tables, `active_sanction_snapshots` and `active_sanction_entities` with `active_sanction_names`, `_addresses` and `_identifiers` hanging off them, with the models, columns and associations part of what the adapter promises. `normalized_value` is the indexed column both scopes probe, and `ActiveSanction::Storage::ActiveRecord.prefilter_key` is how a query builds the same key the write built — a key folded any other way will not find the rows. That fold is deliberately crude and deliberately not the matcher's normalizer: its only job is candidate generation, where a key that collides too eagerly costs a few extra records to score and a key that misses costs a sanctioned person who never reaches the scorer at all.
 
-**A write is one transaction, and `insert_all` in batches inside it.** A full OFAC SDN sync is 19,015 entities and some 65,000 rows hanging off them; a sync that dies partway through rolls back to the list that was there before it, so there is no half-updated list to inspect and none to screen against. Row-at-a-time saves are the obvious alternative and are not what this does.
+**A write is one transaction, and `insert_all` in batches inside it.** A full OFAC SDN sync is roughly 19,000 entities and some 65,000 rows hanging off them; a sync that dies partway through rolls back to the list that was there before it, so there is no half-updated list to inspect and none to screen against. Row-at-a-time saves are the obvious alternative and are not what this does.
 
 **Nothing partial is ever returned**, on the same terms as the filesystem adapter and by the same mechanism. The snapshot is rebuilt with the checksum stored beside it, so construction re-derives the digest over the records that actually came back — a row deleted by hand, a write that half landed, a column edited in a console all raise `Storage::CorruptSnapshot` rather than screening a customer against a list that is quietly missing people. That is also why `each_entity` is inherited rather than reimplemented as a cursor: a checksum covers a whole list, so a store that streamed rows straight to the matcher would be handing it records it cannot prove are all of them.
 
@@ -820,7 +820,7 @@ That table is `diff.to_s`; `Diff#to_h` is the same thing JSON-ready, carrying bo
 
 **An amendment is not a delisting plus a listing.** Governments amend far more records than they publish or withdraw: a passport number is corrected, an alias is added, a program is amended. The two snapshots are joined by entity id, so those report as one `Diff::Change` carrying the fields that moved, rather than as a removal and an addition — which would put a delisting in front of an analyst that never happened. That rests entirely on ids being stable between syncs, which is why the adapter conformance group asserts id stability and why the Canada adapter hashes a citation *and* a name into its synthetic one. Ids that move would make every sync look like a full replacement.
 
-**A first sync is a baseline, not 19,015 new listings.** With no previous snapshot there is nothing to compare, and reporting the whole list as added would be false: those records were not listed today, they were listed over twenty years and we are only now looking. So a diff with no `from` reports `baseline?`, three empty lists, and nothing to re-screen — because the right response to a first sync is a deliberate full screening run rather than one driven by a diff that is really a list.
+**A first sync is a baseline, not nineteen thousand new listings.** With no previous snapshot there is nothing to compare, and reporting the whole list as added would be false: those records were not listed today, they were listed over twenty years and we are only now looking. So a diff with no `from` reports `baseline?`, three empty lists, and nothing to re-screen — because the right response to a first sync is a deliberate full screening run rather than one driven by a diff that is really a list.
 
 **Order is not a change, and neither is a reordered alias.** Two snapshots of the same file compare equal whatever order the publisher emitted it in, and the collection fields inside a record — names, addresses, identifiers, dates of birth, nationalities, programs — are compared by membership rather than by position. The one thing that is never decided for the host is which amendments are too small to bother re-screening: a corrected passport number and a reworded remark reach the scorer by different paths, and a library that filtered them would be choosing which sanctions hits it is willing to miss.
 
@@ -890,7 +890,7 @@ end
 
 **A rescreen never touches the matcher.** It indexes the diff and nothing else, so applying one does not cost an index build over the whole corpus, and a process that has never screened anything can rescreen without paying for one. It also means the run is more sensitive than the equivalent full screen, not less: the candidate cap that binds over 47,000 names cannot bind over a few dozen.
 
-**An empty diff does no work at all** — not one subject is folded. A sync that changed nothing costs nothing to rescreen against, which is what makes rescreening after every sync affordable. A first sync is a baseline rather than 19,015 new listings, so it raises nothing either; the right response to one is a deliberate full screening run with `screen_all`.
+**An empty diff does no work at all** — not one subject is folded. A sync that changed nothing costs nothing to rescreen against, which is what makes rescreening after every sync affordable. A first sync is a baseline rather than nineteen thousand new listings, so it raises nothing either; the right response to one is a deliberate full screening run with `screen_all`.
 
 **Per-subject thresholds are supported, because risk-based screening is ordinary.** A subject that names its own is screened at it; everything else takes the run's. What a `Subject` will not take is `sources:` or `limit:` — the diff names the list, and an alert dropped for being eleventh is a sanctions hit nobody sees. Both are refused rather than ignored.
 
@@ -1097,7 +1097,7 @@ It is applied to the whole score rather than to the name, which matters: a subje
 
 #### What 75 is set from
 
-The default was a guess until `rake benchmark:accuracy` measured it. Against 87 labeled queries — real published records queried the way a customer record spells them, plus the common names and near misses that must not alert — F1 peaks at exactly the number this library ships, and [Reading a score](#reading-a-score) is what each choice around it costs.
+The default was a guess until `rake benchmark:accuracy` measured it. Against the labeled set described in [Reading a score](#reading-a-score), F1 peaks at exactly the number this library ships, and that section has the curve and what each choice around it costs.
 
 That the two agree is the whole argument for the number, and it is worth being clear about what it is not: F1 weighs a miss and a false alert equally and a sanctions screen does not. The default sits at the peak rather than above it, and `threshold:` stays per query for the host that has to be more careful still.
 
