@@ -1,0 +1,94 @@
+name: Match quality — a name this version gets wrong
+description: A listed record it misses, or a clean name it alerts on
+labels: ["match quality"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        **This is the second most useful contribution anybody makes.** A case
+        nobody has written down is a case that regresses silently: a weight
+        nudged by two points does not look like anything in a patch, and it is
+        exactly what moves a name from found to missed. What you file here
+        becomes a row in
+        [`benchmark/fixtures/labeled_set.yml`](https://github.com/Babystep-Technologies/active_sanction/blob/main/benchmark/fixtures/labeled_set.yml)
+        and is scored on every run from then on.
+
+
+        **One exception.** If you have found a *class* of name that reliably
+        evades matching rather than one score you disagree with, that is a
+        screening bypass. Report it privately —
+        [SECURITY.md](https://github.com/Babystep-Technologies/active_sanction/blob/main/SECURITY.md).
+
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Which way is it wrong
+      options:
+        - A listed record it should have found and did not
+        - A record it alerted on that is not the subject
+    validations:
+      required: true
+
+  - type: input
+    id: query
+    attributes:
+      label: The name screened
+      description: Exactly as passed, including case and punctuation.
+    validations:
+      required: true
+
+  - type: input
+    id: expected
+    attributes:
+      label: The published record
+      description: >-
+        The publisher's own primary name, and which list it is on. It is
+        already public, so naming it discloses nothing.
+      placeholder: "PUTIN, Vladimir Vladimirovich — ofac_sdn"
+    validations:
+      required: true
+
+  - type: textarea
+    id: call
+    attributes:
+      label: The call, and what came back
+      description: >-
+        The full `screen` call with every argument you passed, and the result.
+        `result.explanation` is the important part — it says which points were
+        awarded and why, and it is usually where the answer is.
+      render: ruby
+    validations:
+      required: true
+
+  - type: dropdown
+    id: variation
+    attributes:
+      label: What is being done to the name
+      description: >-
+        The labeled set groups cases this way, and the grouping is what makes
+        the recall table mean something.
+      multiple: true
+      options:
+        - published — exactly as the publisher spells it
+        - alias — a name the publisher itself also lists
+        - inverted — given and family name the other way round
+        - transliteration — the same name out of another script
+        - typo — a plausible keying error
+        - partial — a missing patronymic, middle name or particle
+        - legal form — an organisation's suffix spelled out, abbreviated or dropped
+        - punctuation or diacritics
+        - non-Latin script
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: active_sanction version, and MATCHER_VERSION
+      description: >-
+        `ActiveSanction::VERSION` and `ActiveSanction::MATCHER_VERSION`. The
+        second is the one that decides whether a score is reproducible.
+      placeholder: "0.1.0, matcher 1"
+    validations:
+      required: true

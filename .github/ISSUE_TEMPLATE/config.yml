@@ -1,0 +1,20 @@
+# Blank issues stay enabled. The three forms below cover what is reported most
+# often; a report that fits none of them should not have to be squeezed into
+# one, and a maintainer relabelling an issue is cheaper than a contributor
+# giving up on filing it.
+blank_issues_enabled: true
+
+contact_links:
+  - name: Security vulnerability, or a screening bypass
+    url: https://github.com/Babystep-Technologies/active_sanction/security/advisories/new
+    about: >-
+      Report privately, never in a public issue. A screening library that
+      fails to report a listed name is a security problem. SECURITY.md says
+      what is in scope and what response to expect.
+
+  - name: A list this gem does not read yet
+    url: https://github.com/Babystep-Technologies/active_sanction/blob/main/docs/adding_a_source.md
+    about: >-
+      A source can be registered from your own application without touching
+      this gem. Read this first, then open a "New sanctions source" issue if
+      you would rather have it shipped here.

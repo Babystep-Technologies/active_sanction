@@ -1,0 +1,86 @@
+name: New sanctions source
+description: A published list this gem does not read yet
+labels: ["source"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        **You do not need us to add a source.** `ActiveSanction::Sources.register`
+        takes an adapter defined in your own application, which is what makes a
+        bank's internal watchlist a first-class source here.
+        [`docs/adding_a_source.md`](https://github.com/Babystep-Technologies/active_sanction/blob/main/docs/adding_a_source.md)
+        walks the whole of it.
+
+
+        File this when you want the adapter **shipped in the gem**, so that two
+        people do not write it twice — and say whether you intend to write it,
+        because that is the difference between a request and a claim.
+
+  - type: input
+    id: publisher
+    attributes:
+      label: Who publishes it
+      description: The authority, and the legal instrument it publishes under.
+      placeholder: "Swiss SECO — Ordinance on Measures..."
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: The URL of the file itself
+      description: >-
+        Not the landing page. The machine-readable file, which is the thing an
+        adapter fetches.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: format
+    attributes:
+      label: What format does it serve
+      multiple: true
+      options:
+        - CSV or another delimited table
+        - XML
+        - an .xlsx workbook
+        - JSON
+        - several files that join into one record
+        - something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: What the file looks like
+      description: >-
+        Roughly how many records, whether it carries a stable per-record id,
+        whether aliases are separate rows or packed into a field, and whether
+        dates of birth are structured or prose. These four decide most of the
+        adapter, and they are what
+        [`docs/adding_a_source.md`](https://github.com/Babystep-Technologies/active_sanction/blob/main/docs/adding_a_source.md)
+        step 2 asks you to look at before writing anything.
+    validations:
+      required: true
+
+  - type: textarea
+    id: access
+    attributes:
+      label: Anything odd about fetching it
+      description: >-
+        A user agent it rejects, a redirect to blob storage, a login, a rate
+        limit, an IP range it blocks. OFAC 403s a request without a User-Agent,
+        which is the kind of thing that belongs here.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: claiming
+    attributes:
+      label: Are you writing it
+      options:
+        - label: I intend to write this adapter and open a pull request
+        - label: >-
+            I have read `docs/adding_a_source.md` and can capture a fixture
+            from the real file

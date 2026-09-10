@@ -1373,19 +1373,27 @@ library.
 
 ## Contributing
 
-Bug reports and pull requests are welcome at https://github.com/Babystep-Technologies/active_sanction.
+Bug reports and pull requests are welcome at https://github.com/Babystep-Technologies/active_sanction. [`CONTRIBUTING.md`](CONTRIBUTING.md) has the whole of what a contributor needs: setup, the three checks, and the one flag that signs a commit.
 
-The most useful contribution is a new list. [`docs/adding_a_source.md`](docs/adding_a_source.md) is written for exactly that, and the shared conformance group means a new adapter is held to the same checklist the shipped ones are. The UK ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are open and unclaimed.
+Contributions are accepted under the [Developer Certificate of Origin](https://developercertificate.org) — a `Signed-off-by` line, which `git commit -s` writes for you and CI checks. There is no contributor licence agreement, because the commercial advantage here is operational rather than code secrecy and there is no right to relicense worth reserving.
 
-The second most useful is a name this version gets wrong. A missed record or a false alert belongs in [`benchmark/fixtures/labeled_set.yml`](benchmark/fixtures/labeled_set.yml) with what it is supposed to find, whether or not the matching is changed in the same pull request — a case nobody has written down is a case that regresses silently.
+**The most useful contribution is a new list.** [`docs/adding_a_source.md`](docs/adding_a_source.md) is written for exactly that, and the shared conformance group means an adapter written outside this repository is held to the same checklist the seven shipped ones are. A source can also be registered from your own application without touching this gem, which is what makes a bank's internal watchlist a first-class source here.
+
+**The second most useful is a name this version gets wrong.** A missed record or a false alert belongs in [`benchmark/fixtures/labeled_set.yml`](benchmark/fixtures/labeled_set.yml) with what it is supposed to find, whether or not the matching is changed in the same pull request — a case nobody has written down is a case that regresses silently.
 
 `bundle exec rake` runs the suite, RuboCop and Sorbet; all three must pass. If you change the normalizer, the index, the similarity algorithms, the scorer or the weights, run `bundle exec rake benchmark:accuracy` and commit the report it rewrites: a weight nudged by two points does not look like anything in a patch and is exactly what moves a name from found to missed.
 
-This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](CODE_OF_CONDUCT.md).
+## Security
+
+**A false negative here is a security bug, not merely an inaccuracy** — somebody may be relying on an empty result to clear a payment. So is anything that makes the gem accept a modified list as authentic, or that lets a screened name leave the host process.
+
+Report one privately, never in a public issue: [**Report a vulnerability**](https://github.com/Babystep-Technologies/active_sanction/security/advisories/new) on the Security tab. [`SECURITY.md`](SECURITY.md) says what is in scope, what is match quality and belongs in a public issue instead, and what response to expect.
 
 ## License
 
 Available as open source under the terms of the [MIT License](LICENSE.txt).
+
+**The licence covers the software and not the name.** ActiveSanction, the project name and any associated branding are not granted by it. A fork or a derivative may say that it is built on, compatible with, or derived from ActiveSanction; it may not use the name in a way that suggests it is this project or is endorsed by it. This is the ordinary position under MIT, which grants no trademark rights either way, and it is written down only so nobody has to guess. [The bundle format](docs/bundle_format.md) is open and unencumbered under the same rule: anyone can produce one.
 
 ## Code of Conduct
 

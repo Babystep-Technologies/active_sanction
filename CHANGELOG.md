@@ -351,6 +351,39 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
 - A hermetic suite — an un-stubbed HTTP call fails rather than quietly reaching a government
   server ([#3](https://github.com/Babystep-Technologies/active_sanction/issues/3)).
 
+#### Governance
+
+- Contributions are accepted under the
+  [Developer Certificate of Origin](https://developercertificate.org) — a `Signed-off-by`
+  trailer, which `git commit -s` writes and which a CI job checks on every pull request,
+  printing the rebase that fixes a branch already pushed
+  ([#61](https://github.com/Babystep-Technologies/active_sanction/issues/61)). **There is no
+  contributor licence agreement.** The commercial advantage here is operational rather than
+  code secrecy, so there is no right to relicense worth reserving, and a contributor pays one
+  flag instead of a signature.
+- **The licence stays MIT, and that was a decision rather than a default.** A move to
+  Apache-2.0 was considered and declined: this library implements no patentable technique —
+  Jaro-Winkler, Levenshtein, token-set ratios and Double Metaphone are all long published and
+  none encumbered — so an express patent grant would defend against a thicket that does not
+  exist, and MIT is the lowest-friction signal in an ecosystem that is overwhelmingly MIT.
+  `spec/licensing_spec.rb` holds `LICENSE.txt`, the gemspec and the README to saying the same
+  thing, because a licence file and a `spec.license` that disagree are read by different
+  audiences and neither one notices.
+- `CONTRIBUTING.md` and `SECURITY.md`, both shipped **inside the gem** rather than only on
+  GitHub — a dependency is often audited from a vendored bundle or an air-gapped host, and the
+  address to report a vulnerability to is exactly what that reader is looking for.
+- **`SECURITY.md` treats a false negative as a security bug.** A screening library that fails
+  to report a listed name is not merely inaccurate; somebody may be relying on an empty result
+  to clear a payment. So a systematic screening bypass, a bundle signature that verifies when
+  it should not, and any path by which a screened name leaves the host process are all in
+  scope for private disclosure — while a single wrong score stays a public issue and a row in
+  the labeled set.
+- Issue forms for a bug, a name this version gets wrong, and a list the gem does not read yet;
+  a pull request template; and `CODEOWNERS`.
+- **A trademark note in the README and `CONTRIBUTING.md`.** MIT grants no rights in the name
+  either way — this says so out loud, so a fork does not have to guess. The bundle format
+  stays open and unencumbered: anyone can produce one.
+
 ### Known limitations at this release
 
 Documented in full in the README under
