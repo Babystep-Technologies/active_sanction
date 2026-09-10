@@ -38,9 +38,12 @@ module ActiveSanction
       class Record
         extend T::Sig
 
+        # @api private
         SEPARATOR = T.let("/", String)
+        # @api private
         ATTRIBUTE = T.let("@", String)
 
+        # @api private
         UNSET = T.let(Object.new.freeze, Object)
         private_constant :UNSET
 

@@ -20,6 +20,8 @@ module ActiveSanction
     # instead, and for a 304, which has none by definition.
     #
     # Instances are frozen on construction.
+    #
+    # @api private
     class Response
       extend T::Sig
 

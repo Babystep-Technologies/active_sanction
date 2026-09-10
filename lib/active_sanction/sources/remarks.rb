@@ -36,8 +36,10 @@ module ActiveSanction
     module Remarks
       extend T::Sig
 
+      # @api private
       MARKER = T.let("[source fields]", String)
 
+      # @api private
       SEPARATOR = T.let("; ", String)
 
       # `fields` is a list of label/value pairs. A value may be an Array -- the

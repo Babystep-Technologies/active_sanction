@@ -64,6 +64,7 @@ module ActiveSanction
       def retryable? = retryable_or(true)
     end
 
+    # @api private
     MUTEX = T.let(Mutex.new, Mutex)
     private_constant :MUTEX
 
@@ -73,6 +74,8 @@ module ActiveSanction
     # could not see. Everything that writes to it holds MUTEX; reads do not,
     # because a registry is written at load and read for the life of the
     # process.
+    #
+    # @api private
     REGISTRY = T.let({}, T::Hash[Symbol, T.untyped])
     private_constant :REGISTRY
 

@@ -82,6 +82,8 @@ module ActiveSanction
 
     # Canonical member order, matching the layout #to_h produces and the
     # documented JSON shape.
+    #
+    # @api private
     MEMBERS = T.let(
       %i[score entity matched_name explanation query weights snapshot_id matcher_version backend verified
          screened_at].freeze,
@@ -91,6 +93,8 @@ module ActiveSanction
     # Where screening happened. `:local` is this gem doing the work against a
     # list on this machine; #56 introduces the seam and the names of the
     # others.
+    #
+    # @api private
     DEFAULT_BACKEND = T.let(:local, Symbol)
 
     # 0..100, one decimal place, and equal to the sum of the explanation.

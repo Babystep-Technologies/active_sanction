@@ -14,11 +14,15 @@ module ActiveSanction
     # A FetchError, so a caller backing off on "the bytes could not be
     # obtained" does not have to know that this library speaks `net/http`. The
     # subclasses below split it further only where the fix differs.
+    #
+    # @api public
     class Error < FetchError; end
 
     # The connection or a read exceeded its timeout, and retries did not save
     # it. Kept distinct from ConnectionError because it is the failure that
     # usually means "the publisher is slow today", not "the URL is wrong".
+    #
+    # @api public
     class TimeoutError < Error
       extend T::Sig
 
@@ -31,6 +35,8 @@ module ActiveSanction
 
     # The request never completed: DNS failure, refused or reset connection,
     # TLS failure.
+    #
+    # @api public
     class ConnectionError < Error
       extend T::Sig
 
@@ -45,16 +51,22 @@ module ActiveSanction
     # Not retryable, and neither are the two below: a misrouted URL is routed
     # the same way on the next attempt, and this is the shape of failure that
     # needs somebody to look at where the publisher moved the file to.
+    #
+    # @api public
     class TooManyRedirects < Error; end
 
     # A redirect chain that returns to a URL already visited. It would trip the
     # hop cap on its own, but a loop and a genuinely long chain call for
     # different fixes, so they get different errors.
+    #
+    # @api public
     class RedirectLoop < Error; end
 
     # A `Location` that cannot be resolved, or that leaves HTTP entirely. A
     # sanctions file served over `ftp://` is a sign something is wrong upstream,
     # not an opportunity to be accommodating.
+    #
+    # @api public
     class InvalidRedirect < Error; end
 
     # Raised by Response#success! for a status the caller declared fatal. It
@@ -62,6 +74,8 @@ module ActiveSanction
     # status, so `retryable?` answers from it without anybody unwrapping the
     # response to look: a 503 is retryable, a 403 for a missing User-Agent is
     # not. See FetchError::RETRYABLE_STATUSES.
+    #
+    # @api public
     class ResponseError < Error
       extend T::Sig
 

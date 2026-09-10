@@ -351,6 +351,48 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
 - A hermetic suite — an un-stubbed HTTP call fails rather than quietly reaching a government
   server ([#3](https://github.com/Babystep-Technologies/active_sanction/issues/3)).
 
+#### API stability, and what may change
+
+- **The public surface is enumerated rather than inferred**, in
+  [`docs/api_stability.md`](docs/api_stability.md)
+  ([#62](https://github.com/Babystep-Technologies/active_sanction/issues/62)). Roughly 500
+  constants are reachable from `ActiveSanction`; **137 are promised**. The rest are marked
+  `@api private`, hidden from the rendered documentation, and may be renamed or removed in
+  a patch release. Every constant a user can reach is one somebody will reach, and without
+  a stated boundary an internal becomes load-bearing by accident.
+- [`spec/api_surface_spec.rb`](spec/api_surface_spec.rb) fails the build when the code and
+  that document disagree **in either direction** — a new public constant nobody wrote down,
+  or a name written down that no longer exists. Widening the surface is now a diff somebody
+  reviewed rather than a side effect of adding a class.
+- **SemVer, with the pre-1.0 rule said out loud.** Before 1.0 a minor version may break the
+  public API — `0.4.0` may remove what `0.3.0` promised, which is what the leading zero
+  means — and a patch release never does.
+- **`ActiveSanction::Deprecation`**, and one full minor release of overlap. Something
+  deprecated in `0.4.0` works through all of `0.5.x` and may be removed in `0.6.0`, so an
+  application upgrading one minor at a time always meets the warning at least one release
+  before the breakage. `removal_for` computes that version rather than leaving it to be
+  remembered.
+  - Warnings go through `Kernel#warn` with `category: :deprecated`, so
+    `Warning[:deprecated] = false` silences them — the line a host already has in their
+    `spec_helper`, rather than a setting of ours they would have to discover.
+  - Each call site warns once however many times it is reached: a deprecated method called
+    while looping over 19,000 records writes one line, not 19,000. Working out *which* call
+    site took some care, because `sig` wraps every method here and Sorbet's validation
+    wrapper both hides the real caller and moves once the fast path is swapped in.
+- **`Sources::Base`, `Storage::Base` and `ValidatorStore` carry the strongest guarantee.**
+  Breaking one forks every adapter written outside this repository at once, and those
+  authors are not reading these release notes. The two conformance groups are the
+  executable statement of what each requires.
+- `rake doc` now renders the public surface only, at **100% documented**. The 140 constants
+  YARD reported as undocumented were internal — column names, regex fragments, the `MEMBERS`
+  lists a value object serializes through — and the answer to them was a boundary rather
+  than 140 comments restating their names
+  ([#38](https://github.com/Babystep-Technologies/active_sanction/issues/38)).
+- Named as **deliberately not public**: the matching internals (`Index`, `Similarity`,
+  `Phonetics`, and the scorer's `Adjustments` and `NameScore`), `HttpClient`, `Fetcher` and
+  `PayloadCache` as classes though their errors are public, every `MEMBERS` list, the
+  per-adapter `Record` classes, and the parser toolkits' readers and backends.
+
 #### Governance
 
 - Contributions are accepted under the

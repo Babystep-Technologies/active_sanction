@@ -5,6 +5,7 @@ require "sorbet-runtime"
 
 require "active_sanction/error"
 require "active_sanction/version"
+require "active_sanction/deprecation"
 require "active_sanction/configuration"
 require "active_sanction/name"
 require "active_sanction/address"
@@ -49,12 +50,16 @@ module ActiveSanction
   # a matcher that indexed every stored list, and two threads racing to
   # `configure` at boot should not each get a different one. A constant rather
   # than a memoized ivar, because a lazily created lock is not one.
+  #
+  # @api private
   CLIENT_LOCK = T.let(Mutex.new, Mutex)
   private_constant :CLIENT_LOCK
 
   # Where .with_configuration keeps the settings in force. Fiber-local, which
   # is what `Thread#[]` means: two threads screening through two clients read
   # two configurations, and neither can see the other's.
+  #
+  # @api private
   CONFIGURATION_KEY = :active_sanction_configuration
   private_constant :CONFIGURATION_KEY
 

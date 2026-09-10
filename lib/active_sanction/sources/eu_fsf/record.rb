@@ -38,6 +38,8 @@ module ActiveSanction
       # current `<regulation>` -- its programme, its number and its Official
       # Journal URL -- and the per-field trail is dropped rather than
       # flattened into 31,053 remark fragments nothing reads.
+      #
+      # @api private
       class Record
         extend T::Sig
 

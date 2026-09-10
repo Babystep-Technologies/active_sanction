@@ -10,6 +10,8 @@ module ActiveSanction
   # Rails generators, loaded only by Rails' own generator lookup. Nothing here
   # is required by `require "active_sanction"`, which is what keeps Rails and
   # ActiveRecord out of this gem's runtime dependencies.
+  #
+  # @api private
   module Generators
     # The migration that creates the tables Storage::ActiveRecord reads and
     # writes:
@@ -28,6 +30,8 @@ module ActiveSanction
     # something different after a `bundle update`. The cost is that a schema
     # change ships as a second migration, which is the same cost every other
     # table in the host application pays.
+    #
+    # @api private
     class InstallGenerator < ::Rails::Generators::Base
       extend T::Sig
       include ::ActiveRecord::Generators::Migration

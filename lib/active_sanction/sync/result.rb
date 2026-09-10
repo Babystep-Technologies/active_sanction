@@ -50,8 +50,12 @@ module ActiveSanction
     class Result
       extend T::Sig
 
+      # How a sync of one source can come out. `unchanged` is the publisher
+      # answering 304, which is the common case on a list that changes
+      # daily at most, and it is a success rather than a no-op.
       STATUSES = T.let(%i[updated unchanged failed].freeze, T::Array[Symbol])
 
+      # @api private
       MEMBERS = T.let(
         %i[source status record_count checksum fetched_at age duration error].freeze,
         T::Array[Symbol]

@@ -130,6 +130,8 @@ module ActiveSanction
     # synchronize its construction. It holds a cache and a mutex, and reads its
     # dictionary from the configuration on each call rather than holding one,
     # which is why one process-wide instance is enough.
+    #
+    # @api private
     DEFAULT = T.let(new, Normalizer)
   end
 end

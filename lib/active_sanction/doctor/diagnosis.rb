@@ -39,8 +39,12 @@ module ActiveSanction
     class Diagnosis
       extend T::Sig
 
+      # Whether the doctor got far enough to have an opinion. `failed` means
+      # the list could not be read at all, which is a different report from
+      # one that read it and found something wrong with it.
       STATUSES = T.let(%i[checked failed].freeze, T::Array[Symbol])
 
+      # @api private
       MEMBERS = T.let(%i[source status findings profile baseline duration error].freeze, T::Array[Symbol])
 
       sig { returns(Symbol) }

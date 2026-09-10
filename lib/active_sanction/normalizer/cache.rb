@@ -19,6 +19,8 @@ module ActiveSanction
     # which runs outside it. Two threads racing on a cold key both fold the
     # string and store equal results, which costs one redundant fold and is
     # much cheaper than serializing every normalization behind one mutex.
+    #
+    # @api private
     class Cache
       extend T::Sig
 

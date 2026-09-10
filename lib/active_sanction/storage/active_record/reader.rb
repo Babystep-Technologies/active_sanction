@@ -26,22 +26,30 @@ module ActiveSanction
       # it does not match. A row deleted by hand, a write that half landed, a
       # column edited in a console -- all of them raise rather than screen a
       # customer against a list that is quietly missing people.
+      #
+      # @api private
       class Reader
         extend T::Sig
 
+        # @api private
         ENTITY_COLUMNS = T.let(%i[
           id external_id source source_ref entity_type dates_of_birth nationalities programs listed_on remarks
         ].freeze, T::Array[Symbol])
 
+        # @api private
         NAME_COLUMNS = T.let(%i[entity_id value kind quality script].freeze, T::Array[Symbol])
+        # @api private
         ADDRESS_COLUMNS = T.let(
           %i[entity_id street city state_province postal_code country note].freeze, T::Array[Symbol]
         )
+        # @api private
         IDENTIFIER_COLUMNS = T.let(
           %i[entity_id kind value country issued_on expires_on note].freeze, T::Array[Symbol]
         )
 
         # Identifier members that are stored as JSON and rebuilt as dates.
+        #
+        # @api private
         IDENTIFIER_DATES = T.let(%i[issued_on expires_on].freeze, T::Array[Symbol])
 
         sig { params(row: T.untyped).void }

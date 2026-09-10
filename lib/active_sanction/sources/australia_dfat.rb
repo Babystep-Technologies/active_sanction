@@ -102,14 +102,18 @@ module ActiveSanction
 
       url :main, "https://www.dfat.gov.au/sites/default/files/Australian_Sanctions_Consolidated_List.xlsx"
 
+      # @api private
       SHEET = T.let("Consolidated List", String)
 
+      # @api private
       LIST = T.let(Parsers::Spreadsheet.new(sheet: SHEET), Parsers::Spreadsheet)
 
       # The columns this adapter reads by name. The sheet names its own, so
       # these are not a declaration of its shape -- they are what is checked
       # before a single row is mapped, so that a column DFAT renames says so
       # once and loudly rather than reading nil on all 11,163 rows.
+      #
+      # @api private
       REQUIRED_COLUMNS = T.let(
         %i[reference name_of_individual_or_entity type name_type alias_strength date_of_birth citizenship
            address additional_information listing_information imo_number committees control_date
@@ -119,17 +123,25 @@ module ActiveSanction
 
       # The letters DFAT suffixes an alias reference with: `1000a`, and six
       # times `1000aa`. Stripping them is what joins a group.
+      #
+      # @api private
       ALIAS_SUFFIX = T.let(/[a-z]+\z/, Regexp)
 
       # `a) ... b) ...`: a UN enumeration inside one cell, which DFAT carries
       # through into the addresses and the birth dates.
+      #
+      # @api private
       ENUMERATOR = T.let(/(?:\A|[[:space:]])[a-z]\)[[:space:]]*/, Regexp)
 
       # Every kind of space: these cells carry non-breaking ones, which
       # `String#strip` leaves in place.
+      #
+      # @api private
       SPACE = T.let(/[[:space:]]+/, Regexp)
 
       # The form a filtered edge recognises -- see the class comment.
+      #
+      # @api private
       COMPATIBLE_AGENT = T.let("Mozilla/5.0 (compatible; %s)", String)
 
       # Records that could not be used, and fields that could not be read.

@@ -18,6 +18,8 @@ module ActiveSanction
       # the human-readable form, appended to remarks ahead of the other
       # source fields because it is the first thing an examiner looking at a
       # hit needs to know.
+      #
+      # @api private
       class Record < Ofac::Record
         extend T::Sig
 

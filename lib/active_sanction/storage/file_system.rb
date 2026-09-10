@@ -97,9 +97,13 @@ module ActiveSanction
 
       # The sidecar, and the commit point. Its presence is what makes a
       # directory a stored source, and replacing it is what publishes a write.
+      #
+      # @api private
       META_FILENAME = T.let("meta.json", String)
 
+      # @api private
       SNAPSHOT_PREFIX = T.let("snapshot-", String)
+      # @api private
       SNAPSHOT_EXTENSION = T.let(".json.gz", String)
 
       # Snapshot versions this code can read. Anything above the version it
@@ -107,27 +111,37 @@ module ActiveSanction
       # through Snapshot.from_h, which folds the version into the checksum it
       # verifies, so a list cannot be read under a schema it was not written
       # under without the mismatch being caught.
+      #
+      # @api private
       READABLE_SCHEMA_VERSIONS = T.let(1..Snapshot::SCHEMA_VERSION, T::Range[Integer])
 
       # Zlib's default, not its best. A parsed OFAC list is tens of megabytes
       # of highly repetitive JSON that gzip already reduces by better than 90%;
       # the last few points cost several seconds of a sync and buy a rounding
       # error of disk.
+      #
+      # @api private
       COMPRESSION_LEVEL = T.let(Zlib::DEFAULT_COMPRESSION, Integer)
 
       # A checksum becomes a filename, so it is matched rather than sanitized:
       # this is the one place a value read back off disk is joined to a path,
       # and `sha256:<64 hex>` is the only shape allowed through.
+      #
+      # @api private
       CHECKSUM_PATTERN = T.let(/\A#{Snapshot::ALGORITHM}:(\h{64})\z/, Regexp)
 
       # A directory is only a source if it is named like one. Held to the rule
       # source keys are held to everywhere, so an unrelated directory a user
       # left under `root` is not reported as a sanctions list.
+      #
+      # @api private
       SOURCE_PATTERN = T.let(Sources::Definition::KEY_PATTERN, Regexp)
 
       # How long a `.part` file from a killed write is left alone before the
       # next write sweeps it. Well past any real write and short of leaving
       # abandoned megabytes on disk forever.
+      #
+      # @api private
       ORPHAN_GRACE = T.let(3600, Integer)
 
       # The directory every source is filed under. Its layout is private --

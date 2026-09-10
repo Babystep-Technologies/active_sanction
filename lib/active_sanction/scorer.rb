@@ -120,6 +120,8 @@ module ActiveSanction
 
     # The scale everything here works in. Similarity is 0..1; the conversion
     # happens once, in NameScore.
+    #
+    # @api private
     SCALE = T.let(100.0, Float)
 
     module_function
@@ -208,6 +210,8 @@ module ActiveSanction
 
     # One of an entity's names, as far as this stage takes it: the published
     # name, its folded form, and the reasons that name produced.
+    #
+    # @api private
     Scored = T.type_alias { [Name, Normalizer::Form, T::Array[Reason]] }
 
     # Whichever of the entity's names scores highest once its own quality

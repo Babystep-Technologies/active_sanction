@@ -26,6 +26,8 @@ module ActiveSanction
       # `ENTITY_ADDRESS` -- so the prefix is taken from the record's own name.
       # An element only individuals have then resolves to a path entities do
       # not carry, which reads as absent, which is what it is.
+      #
+      # @api private
       class Record
         extend T::Sig
 

@@ -24,6 +24,8 @@ module ActiveSanction
       # Every element is optional and the file has no nesting, so which of the
       # three record shapes a `<record>` is has to be read off which elements
       # it happens to carry. See #type.
+      #
+      # @api private
       class Record
         extend T::Sig
 

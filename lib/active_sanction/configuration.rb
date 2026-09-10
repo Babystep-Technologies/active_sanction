@@ -38,6 +38,8 @@ module ActiveSanction
     # real gaps between them. The read timeout is per-read, not per-request, so
     # it does not cap how long a large download may take overall.
     DEFAULT_OPEN_TIMEOUT = T.let(10, Numeric)
+
+    # Seconds to wait for the next chunk of a body, not for the whole of one.
     DEFAULT_READ_TIMEOUT = T.let(60, Numeric)
 
     # OFAC's download URLs 302 to blob storage, one hop. Five leaves room for
@@ -49,6 +51,8 @@ module ActiveSanction
     # work with no user waiting on them, but they are also not worth an hour of
     # a government server's patience.
     DEFAULT_MAX_RETRIES = T.let(2, Integer)
+
+    # Seconds before the first retry, doubling on each one after it.
     DEFAULT_RETRY_BACKOFF = T.let(1.0, Numeric)
 
     # Cache validators and raw payloads live under here. The XDG base directory
@@ -57,7 +61,11 @@ module ActiveSanction
     # publisher overwrites its file the previous payload is gone, whether or
     # not this directory still holds a copy. PayloadCache is a bounded aid to
     # re-parsing and auditing, not the system of record; storage (#24) is.
+    #
+    # @api private
     XDG_CACHE_HOME = T.let("XDG_CACHE_HOME", String)
+
+    # The directory this gem takes for itself under whichever cache root wins.
     DEFAULT_CACHE_DIRNAME = T.let("active_sanction", String)
 
     # Where Storage::FileSystem (#24) keeps parsed snapshots. Deliberately not

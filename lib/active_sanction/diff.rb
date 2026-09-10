@@ -94,6 +94,8 @@ module ActiveSanction
     # two consecutive syncs is a handful of records; one that is thousands is a
     # parse regression or a publisher who reissued a list under new ids, and
     # neither is improved by dumping all of it into a terminal.
+    #
+    # @api private
     DETAIL_LIMIT = T.let(20, Integer)
 
     sig { returns(Symbol) }

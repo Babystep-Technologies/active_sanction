@@ -177,6 +177,8 @@ module ActiveSanction
     # answer at all. A 4xx outside those two is never in here: a 403 for a
     # missing User-Agent or a 404 for a retired URL says the request is wrong,
     # and repeating it wastes the publisher's capacity to make the same point.
+    #
+    # @api private
     RETRYABLE_STATUSES = T.let(([408, 425, 429] + (500..599).to_a).freeze, T::Array[Integer])
 
     sig { returns(T::Boolean) }

@@ -49,6 +49,8 @@ module ActiveSanction
       # The listing date is in the Listing Information prose instead, on the
       # 1,438 records that state one; see PublishedDate.listing. The Control
       # Date is kept in remarks, labelled as what it is.
+      #
+      # @api private
       class Record
         extend T::Sig
 

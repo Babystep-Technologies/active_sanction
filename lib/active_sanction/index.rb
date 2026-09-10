@@ -124,6 +124,8 @@ module ActiveSanction
   # against a consistent view of one list version, which is what makes a
   # screening decision re-derivable: an index that mutated underneath a query
   # would produce a result no snapshot checksum explains.
+  #
+  # @api private
   class Index
     extend T::Sig
 

@@ -50,6 +50,8 @@ module ActiveSanction
         # Canonical member order. This is the order #to_h builds and #to_line
         # serializes, and it is part of the format: a reader in another language
         # that emits these keys in another order produces a different file.
+        #
+        # @api private
         MEMBERS = T.let(
           %i[format_version gem_version generator source schema_version snapshot_checksum record_count
              fetched_at source_version payload_encoding payload_compression payload_digest payload_bytes].freeze,
@@ -59,11 +61,15 @@ module ActiveSanction
         # The one field a publisher may leave out, because plenty of lists
         # publish no version of their own. It still serializes, as null: the
         # key order is the format, so nothing is omitted from the line.
+        #
+        # @api private
         OPTIONAL_MEMBERS = T.let(%i[source_version].freeze, T::Array[Symbol])
 
         # `sha256:` and 64 hex digits, the form this library quotes every digest
         # in -- a snapshot's checksum, a cached payload's, and both of the ones
         # here.
+        #
+        # @api private
         DIGEST_PATTERN = T.let(/\A#{Snapshot::ALGORITHM}:\h{64}\z/, Regexp)
 
         # Who wrote the file, defaulted to this gem and this version. A

@@ -52,6 +52,8 @@ module ActiveSanction
       # Note that an ECDSA signature is randomized -- signing one snapshot twice
       # with one key produces two different lines. Determinism is a property of
       # the magic line, the header and the payload; see Bundle.
+      #
+      # @api private
       module Signature
         extend T::Sig
         extend T::Helpers

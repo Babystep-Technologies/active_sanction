@@ -33,6 +33,7 @@ module ActiveSanction
     class FileSystem < ValidatorStore
       extend T::Sig
 
+      # @api private
       DEFAULT_FILENAME = T.let("validators.json", String)
 
       sig { returns(String) }

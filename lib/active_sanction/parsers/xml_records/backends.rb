@@ -40,6 +40,8 @@ module ActiveSanction
       # So the default is REXML on every installation -- stdlib, no build step,
       # and the same answer everywhere -- and a host that wants libxml2's speed
       # says so out loud, in one line, where a reviewer can see it.
+      #
+      # @api private
       module Backends
         DEFAULT = T.let(:rexml, Symbol)
 

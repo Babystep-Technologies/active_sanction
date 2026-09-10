@@ -1204,6 +1204,26 @@ CLIENT.reload!            # the same, for one the application holds
 Batch screening stamps the whole call with one `screened_at`, because a rescreening of a customer book against a new list version is one event in an audit trail rather than ten thousand a microsecond apart. Results come back index-aligned rather than keyed by name — a book of customers contains the same name twice often enough, and a Hash would silently screen one of them and report both.
 
 
+## What is public, and what may change
+
+**The public surface is enumerated, not inferred.** Nearly 500 constants are
+reachable from `ActiveSanction`; 137 of them are promised. Everything else is
+marked `@api private`, is hidden from the rendered documentation, and may be
+renamed or removed in a patch release. [`docs/api_stability.md`](docs/api_stability.md)
+is the list and the policy, and [`spec/api_surface_spec.rb`](spec/api_surface_spec.rb)
+fails the build when the code and that list stop agreeing in either direction.
+
+**Before 1.0, a minor version may break the public API** — `0.4.0` may remove what
+`0.3.0` promised, which is what the leading zero means. A patch release never does.
+At 1.0 the deprecation path begins: one full minor release of overlap, a warning
+through Ruby's own `Warning[:deprecated]` switch, and a changelog entry in both the
+release that deprecates and the release that removes.
+
+**`Sources::Base`, `Storage::Base` and `ValidatorStore` carry the strongest
+guarantee**, because breaking one of them forks every adapter written outside this
+repository at once — and those authors are not reading these release notes. The two
+conformance groups are the executable statement of what each requires.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies, and `bin/console` for a prompt with the library loaded.

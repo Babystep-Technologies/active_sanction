@@ -86,6 +86,7 @@ module ActiveSanction
       # What happened to this subject's match. See the class comment.
       CHANGES = T.let(%i[newly_listed delisted details_changed].freeze, T::Array[Symbol])
 
+      # @api private
       MEMBERS = T.let(
         %i[subject change fields result previous_result snapshot_id previous_snapshot_id].freeze,
         T::Array[Symbol]
