@@ -288,9 +288,10 @@ Steps 8 and 9 are both required, and they catch different things: 8 says the
 bytes are the bytes that were packed, and 9 says those bytes are the list the
 header describes.
 
-Nothing partial is ever returned. A reader that hands back the 8,000 records it
-managed to parse out of 19,015 produces a report that looks exactly like a clean
-one, which is the most expensive thing a screening library can get wrong.
+Nothing partial is ever returned. A reader that hands back the eight thousand
+records it managed to parse out of nineteen thousand produces a report that
+looks exactly like a clean one, which is the most expensive thing a screening
+library can get wrong.
 
 ### Failure modes
 
