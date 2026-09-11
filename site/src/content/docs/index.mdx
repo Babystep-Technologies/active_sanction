@@ -24,6 +24,8 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 Sync, screen, and read the score:
 
+{/* sample: illustrative -- reaches seven government endpoints and needs a configured store */}
+
 ```ruby
 ActiveSanction.sync!
 
@@ -68,3 +70,17 @@ The gem is complete on its own — every supported list is fetchable, parseable
 and screenable locally, forever, with no account and no key. A commercial
 hosted service exists, and what it sells is operations rather than capability.
 [The gem and the service](/active_sanction/explanation/) says more.
+
+---
+
+Screening compares folded strings, never published ones. This is the one
+thing you can try with no data at all:
+
+{/* sample: runnable */}
+
+```ruby
+require "active_sanction"
+
+ActiveSanction::Normalizer.call("O'Brien, Seán").value
+# => "o brien sean"
+```
