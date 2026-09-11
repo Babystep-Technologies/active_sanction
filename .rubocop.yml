@@ -55,6 +55,7 @@ RSpec/DescribeClass:
     - "spec/api_surface_spec.rb"
     - "spec/site_samples_spec.rb"
     - "spec/site_sources_data_spec.rb"
+    - "spec/site_weights_data_spec.rb"
     - "spec/site_tutorial_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
