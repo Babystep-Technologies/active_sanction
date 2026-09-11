@@ -31,7 +31,10 @@ to reserve.
 
 **A new list.** [`docs/adding_a_source.md`](docs/adding_a_source.md) is written
 for exactly that, and the shared conformance group means an adapter written
-outside this repository is held to the same checklist the shipped ones are. A
+outside this repository is held to the same checklist the shipped ones are.
+The documentation site has a shorter
+[field guide](https://babystep-technologies.github.io/active_sanction/how-to/adding-a-source/)
+version, pointing into the file's sections rather than restating them. A
 source can also be registered from your own application without touching this
 gem at all, which is the point of the extension seam — open an issue first if
 you would rather have it shipped here, so two people do not write the same
