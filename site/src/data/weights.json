@@ -1,0 +1,18 @@
+{
+  "generated_by": "site/bin/generate_weights.rb, via `rake site:weights`",
+  "matcher_version": "1",
+  "weights": {
+    "dob_conflict": -35.0,
+    "dob_exact": 15.0,
+    "dob_overlap": 6.0,
+    "identifier_match": 40.0,
+    "jaro_winkler": 0.15,
+    "levenshtein": 0.1,
+    "low_quality_alias": -10.0,
+    "nationality_conflict": -12.0,
+    "nationality_match": 6.0,
+    "phonetic": 0.05,
+    "token_set": 0.45,
+    "token_sort": 0.25
+  }
+}

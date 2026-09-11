@@ -1,0 +1,353 @@
+---
+title: How matching works
+description: Why the matcher produces the number it produces, and how to defend or tune it.
+sidebar:
+  order: 2
+---
+
+import weightsData from "../../../data/weights.json";
+
+export const weights = weightsData.weights;
+
+This page is for someone who has already screened a name and now has to
+defend the result, or tune it. It does not tell you what to type — where you
+want that, [Get started](/active_sanction/tutorial/) and
+[Guides](/active_sanction/how-to/) do. It explains why the number came out
+the way it did.
+
+Every hosted competitor in this market reports a score and a vague summary of
+which fields contributed. This library reports **reasons that sum to the
+score exactly**, stamped with the weights and the matcher version that
+produced them. That is the most defensible claim it makes, and this page is
+the argument for it.
+
+## The pipeline, end to end
+
+A screening call is five stages, each narrowing or explaining what the one
+before it did. Fold the query once. Retrieve the names worth comparing.
+Score each candidate against four string algorithms and a phonetic pass.
+Adjust for what the record says beyond the name. Report the reasons — which
+are the score, not a commentary on it.
+
+<figure role="img" aria-label="The five stages of a screening call: normalize the query, retrieve candidates from an inverted index, score each candidate against a blend of four algorithms and a phonetic pass, adjust for identifiers and dates of birth and nationality, then report the reasons that sum to the score.">
+  <svg viewBox="0 0 940 190" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+        <path d="M0,0 L8,4 L0,8 z" fill="var(--sl-color-text)" />
+      </marker>
+    </defs>
+    {[
+      { x: 10, title: "Normalize", subtitle: "fold the query" },
+      { x: 196, title: "Retrieve", subtitle: "candidates, from the index" },
+      { x: 382, title: "Score", subtitle: "four algorithms + phonetic" },
+      { x: 568, title: "Adjust", subtitle: "identifiers, dob, nationality" },
+      { x: 754, title: "Report", subtitle: "reasons that sum to the score" },
+    ].map((stage, i) => (
+      <g key={stage.title}>
+        <rect
+          x={stage.x}
+          y="55"
+          width="176"
+          height="80"
+          rx="8"
+          fill={i === 4 ? "var(--sl-color-accent-low)" : "var(--sl-color-gray-6)"}
+          stroke="var(--sl-color-hairline)"
+        />
+        <text x={stage.x + 88} y="90" text-anchor="middle" fill="var(--sl-color-text)" font-size="17" font-weight="600">
+          {stage.title}
+        </text>
+        <text x={stage.x + 88} y="112" text-anchor="middle" fill="var(--sl-color-text)" font-size="12" opacity="0.8">
+          {stage.subtitle}
+        </text>
+        <text x={stage.x + 88} y="30" text-anchor="middle" fill="var(--sl-color-text)" font-size="12" opacity="0.6">
+          {i + 1}
+        </text>
+      </g>
+    ))}
+    {[196, 382, 568, 754].map((x) => (
+      <line key={x} x1={x - 20} y1="95" x2={x - 4} y2="95" stroke="var(--sl-color-text)" stroke-width="2" marker-end="url(#arrow)" />
+    ))}
+  </svg>
+  <figcaption style={{ fontSize: "0.85em", opacity: 0.75, marginTop: "0.5em" }}>
+    Normalizer → Index → NameScore → Adjustments → Reason. Stage numbers below
+    match the section headings on this page.
+  </figcaption>
+</figure>
+
+## Normalizing a name
+
+Screening compares folded strings, never published ones. `ActiveSanction::Normalizer`
+is stage one, and the only place in the library a name is folded at all:
+
+{/* sample: runnable */}
+
+```ruby
+require "active_sanction"
+
+ActiveSanction::Normalizer.call("O'Brien, Seán").value
+# => "o brien sean"
+```
+
+Five stages, in order: Unicode NFKD, strip the combining marks it separated,
+casefold, punctuation to spaces, collapse whitespace — plus one table for the
+Latin letters decomposition cannot reach, so `Bjørn` still meets `Bjorn` and
+the same goes for `ł`, `đ`, `þ`, `æ`, `ı` and `ə`. Told what kind of entity a
+name belongs to, a sixth stage drops the tokens that identify nothing rather
+than which entity: legal forms and function words from an organization,
+honorifics from an individual — "Public Joint Stock Company Gazprom", "PJSC
+Gazprom" and "Gazprom" all fold to `gazprom`. A fixed list of particles —
+`bin`, `ibn`, `al`, `von`, `de`, and a dozen more — is never stripped,
+because "Osama bin Laden" without `bin` is not a shorter name, it is a
+different one.
+
+**There is one code path, and that is the point.** A matcher whose index and
+query fold differently does not fail loudly; it silently stops matching, on
+exactly the records the difference touches. Both sides of every comparison
+call the same `Normalizer.call`, so a stoplist entry added today changes what
+matches today, everywhere, rather than on one side of a comparison and not
+the other.
+
+**Be explicit about the limit.** Non-Latin script is not transliterated.
+`Путин` does not fold to `putin` — Cyrillic, Arabic, Han, Kana and Hangul
+come out casefolded and stripped of marks, in their own script, so a
+Cyrillic name matches a Cyrillic query and nothing else. What makes that
+survivable is that these publishers ship a romanized name as an *additional*
+alias rather than instead of the original — the UN's `ORIGINAL_SCRIPT`
+entries and Canada's Cyrillic ones sit on records that carry a Latin
+spelling too, which is the one an English-language query finds. Guessing at
+a romanization costs precision everywhere it is tried, for every script, and
+buys recall on the one record a publisher has not already covered — see
+[the case one name transliterated two ways does not solve](#the-blend-and-what-it-cannot-fix),
+below.
+
+## Candidate retrieval
+
+The corpus is roughly 46,000 searchable name strings. Scoring all of them
+against a query costs a few hundred milliseconds per call, which is fine
+once and hopeless for a service — so an inverted index narrows the field
+first, the way a search engine does, rather than scanning.
+
+A folded name is described by three feature spaces — its tokens, its
+character trigrams, and its Double Metaphone keys — and any indexed name
+sharing a single feature with the query is a candidate. Trigrams catch a
+typo a token match would miss; phonetic keys catch a name filed under a
+different spelling of itself, which is the retrieval half of the
+[transliteration limit](#the-blend-and-what-it-cannot-fix) below. Candidates
+are then ranked by a cosine over those three spaces, each feature weighted
+by how rare it is — a shared `mohammed` says almost nothing on a corpus
+where thousands of names carry it; a shared surname held by two says nearly
+everything — divided by how much of each name the query actually accounts
+for, so a short name matched completely outranks a long one matched partly.
+
+**Recall is this stage's whole job, and that is why the cap exists at all.**
+A name this stage does not retrieve is never compared to anything by the
+stages after it — it cannot score badly, it does not appear, and there is no
+signal to a caller that it happened. So retrieval is generous on purpose,
+capped at 200 candidates by default, and the number is set from a measured
+recall curve rather than a round one: it is where recall against a
+deliberately damaged query set stops improving and latency keeps costing.
+`ActiveSanction.configure { |c| c.candidate_limit = 500 }` raises it for a
+caller who has the budget and wants the margin.
+
+## The blend, and what it cannot fix
+
+`ActiveSanction::Scorer::NameScore` is stage three: four string algorithms
+and a phonetic pass, blended into one similarity on the 0..100 scale a score
+is read on.
+
+<table>
+  <thead>
+    <tr><th>Component</th><th>Default weight</th><th>What it catches</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>token_set</code></td>
+      <td>{weights.token_set}</td>
+      <td>Every word of the shorter name appearing in the longer one — the shape of nearly every honest partial query.</td>
+    </tr>
+    <tr>
+      <td><code>token_sort</code></td>
+      <td>{weights.token_sort}</td>
+      <td>The same words in a different order — a record published surname-first against a query typed given-name-first.</td>
+    </tr>
+    <tr>
+      <td><code>jaro_winkler</code></td>
+      <td>{weights.jaro_winkler}</td>
+      <td>A shared prefix and a small edit distance — the cheapest of the five to compute, and the first one measured.</td>
+    </tr>
+    <tr>
+      <td><code>levenshtein</code></td>
+      <td>{weights.levenshtein}</td>
+      <td>Raw character edits, no rearrangement forgiven — the brake that keeps <code>kim jong un</code> apart from <code>kim yong chol</code>, where the token ratios cannot tell the two apart.</td>
+    </tr>
+    <tr>
+      <td><code>phonetic</code></td>
+      <td>{weights.phonetic}</td>
+      <td>Shared Double Metaphone keys — real evidence, and weak evidence, since <code>HSN</code> is the key for both <code>HUSSEIN</code> and <code>HASSAN</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+The five are shares of one weighted mean, held to summing to 1.0. Every
+number lives in `ActiveSanction::Scorer::Weights`, with the reason it is
+what it is, and a host can change any of it:
+
+{/* sample: illustrative -- changes ActiveSanction's process-global configuration */}
+
+```ruby
+ActiveSanction.configure { |c| c.scorer_weights = { dob_conflict: -20.0 } }
+```
+
+**Why a mean, and not the weighted maximum the well-known Python ratio
+uses.** `token_set` returns 1.0 whenever one name's words are a subset of
+the other's, so a maximum would score the query `Mohammed` against
+`MOHAMMED AL-ZAWAHIRI` in the nineties. On a corpus where a quarter of the
+individuals share a handful of given names, that is not tolerance, it is an
+alert queue nobody can work through. A mean puts the same pair in the high
+seventies — still high, because the caller's whole query really is on the
+record, which is the honest answer — and what pulls it apart from a true
+match is not the name at all. It is the identifiers, below.
+
+**One name transliterated two different ways is the case this stage does
+not solve.** `QADHAFI, Muammar` against `Muammar Gaddafi` scores 58.8, and
+raising the phonetic share does not fix it — pushing it from 0.05 to 0.15
+moves the pair to 66.8, still under any threshold worth setting, while
+lifting every common-name near-miss by the same few points. What actually
+covers the case is upstream: these lists publish the variants themselves —
+OFAC's Qadhafi record carries `QADHAFI`, `QADAFI`, `GADAFI` and `KADAFI`
+among others — [the index](#candidate-retrieval) keys on Double Metaphone so
+a query for one spelling retrieves a record filed under another, and the
+scorer takes the maximum over an entity's names, so the query is scored
+against the alias it is actually a spelling of. The residue — a record
+carrying one spelling and one only, queried with a different one — is a
+real recall limitation, and the honest mitigation is the identifier fields
+rather than a bigger number in the blend.
+
+## Adjustments, and why absence is never conflict
+
+Name similarity alone puts thousands of people on a list of a few hundred —
+a quarter of the individuals on these lists share a handful of given names,
+and every one of them scores in the seventies against every other. The
+passport number, the date of birth and the nationality are the corrective,
+and they are the fields a compliance officer already has in a customer
+record. `ActiveSanction::Scorer::Adjustments` is stage four: points added to
+the name score, strongest evidence first.
+
+<table>
+  <thead>
+    <tr><th>Adjustment</th><th>Points</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Passport / national ID exact match</td><td>+{weights.identifier_match}</td></tr>
+    <tr><td>Date of birth, exact full date</td><td>+{weights.dob_exact}</td></tr>
+    <tr><td>Date of birth, year-only overlap</td><td>+{weights.dob_overlap}</td></tr>
+    <tr><td>Date of birth, genuine conflict</td><td>{weights.dob_conflict}</td></tr>
+    <tr><td>Nationality agreement</td><td>+{weights.nationality_match}</td></tr>
+    <tr><td>Nationality conflict</td><td>{weights.nationality_conflict}</td></tr>
+    <tr><td>Entity type mismatch</td><td>filtered out entirely, at any name similarity</td></tr>
+  </tbody>
+</table>
+
+A UN alias graded `QUALITY=Low` by the Committee itself costs
+{Math.abs(weights.low_quality_alias)} points before the maximum over an
+entity's names is taken — not after — so a good name scoring 85 beats a low-quality one
+scoring 90, rather than the other way around.
+
+**Every adjustment above fires only when *both* sides carry the field, and
+that is the rule everything here obeys.** Most records lack most
+identifiers: Canada publishes no aliases and frequently no date of birth,
+OFAC's dates are prose in a remarks field, and the UN grades what it has and
+says nothing about what it does not. A missing field produces no reason at
+all — not a small penalty. Treating absence as disagreement would
+systematically under-score the jurisdictions that publish least, Canada
+above all, and would hide real hits below the threshold. That is a
+compliance argument, not a coding-style one.
+
+The practical consequence follows directly: a subject carrying a passport
+number needs {weights.identifier_match} points less name similarity than one
+carrying nothing, so a query passing only a name leaves most of the
+library's discrimination unused — and it is discrimination against the
+false positives, not against the hits.
+
+## Reading a score
+
+The reasons sum to the score, rounded once — there is no arithmetic anywhere
+in this library that can move one without the other:
+
+{/* sample: illustrative -- needs an entity retrieved from a synced store */}
+
+```ruby
+result.score
+# => 82.0
+result.explanation.map(&:to_s)
+# => ["+42.0 name: matched primary name \"PUTIN, Vladimir Vladimirovich\"",
+#     "+40.0 identifier: passport 750123456 matches"]
+```
+
+**Do not band by score alone.** A 97 that is all name similarity and an 82
+with a matching passport number are different findings, and the number does
+not distinguish them. A score that merely travelled beside the reasons that
+produced it could come apart from them in a later release and be quietly
+wrong for a year — so it never travels beside them, it is computed from
+them, on every read.
+
+## Why the threshold defaults to 75
+
+The default was a guess until `rake benchmark:accuracy` measured it, against
+87 labeled queries: real published records queried the way a customer
+record spells them, plus the common names and near misses that must not
+alert.
+
+```
+threshold  precision  recall      F1   found  missed  false alerts
+       60      0.831   0.970   0.895      64       2            13
+       75      0.899   0.939   0.919      62       4             7   <- best F1
+       85      0.963   0.788   0.867      52      14             2
+```
+
+F1 peaks at exactly the number this library ships, and that agreement is
+the whole argument for the default — but it is worth being clear about what
+F1 *cannot* argue. It weighs a miss and a false alert equally, and a
+sanctions screen does not: a false positive costs an analyst minutes, and a
+false negative is a sanctioned counterparty onboarded. So **75 is a floor
+to tune down from, not a ceiling**, and `threshold:` is per query for a
+host that has to be more careful still.
+
+Recall is not uniform across the lists, and an averaged figure would hide
+it — Canada's 0.880 against the UN's 1.000 is not the matching's fault; the
+list publishes fewer aliases and fewer dates of birth, so there is less to
+match against.
+
+[`benchmark/results/accuracy.md`](https://github.com/Babystep-Technologies/active_sanction/blob/main/benchmark/results/accuracy.md)
+is regenerated by `rake benchmark:accuracy` and committed. It names every
+miss and every false alert at the default threshold, breaks recall down by
+what the query did to the name, and is the one place these figures are
+rendered — this page argues about what they mean and links there rather
+than restating them, so the numbers cannot drift into disagreement with
+themselves.
+
+## Reproducibility
+
+Four fields make a past screening decision re-derivable, and each is a way
+the same query could score differently today:
+
+| Field | What it pins down |
+|---|---|
+| `snapshot_id` | the checksum of the exact list version that answered. Publishers overwrite their files in place, so "the OFAC list" is not a citable thing; a checksum is |
+| `matcher_version` | which matching pipeline scored it |
+| `weights` | what each signal was worth. A host that retunes `dob_conflict` changes what every past decision would score today |
+| `query` | what was screened, and under what threshold. A hit at 78 means one thing under a threshold of 75, and could not have existed under 85 |
+
+`matcher_version` (currently `"{weightsData.matcher_version}"`) is
+deliberately not the gem version. The gem version moves for a new source
+adapter, a storage fix, or a documentation release — none of which change
+what a name scores. It is bumped only when a change to the normalizer, the
+index, the similarity algorithms or the scorer *could* move a score,
+because an auditor asking "would this screening come out the same today?"
+needs the answer to that specific question, not to several others that
+happen to share a release number.
+
+Together with the snapshot checksum and the weights, it is what turns a
+`MatchResult` sitting in an audit record into something a compliance
+officer can re-derive months later, rather than something they have to
+trust.

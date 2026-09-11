@@ -70,6 +70,15 @@ namespace :site do
     ruby "site/bin/generate_sources.rb"
   end
 
+  # The weights table on the "How matching works" page (#106): every number
+  # read straight from Scorer::Weights::DEFAULTS, so the table cannot drift
+  # from the scorer the way a hand-typed one would the first time a weight is
+  # tuned. spec/site_weights_data_spec.rb fails when it has.
+  desc "Regenerate site/src/data/weights.json from Scorer::Weights::DEFAULTS (#106)"
+  task :weights do
+    ruby "site/bin/generate_weights.rb"
+  end
+
   desc "Build the documentation site, with the API docs under /api/ (#103)"
   task :build do
     sh "npm", "ci", chdir: "site"
