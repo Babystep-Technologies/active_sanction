@@ -70,4 +70,20 @@ RSpec.describe "what this gem says about its own licence" do
   it "ships nothing from .github/" do
     expect(packaged.grep(%r{\A\.github/})).to be_empty
   end
+
+  # `site/` is the documentation site's Jekyll sources (#103), and this is the
+  # reason the site is not built out of `docs/`: doing so would ship a
+  # `_config.yml`, a theme, a set of layouts and a second Gemfile into every
+  # application that installs this gem.
+  it "ships nothing from site/" do
+    expect(packaged.grep(%r{\Asite/})).to be_empty
+  end
+
+  # And the half that is easy to lose by fixing the half above. `docs/` is
+  # linked from the README, from the site, and from the gem's own error
+  # messages, and it is read by people auditing an installed dependency who
+  # cannot reach either.
+  it "still ships docs/" do
+    expect(packaged.grep(%r{\Adocs/})).not_to be_empty
+  end
 end

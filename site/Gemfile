@@ -1,0 +1,34 @@
+# frozen_string_literal: true
+
+# The site toolchain, deliberately a separate bundle from the gem's.
+#
+# The gem's Gemfile is resolved against every Ruby from 3.1 to 4.0 in CI, and
+# Jekyll's own dependency floor has nothing to do with what `active_sanction`
+# supports. Keeping them apart means a Jekyll release can never be the reason
+# the library's matrix goes red, and a Ruby the library must support can never
+# be the reason the site will not build.
+
+source "https://rubygems.org"
+
+gem "jekyll", "~> 4.3"
+
+# The theme as a gem rather than through `remote_theme`. That plugin exists
+# for the GitHub Pages default builder, which fetches and unpacks a theme at
+# build time; this site runs its own Jekyll build, so it can depend on the
+# theme directly and skip a plugin whose native openssl dependency is one more
+# thing that has to compile on a runner.
+gem "just-the-docs", "~> 0.10"
+
+gem "jekyll-seo-tag", "~> 2.8"
+gem "jekyll-sitemap", "~> 1.4"
+
+# The link checker parses what Jekyll built rather than guessing at it with a
+# regular expression. An anchor that points at a heading which no longer
+# exists is the breakage this is really for, and finding it means reading the
+# ids out of the target page.
+gem "nokogiri", "~> 1.15"
+
+# Moved out of the standard library, and Jekyll 4.3 still expects them.
+gem "base64"
+gem "csv"
+gem "logger"

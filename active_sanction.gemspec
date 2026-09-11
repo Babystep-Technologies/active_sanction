@@ -63,11 +63,18 @@ Gem::Specification.new do |spec|
   # installed gem, and each of which is one more file a security scan has to be
   # told to ignore.
   #
+  # `site/` (#103) is the documentation site's Jekyll sources -- a theme, a
+  # layout, a link checker and its own separate bundle. It exists to be
+  # published at a URL, and an application that installed this gem has no use
+  # for the machinery that publishes it.
+  #
   # What is deliberately kept is `docs/`, which is linked from the README and
-  # is as much a part of the library as the code is.
+  # is as much a part of the library as the code is. That is the whole reason
+  # the site is not built out of `docs/`: doing so would ship a `_config.yml`
+  # and a set of layouts into every application that installs this gem.
   dev_only = %r{
     \A(?:
-      (?:test|spec|features|sorbet|benchmark|canary|bin|\.github)/ |
+      (?:test|spec|features|sorbet|benchmark|canary|bin|site|\.github)/ |
       Gemfile |
       Rakefile |
       \.

@@ -1,0 +1,110 @@
+name: Docs site
+
+# Two jobs and one artifact. Every push to `main` publishes; every pull
+# request builds the same way and runs the same link check without publishing
+# anything, so a broken link is caught by the author rather than by a reader
+# (#103).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "site/**"
+      - "lib/**"
+      - "docs/**"
+      - ".yardopts"
+      - ".github/workflows/pages.yml"
+
+permissions:
+  contents: read
+
+# A queued deploy should wait for the one in flight rather than race it, and a
+# superseded one should be dropped -- but never cancel a deploy that is
+# already writing, which is what `cancel-in-progress: false` is for.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned, and deliberately not the gem's matrix. The library supports
+      # 3.1 through 4.0 and is built on every one of them; the site is one
+      # artifact built once, and Jekyll's own dependencies -- eventmachine
+      # among them -- have nothing to do with what `active_sanction` runs on.
+      # A Jekyll release must never be the reason the library's matrix goes
+      # red, and a Ruby the library must support must never be the reason the
+      # site will not build.
+      - name: Ruby for the gem's own bundle
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      # Generated API documentation, rendered from the inline signatures and
+      # the prose above every public method. `--fail-on-warning` is in the
+      # rake task, so a broken cross-reference fails here rather than
+      # publishing as a dead link. Since #62 this renders the public surface
+      # only, and it is 100% documented.
+      - name: Render the API documentation
+        run: bundle exec rake doc
+
+      - name: Ruby for the site's bundle
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: site
+
+      - name: Build the site
+        working-directory: site
+        env:
+          JEKYLL_ENV: production
+        run: bundle exec jekyll build --strict_front_matter --trace
+
+      # Under `/api/`, which is where the site's navigation points and where
+      # the handwritten reference links into rather than restating a
+      # signature. Copied rather than built by Jekyll: 600 generated files
+      # have no front matter and nothing for Liquid to do.
+      - name: Publish the API documentation under /api/
+        run: |
+          mkdir -p site/_site/api
+          cp -R doc/. site/_site/api/
+
+      # After the copy, so that the navigation's link to `/api/` is one of the
+      # links being checked. Internal links and anchors gate; external ones
+      # are counted and not fetched -- see the comment in the script, which is
+      # the same reasoning that keeps the canary out of CI.
+      - name: Check every internal link and anchor
+        working-directory: site
+        run: bundle exec ruby bin/linkcheck _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/_site
+
+  deploy:
+    name: Deploy
+    # Pull requests build and check; only the trunk publishes. A fork's pull
+    # request could not deploy anyway -- it has no write token -- and this
+    # makes that a property of the workflow rather than of the permissions.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

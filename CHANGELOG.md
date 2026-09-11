@@ -351,6 +351,36 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
 - A hermetic suite — an un-stubbed HTTP call fails rather than quietly reaching a government
   server ([#3](https://github.com/Babystep-Technologies/active_sanction/issues/3)).
 
+#### The documentation site
+
+- **Scaffold, build and deploy for a GitHub Pages site**, structured by the four Diátaxis
+  quadrants ([#103](https://github.com/Babystep-Technologies/active_sanction/issues/103)).
+  Sources live in `site/`, not in `docs/` — building from `docs/` would ship a
+  `_config.yml`, a theme and a set of layouts into every application that installs this gem,
+  and `docs/` is in the package on purpose. `spec/licensing_spec.rb` now holds both halves:
+  `site/` never ships, and `docs/` always does.
+- **Navigation is named for what a reader wants, not for the framework.** Get started,
+  Guides, Reference, Explanation. Diátaxis is the discipline for whoever writes the pages;
+  nobody arrives at a documentation site wanting a quadrant.
+- **Generated API documentation is published under `/api/`**, built by `rake doc` during
+  deploy and linked from the navigation, so the handwritten reference can point into a
+  signature rather than restating one.
+- **A link checker that gates on internal links and anchors, and not on external ones.** A
+  link into a page that no longer has that heading still lands somewhere real, at the top,
+  silently — which is the breakage worth catching. External links are counted and not
+  fetched: half of them point at government publishers that 403 a non-browser user agent on
+  purpose, and a build that went red when Treasury rate-limited a runner would be muted
+  inside a week. Same reasoning that keeps the canary out of CI.
+- **Every fenced Ruby sample on the site declares itself `runnable` or `illustrative`**, and
+  `spec/site_samples_spec.rb` runs the first kind, parses both, and fails on a block that
+  declares neither. An illustrative block has to say why it cannot run. The dangerous sample
+  is not the one somebody marked wrong — it is the one nobody thought about, which looks
+  exactly like a tested one to a reader.
+- Deploys from a workflow rather than from a branch, so the build runs the link check before
+  anything is published and a pull request gets the same check without publishing. The site
+  toolchain is its own bundle pinned to one Ruby, deliberately not the gem's 3.1-to-4.0
+  matrix: a Jekyll release must never be the reason the library's build goes red.
+
 #### API stability, and what may change
 
 - **The public surface is enumerated rather than inferred**, in

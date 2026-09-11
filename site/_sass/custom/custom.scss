@@ -1,0 +1,32 @@
+// The source catalogue is seven rows of eight columns, and the accuracy
+// reference is wider still. Just the Docs lays tables out at their natural
+// width, so on a phone the widest one pushes the whole page sideways and the
+// navigation goes with it. Scrolling the table rather than the document is
+// the fix, and it has to be the table's own container because the theme's
+// markdown pipeline gives a bare `<table>` with nothing around it.
+.main-content {
+  table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    // `display: block` costs the table its default collapse, so the cells
+    // need the whitespace rule back or a source name wraps mid-word.
+    white-space: nowrap;
+  }
+
+  // Code blocks have the same problem for the same reason: a long `sig` line
+  // or a fetch URL is wider than a phone and must not take the page with it.
+  pre.highlight,
+  figure.highlight pre {
+    overflow-x: auto;
+  }
+}
+
+// The disclaimer in the footer is the one piece of prose on this site that a
+// reader must not skim past, and a reader who arrived at a reference table
+// from a search engine never saw the landing page that also carries it.
+.site-footer {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
