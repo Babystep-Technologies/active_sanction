@@ -153,6 +153,16 @@ jobs:
               fi
             done
 
+      # The tutorial (#105) pins its subject: Bosco Ntaganda, on the UN
+      # Security Council's consolidated list since 2005. If he is ever
+      # delisted, the tutorial's screening call silently returns an empty
+      # array, and a new user has no way to tell their mistake from ours. This
+      # is where that fails loudly instead -- last in the job, and not folded
+      # into the drift report above, so it neither waits for two runs to
+      # agree nor blocks the ordinary reporting steps when it fails.
+      - name: Confirm the tutorial's pinned subject is still listed
+        run: bundle exec rspec --tag live spec/site_tutorial_spec.rb
+
   # Keeps the committed numbers current without anybody editing JSON. It runs
   # only after a clean examination, so what it commits is a list that moved
   # inside its tolerances rather than one that drifted: accepting drift is a

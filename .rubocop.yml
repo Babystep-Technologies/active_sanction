@@ -42,8 +42,9 @@ RSpec/ExampleLength:
 # every place a scanner or a lawyer looks, dco_spec that the sign-off
 # CONTRIBUTING.md asks for is a check CI actually runs, api_surface_spec that
 # the constants docs/api_stability.md promises are the constants this gem
-# actually has, and the two conformance specs the shared example groups that
-# every source adapter and every storage adapter are held to.
+# actually has, site_tutorial_spec that the tutorial's own sequence still
+# works, and the two conformance specs the shared example groups that every
+# source adapter and every storage adapter are held to.
 RSpec/DescribeClass:
   Exclude:
     - "spec/network_isolation_spec.rb"
@@ -54,6 +55,7 @@ RSpec/DescribeClass:
     - "spec/api_surface_spec.rb"
     - "spec/site_samples_spec.rb"
     - "spec/site_sources_data_spec.rb"
+    - "spec/site_tutorial_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
 
