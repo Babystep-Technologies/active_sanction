@@ -1,0 +1,215 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Reads what Astro built and reports links that go nowhere (#103).
+#
+#     $ bundle exec ruby site/bin/linkcheck site/dist
+#     $ bundle exec ruby site/bin/linkcheck site/dist --ignore api
+#     $ bundle exec ruby site/bin/linkcheck site/dist --external
+#
+# Ruby rather than one of the Node link checkers, because it runs in the
+# bundle this repository already has -- nokogiri is here for the XML backend
+# the suite covers -- and adding an npm dependency to check links would be one
+# more thing in a lockfile for a job that is forty lines.
+#
+# ### Internal links fail the build. External links do not.
+#
+# An internal link is a fact about this repository: the page it points at is
+# either in the tree or it is not, the answer is the same on every machine,
+# and a broken one is always our mistake. Those gate a pull request.
+#
+# External links are somebody else's uptime. Half the links on this site point
+# at government sanctions publishers, and those endpoints 403 a non-browser
+# user agent and block cloud address ranges on purpose -- the canary (#69)
+# exists because of exactly that behaviour. A build that went red when
+# Treasury rate-limited a GitHub runner would be muted inside a week, and the
+# same reasoning that keeps the canary out of CI keeps external checking out
+# of the gating job. `--external` is there for a human, or for a scheduled run
+# that reports rather than blocks.
+#
+# ### `--ignore` is for generated pages, and it is not optional
+#
+# `rake doc` renders the README into YARD's index page, where every relative
+# link in it -- `CONTRIBUTING.md`, `LICENSE.txt`, `docs/bundle_format.md` --
+# resolves against the repository and not against this site. Crawling that
+# output reports 126 broken links which are all correct where they are
+# written. So generated directories are skipped as *sources* of links while
+# staying valid *targets* of them: the navigation's own link to `/api/` is
+# still checked, which is what catches a deploy that forgot to copy it.
+#
+# ### Anchors are checked, because that is the breakage nobody sees
+#
+# A link to a page that was deleted is obvious the first time somebody clicks
+# it. A link to `#reading-a-score` on a page where that heading was reworded
+# still lands on a real page, at the top, silently. So the ids of every target
+# page are read and the fragment is held to being one of them.
+
+require "nokogiri"
+require "set"
+require "uri"
+
+class LinkCheck
+  # Anything that is not a page request: a mail link, a phone number, an
+  # inline `data:` image. Nothing to resolve and nothing to fetch.
+  NON_HTTP = %w[mailto: tel: data: javascript:].freeze
+
+  Problem = Struct.new(:page, :link, :reason, keyword_init: true)
+
+  def initialize(root, ignore: [], check_external: false)
+    @root = File.expand_path(root)
+    @ignore = ignore
+    @check_external = check_external
+    @problems = []
+    @external = Set.new
+  end
+
+  def run
+    pages = Dir.glob(File.join(@root, "**", "*.html"))
+    abort "no HTML under #{@root} -- was the site built?" if pages.empty?
+
+    ids = page_ids(pages)
+    sources = pages.reject { |page| ignored?(page) }
+    sources.each { |page| check_page(page, ids) }
+    check_external_links if @check_external
+
+    report(pages.length, sources.length)
+  end
+
+  private
+
+  # Generated output, skipped as a source of links. Still in `ids`, so links
+  # pointing at it resolve.
+  def ignored?(page)
+    @ignore.any? { |prefix| page.start_with?(File.join(@root, prefix)) }
+  end
+
+  # Every id and every `name` anchor on every page, so a fragment can be
+  # resolved without re-parsing the target once per link that points at it.
+  def page_ids(pages)
+    pages.each_with_object({}) do |page, ids|
+      document = Nokogiri::HTML(File.read(page))
+      ids[page] = document.css("[id], a[name]")
+                          .map { |node| node["id"] || node["name"] }
+                          .compact
+                          .to_set
+    end
+  end
+
+  def check_page(page, ids)
+    document = Nokogiri::HTML(File.read(page))
+    targets(document).each do |target|
+      if target.start_with?("http://", "https://")
+        @external << target
+      else
+        check_internal(page, target, ids)
+      end
+    end
+  end
+
+  # Every link on a page worth resolving: skipping the empty ones, and the
+  # schemes that name something other than a document.
+  def targets(document)
+    document.css("a[href], link[href], img[src], script[src]").filter_map do |node|
+      target = node["href"] || node["src"]
+      next if target.nil? || target.empty?
+      next if NON_HTTP.any? { |prefix| target.start_with?(prefix) }
+
+      target
+    end
+  end
+
+  def check_internal(page, target, ids)
+    path, _, fragment = target.partition("#")
+
+    # A bare `#anchor` is a link into the page it sits on.
+    resolved = path.empty? ? page : resolve(page, path)
+
+    return @problems << Problem.new(page: page, link: target, reason: "no such page") unless File.exist?(resolved)
+    return if fragment.empty?
+
+    # `%20` and friends: an id in the markup is decoded, a fragment in an href
+    # is not necessarily.
+    wanted = begin
+      URI.decode_www_form_component(fragment)
+    rescue ArgumentError
+      fragment
+    end
+    return if ids.fetch(resolved, Set.new).include?(wanted)
+
+    @problems << Problem.new(page: page, link: target, reason: "no anchor ##{wanted} on that page")
+  end
+
+  # Site-absolute hrefs carry the base path, which is not part of the built
+  # tree's own layout -- `/active_sanction/reference/` is `dist/reference/`.
+  # Everything else resolves against the directory the link sits in.
+  def resolve(page, path)
+    candidate =
+      if path.start_with?("/")
+        File.join(@root, path.sub(%r{\A/[^/]+}, ""))
+      else
+        File.expand_path(path, File.dirname(page))
+      end
+
+    candidate = File.join(candidate, "index.html") if candidate.end_with?("/")
+    candidate = File.join(candidate, "index.html") if File.directory?(candidate)
+    candidate
+  end
+
+  def check_external_links
+    require "net/http"
+
+    @external.sort.each do |url|
+      status = fetch_status(url)
+      next if status.nil? || status < 400
+
+      @problems << Problem.new(page: "(external)", link: url, reason: "returned #{status}")
+    end
+  end
+
+  def fetch_status(url)
+    uri = URI.parse(url)
+    Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
+                                        open_timeout: 10, read_timeout: 10) do |http|
+      # A HEAD is cheaper and many servers answer it; a 405 means ask properly.
+      response = http.head(uri.request_uri, "User-Agent" => "active_sanction-linkcheck")
+      response = http.get(uri.request_uri, "User-Agent" => "active_sanction-linkcheck") if
+        response.code.to_i == 405
+      response.code.to_i
+    end
+  rescue StandardError => e
+    # Unreachable is not the same as broken, and this job does not gate.
+    warn "  ? #{url} -- #{e.class}"
+    nil
+  end
+
+  def report(page_count, source_count)
+    skipped = page_count - source_count
+    puts "#{source_count} pages crawled" \
+         "#{", #{skipped} generated pages skipped as sources" if skipped.positive?}, " \
+         "#{@external.length} distinct external links" \
+         "#{@check_external ? " (checked)" : " (not checked -- see the comment in this file)"}"
+
+    if @problems.empty?
+      puts "every internal link resolves, anchors included"
+      return 0
+    end
+
+    @problems.each do |problem|
+      puts "  #{relative(problem.page)}: #{problem.link} -- #{problem.reason}"
+    end
+    puts "#{@problems.length} broken"
+    1
+  end
+
+  def relative(page)
+    page.start_with?(@root) ? page.sub("#{@root}/", "") : page
+  end
+end
+
+ignore = []
+ARGV.each_with_index { |argument, i| ignore << ARGV[i + 1] if argument == "--ignore" }
+positional = ARGV.reject.with_index { |a, i| a.start_with?("--") || ARGV[i - 1] == "--ignore" }
+
+exit LinkCheck.new(positional.first || "site/dist",
+                   ignore: ignore.compact,
+                   check_external: ARGV.include?("--external")).run

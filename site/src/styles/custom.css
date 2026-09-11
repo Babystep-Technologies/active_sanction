@@ -1,0 +1,58 @@
+/* The site's own colours, sitting on Starlight's custom properties rather than
+   overriding its rules. Everything here is a token, so a later change to the
+   theme does not have to be chased through selectors.
+
+   The accent is the sibling project's blue, kept so the two sites read as
+   coming from the same place. */
+:root {
+  --sl-color-accent-low: #131e4f;
+  --sl-color-accent: #2337ff;
+  --sl-color-accent-high: #c7d2fe;
+  --sl-color-white: #ffffff;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #c7d2fe;
+  --sl-color-accent: #2337ff;
+  --sl-color-accent-high: #131e4f;
+}
+
+/* The source catalogue is seven rows of eight columns and the accuracy
+   reference is wider still. Left alone, the widest table on a page pushes the
+   whole document sideways on a phone and takes the navigation with it. The
+   table scrolls; the page does not. */
+.sl-markdown-content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  /* `display: block` costs the table its default layout, so the whitespace
+     rule has to come back or a source name wraps mid-word. */
+  white-space: nowrap;
+  border-collapse: collapse;
+}
+
+/* Same problem, same fix: a long `sig` line or a publisher's URL is wider than
+   a phone and must not take the page with it. */
+.sl-markdown-content pre {
+  overflow-x: auto;
+}
+
+/* The disclaimer. It is the one piece of prose on this site a reader must not
+   skim, and it appears on the landing page and in the footer of every other
+   one, because somebody arriving at a reference table from a search engine
+   never saw the landing page. */
+.screening-aid {
+  border-inline-start: 4px solid var(--sl-color-red);
+  background: var(--sl-color-red-low);
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
+  font-size: var(--sl-text-sm);
+  line-height: 1.5;
+}
+
+/* Tabular figures in the accuracy and performance tables. A recall of 0.939
+   under a recall of 0.882 should line up on the decimal point. */
+.sl-markdown-content td {
+  font-variant-numeric: tabular-nums;
+}

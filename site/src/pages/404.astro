@@ -1,0 +1,54 @@
+---
+// GitHub Pages serves `/404.html` for anything it cannot find, and only a file
+// at that exact path. A page in the docs collection would build to `/404/`
+// instead and never be reached, so this one lives in `src/pages/` -- which is
+// the only thing in this site that does.
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+---
+
+<StarlightPage
+  frontmatter={{
+    title: "That page is not here",
+    template: "splash",
+    pagefind: false,
+  }}
+>
+  <p>
+    It may have moved while this site was being written, or the link that
+    brought you here may be older than the page it points at.
+  </p>
+
+  <p>Four places to look, which is the whole site:</p>
+
+  <ul>
+    <li>
+      <a href="/active_sanction/tutorial/"><strong>Get started</strong></a> —
+      screening a name for the first time
+    </li>
+    <li>
+      <a href="/active_sanction/how-to/"><strong>Guides</strong></a> — a
+      specific job, for someone who already knows the domain
+    </li>
+    <li>
+      <a href="/active_sanction/reference/"><strong>Reference</strong></a> —
+      sources, configuration, errors, accuracy, the bundle format
+    </li>
+    <li>
+      <a href="/active_sanction/explanation/"><strong>Explanation</strong></a> —
+      how matching works, and why the defaults are what they are
+    </li>
+  </ul>
+
+  <p>
+    Generated API documentation is at
+    <a href="/active_sanction/api/"><strong>/api/</strong></a>.
+  </p>
+
+  <p>
+    If a link on this site brought you here, that is a bug in the site rather
+    than a mistake you made. Please
+    <a href="https://github.com/Babystep-Technologies/active_sanction/issues/new"
+      >open an issue</a
+    > and say which page you came from.
+  </p>
+</StarlightPage>

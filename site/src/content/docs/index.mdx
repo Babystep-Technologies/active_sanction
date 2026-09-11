@@ -1,0 +1,86 @@
+---
+title: ActiveSanction
+description: >-
+  Screen a name against government sanctions lists, in Ruby, in your own
+  process. The lists live on your disk, screening runs in your process, and no
+  name you screen leaves it.
+template: splash
+hero:
+  tagline: >-
+    Screen a name against government sanctions lists, in Ruby, in your own
+    process. Seven lists, one record model, and an account of every point a
+    score was awarded.
+  actions:
+    - text: Screen your first name
+      link: /active_sanction/tutorial/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/Babystep-Technologies/active_sanction
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<div class="screening-aid">
+  <strong>This library is a screening aid. It is not legal advice, and it is
+  not a compliance program.</strong> Verify every hit against the official
+  published list before acting on it. A clean result means <em>nothing over the
+  threshold in the lists we currently hold</em> — it does not mean <em>not
+  sanctioned</em>.
+</div>
+
+## Where to go
+
+<CardGrid>
+  <Card title="Get started" icon="rocket">
+    Screening a name for the first time, one path followed start to finish.
+    [Begin here](/active_sanction/tutorial/).
+  </Card>
+  <Card title="Guides" icon="setting">
+    One job per page, for somebody who already knows what they are trying to
+    achieve. [Browse the guides](/active_sanction/how-to/).
+  </Card>
+  <Card title="Reference" icon="open-book">
+    Sources, configuration, errors, measured accuracy, the bundle format.
+    [Look something up](/active_sanction/reference/).
+  </Card>
+  <Card title="Explanation" icon="information">
+    How matching works, and why the defaults are what they are.
+    [Understand why](/active_sanction/explanation/).
+  </Card>
+</CardGrid>
+
+## Folding a name
+
+Screening compares folded strings, never published ones. This is the one thing
+you can try with no data at all:
+
+{/* sample: runnable */}
+
+```ruby
+require "active_sanction"
+
+ActiveSanction::Normalizer.call("O'Brien, Seán").value
+# => "o brien sean"
+
+ActiveSanction::Normalizer.call("Public Joint Stock Company Gazprom", type: :organization).value
+# => "gazprom"
+```
+
+Everything else needs a synced list:
+
+{/* sample: illustrative -- reaches seven government endpoints and needs a configured store */}
+
+```ruby
+ActiveSanction.sync!
+
+ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: "1952-10-07")
+# => [#<MatchResult score=97.3 source=:ofac_sdn matched_name="PUTIN, Vladimir Vladimirovich">]
+```
+
+---
+
+*This landing page is scaffolding.
+[#104](https://github.com/Babystep-Technologies/active_sanction/issues/104)
+writes the real one, along with the source catalogue it links to.*

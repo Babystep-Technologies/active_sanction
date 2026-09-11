@@ -1,0 +1,114 @@
+name: Docs site
+
+# Two jobs and one artifact. Every push to `main` publishes; every pull
+# request builds the same way and runs the same link check without publishing
+# anything, so a broken link is caught by the author rather than by a reader
+# (#103).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "site/**"
+      - "lib/**"
+      - "docs/**"
+      - ".yardopts"
+      - ".github/workflows/pages.yml"
+
+permissions:
+  contents: read
+
+# A queued deploy should wait for the one in flight rather than race it, and a
+# superseded one should be dropped -- but never cancel a deploy that is
+# already writing, which is what `cancel-in-progress: false` is for.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Two toolchains, because the site genuinely needs both: Astro builds
+      # the handwritten pages, and YARD renders the generated API reference
+      # out of the library's own signatures. Neither is a dependency of the
+      # gem, and nothing here ships.
+      - name: Ruby, for the generated API documentation
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      # `--fail-on-warning` is in the rake task, so a broken cross-reference
+      # fails here rather than publishing as a dead link. Since #62 this
+      # renders the public surface only, and it is 100% documented.
+      - name: Render the API documentation
+        run: bundle exec rake doc
+
+      # Pinned, and deliberately not the gem's Ruby matrix. The library is
+      # built on every Ruby from 3.1 to 4.0; the site is one artifact built
+      # once, and Astro's own floor has nothing to do with what
+      # `active_sanction` supports.
+      - name: Node, for the site
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install the site's dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Build the site
+        working-directory: site
+        run: npm run build
+
+      # Under `/api/`, which is where the navigation points and where the
+      # handwritten reference links into rather than restating a signature.
+      # Copied rather than built by Astro: 600 generated files have no front
+      # matter and nothing for a content collection to do.
+      - name: Publish the API documentation under /api/
+        run: |
+          mkdir -p site/dist/api
+          cp -R doc/. site/dist/api/
+
+      # After the copy, so the navigation's own link to `/api/` is one of the
+      # links being checked -- which is what catches a deploy that forgot it.
+      #
+      # `--ignore api` skips that directory as a *source* of links while
+      # leaving it a valid *target*. YARD renders the README as its index
+      # page, and every relative link in the README resolves against the
+      # repository rather than against this site; crawling it reports 126
+      # broken links that are all correct where they are written.
+      - name: Check every internal link and anchor
+        run: bundle exec ruby site/bin/linkcheck site/dist --ignore api
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy
+    # Pull requests build and check; only the trunk publishes. A fork's pull
+    # request could not deploy anyway -- it has no write token -- and this
+    # makes that a property of the workflow rather than of the permissions.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

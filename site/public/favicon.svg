@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ActiveSanction">
+  <!-- A list, and a magnifier over it. The library reads published lists and
+       looks names up in them; that is the whole of what the mark says. -->
+  <rect width="32" height="32" rx="7" fill="#2337ff"/>
+  <g stroke="#ffffff" stroke-width="2" stroke-linecap="round" fill="none">
+    <path d="M8 10h16M8 15h9M8 20h6"/>
+    <circle cx="21" cy="20.5" r="4.5"/>
+    <path d="M24.4 23.9 27 26.5"/>
+  </g>
+</svg>

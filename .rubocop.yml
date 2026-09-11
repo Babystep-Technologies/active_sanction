@@ -52,6 +52,7 @@ RSpec/DescribeClass:
     - "spec/licensing_spec.rb"
     - "spec/dco_spec.rb"
     - "spec/api_surface_spec.rb"
+    - "spec/site_samples_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
 

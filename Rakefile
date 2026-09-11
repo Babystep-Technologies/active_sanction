@@ -54,6 +54,34 @@ namespace :canary do
   end
 end
 
+# The documentation site (#103). Not part of the default task: it needs Node
+# and it produces an artifact rather than passing or failing. What it is for
+# is reproducing exactly what the deploy workflow does, locally, so that a
+# broken link is found before a pull request rather than by it.
+namespace :site do
+  desc "Build the documentation site, with the API docs under /api/ (#103)"
+  task :build do
+    sh "npm", "ci", chdir: "site"
+    sh "npm", "run", "build", chdir: "site"
+    Rake::Task["doc"].invoke
+    mkdir_p "site/dist/api"
+    sh "cp", "-R", "doc/.", "site/dist/api/"
+  end
+
+  # `--ignore api` skips YARD's output as a source of links while leaving it
+  # a valid target: YARD renders the README as its index page, and every
+  # relative link in the README resolves against the repository rather than
+  # against the site. The reasoning, and why external links do not gate, is
+  # in the header of site/bin/linkcheck.
+  desc "Report internal links and anchors on the built site that go nowhere (#103)"
+  task :linkcheck do
+    ruby "site/bin/linkcheck", "site/dist", "--ignore", "api"
+  end
+
+  desc "Build the site and check its links, the way the deploy workflow does"
+  task check: %i[build linkcheck]
+end
+
 namespace :benchmark do
   # Not part of the default task: a benchmark measures the machine it runs on,
   # so it answers a question rather than passing or failing.
