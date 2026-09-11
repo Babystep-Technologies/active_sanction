@@ -100,6 +100,14 @@ module ActiveSanction
       authority "European Commission"
       format :xml
 
+      # Commission Decision 2011/833/EU, which permits reuse of Commission
+      # documents provided the source is acknowledged and the reuse does not
+      # suggest the Commission endorses it.
+      licence_notice "Reusable under Commission Decision 2011/833/EU " \
+                     "provided the source is acknowledged and no Commission " \
+                     "endorsement is implied. Verified 2026-09-11."
+      licence_url "https://eur-lex.europa.eu/eli/dec/2011/833/oj/eng"
+
       # Split out so #token= can rebuild the URL around a rotated value. See
       # the class comment for why the token is not a credential.
       #

@@ -50,6 +50,17 @@ module ActiveSanction
       authority "U.S. Department of the Treasury, Office of Foreign Assets Control"
       format :csv
 
+      # A work of the United States government, which 17 U.S.C. Section 105
+      # puts outside copyright protection. Treasury restricts its seals and
+      # its name rather than the data, which is why the notice mentions them:
+      # republishing the list is unencumbered, implying Treasury endorsed you
+      # is not.
+      licence_notice "A work of the U.S. government and not subject to " \
+                     "domestic copyright (17 U.S.C. 105). Treasury's seals " \
+                     "and marks are restricted separately, and nothing here " \
+                     "may imply endorsement. Verified 2026-09-11."
+      licence_url "https://home.treasury.gov/subfooter/site-policies-and-notices"
+
       # The one floor either OFAC list commits to, and only for the run that
       # has no previous snapshot to compare against. RemarksParser reads about
       # 97% of the SDN file's segments; 90% is a long way below anything the

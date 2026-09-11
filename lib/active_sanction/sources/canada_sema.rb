@@ -77,6 +77,19 @@ module ActiveSanction
       authority "Global Affairs Canada"
       format :xml
 
+      # The one that most often surprises people, and the reason this field
+      # exists at all. Global Affairs permits reproduction for
+      # non-commercial purposes without charge or further permission, and
+      # requires prior written permission for commercial redistribution --
+      # so a hosted service reselling this list is in a different position
+      # from an application screening against it in its own process.
+      licence_notice "Reproducible for non-commercial purposes without " \
+                     "charge or further permission, with the source " \
+                     "identified. Commercial redistribution requires prior " \
+                     "written permission from Global Affairs Canada. " \
+                     "Verified 2026-09-11."
+      licence_url "https://www.international.gc.ca/gac-amc/notices-avis.aspx?lang=eng"
+
       url :main,
           "https://www.international.gc.ca/world-monde/assets/office_docs/" \
           "international_relations-relations_internationales/sanctions/sema-lmes.xml"
