@@ -53,6 +53,17 @@ module ActiveSanction
       authority "United Nations Security Council"
       format :xml
 
+      # The most restrictive of the seven on paper. The UN's copyright page
+      # reserves reproduction of material on its sites, and the Consolidated
+      # List carries no separate open licence -- it is published so that
+      # member states and their regulated entities can implement the
+      # measures, which is the use this library is for. Redistributing it,
+      # as a bundle or through an API, is the case to take to counsel.
+      licence_notice "Copyright reserved by the United Nations. Published " \
+                     "for implementation of Security Council measures; no " \
+                     "open reuse licence is stated. Verified 2026-09-11."
+      licence_url "https://www.un.org/en/about-us/copyright"
+
       url :main, "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
 
       # @api private

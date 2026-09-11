@@ -117,6 +117,13 @@ module ActiveSanction
       authority "Foreign, Commonwealth and Development Office"
       format :xml
 
+      # Crown copyright under the Open Government Licence v3.0, which is the
+      # most permissive of the seven: reuse for any purpose, commercial
+      # included, on an attribution condition.
+      licence_notice "Crown copyright, reusable under the Open Government " \
+                     "Licence v3.0 with attribution. Verified 2026-09-11."
+      licence_url "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+
       # Static since January 2026, and the FCDO says so out loud: the URL for
       # each format stays the same however many times the list is refreshed.
       url :main, "https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml"

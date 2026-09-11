@@ -53,6 +53,7 @@ RSpec/DescribeClass:
     - "spec/dco_spec.rb"
     - "spec/api_surface_spec.rb"
     - "spec/site_samples_spec.rb"
+    - "spec/site_sources_data_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
 
@@ -147,9 +148,14 @@ Metrics/ClassLength:
 # Sources::Definition is a reader and a writer for every declaration a source
 # adapter makes, each of which now carries a signature. 130 became 150 for the
 # doctor (#68), which added `floor` -- a reader, a writer, an inheritance merge
-# and a validation, the same four lines every other declaration costs.
+# and a validation, the same four lines every other declaration costs. 150
+# became 160 for the source catalogue (#104), which added `licence_notice` and
+# `licence_url` on the same terms.
+#
+# This number measures how many things a source declares about itself, which
+# is a fact about sanctions lists rather than about this module's design.
 Metrics/ModuleLength:
-  Max: 150
+  Max: 160
 
 # The one file in the library that is a transcription rather than a design.
 #

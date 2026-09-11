@@ -59,6 +59,17 @@ end
 # is reproducing exactly what the deploy workflow does, locally, so that a
 # broken link is found before a pull request rather than by it.
 namespace :site do
+  # The catalogue page's mechanical facts (#104): what each adapter declares,
+  # and what the canary last measured into .github/baselines. Generated
+  # rather than typed, because a record count typed onto a page is wrong
+  # within a month and nobody notices. The output is committed so the site
+  # builds with Node alone, and spec/site_sources_data_spec.rb fails when it
+  # has drifted.
+  desc "Regenerate site/src/data/sources.json from the registry and the baselines (#104)"
+  task :sources do
+    ruby "site/bin/generate_sources.rb"
+  end
+
   desc "Build the documentation site, with the API docs under /api/ (#103)"
   task :build do
     sh "npm", "ci", chdir: "site"

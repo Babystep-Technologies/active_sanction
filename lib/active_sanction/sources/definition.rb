@@ -113,6 +113,51 @@ module ActiveSanction
         declarations[:authority] = string!(:authority, value)
       end
 
+      # What the publisher says about reusing its list, and where it says it.
+      # Both optional, and both are a *pointer* rather than a legal opinion:
+      #
+      #   licence_notice "Crown copyright. Open Government Licence v3.0."
+      #   licence_url    "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+      #
+      # ### Why this is in the gem at all
+      #
+      # Screening a name against a list is reading it, and nobody needs a
+      # licence to read. Publishing what a list *said* is redistribution --
+      # which is what a signed bundle (#57) is, what a hosted screening API
+      # returning a matched name arguably is, and what any application storing
+      # hits in its own audit trail may be. These publishers do not agree with
+      # each other about that: two of the seven attach conditions to
+      # redistribution that the other five do not.
+      #
+      # So the notice travels with the source rather than living in a document
+      # somebody has to go and find. `ActiveSanction::Sources[:canada_sema]
+      # .licence_notice` answers in a console, in a bundle's header, and on the
+      # catalogue page, from one declaration.
+      #
+      # ### What it is not
+      #
+      # It is not legal advice, it is not this project's reading of the terms,
+      # and it is not a grant of anything by us. It is a short, dated summary
+      # of what the publisher's own page says, plus the URL of that page, which
+      # is the thing that actually governs. A deployment redistributing any of
+      # these lists should read the URL and ask its own counsel.
+      sig { params(value: T.untyped).returns(T.nilable(String)) }
+      def licence_notice(value = UNSET)
+        return declared(:licence_notice) if unset?(value)
+
+        declarations[:licence_notice] = string!(:licence_notice, value)
+      end
+
+      # Where the publisher states its terms. Validated as an http(s) URL for
+      # the same reason a list's own URL is: a notice pointing nowhere is worse
+      # than no notice, because it reads as though somebody checked.
+      sig { params(value: T.untyped).returns(T.nilable(String)) }
+      def licence_url(value = UNSET)
+        return declared(:licence_url) if unset?(value)
+
+        declarations[:licence_url] = address!(:licence_url, value)
+      end
+
       # What the publisher serves: :csv, :xml, :json. Informational, and
       # deliberately not checked against a list of known formats -- the parser
       # toolkits (#14, #15) are chosen by the adapter, not dispatched from
@@ -203,7 +248,8 @@ module ActiveSanction
       sig { returns(T::Hash[Symbol, T.untyped]) }
       def to_h
         { key: declarations[:key], jurisdiction: declared(:jurisdiction), authority: declared(:authority),
-          format: declared(:format), urls: urls }
+          format: declared(:format), urls: urls,
+          licence_notice: declared(:licence_notice), licence_url: declared(:licence_url) }
       end
 
       # The declarations made on this exact class, ignoring anything inherited.

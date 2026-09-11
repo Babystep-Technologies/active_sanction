@@ -24,6 +24,18 @@ RSpec.describe ActiveSanction::Sources::Definition do
     end
   end
 
+  # A source that states what its publisher says about reuse. Optional, like
+  # `format`: an internal watchlist has no publisher's terms to point at.
+  def licensed
+    Class.new(ActiveSanction::Sources::Base) do
+      key :licensed_list
+      jurisdiction :uk
+      authority "Foreign, Commonwealth and Development Office"
+      licence_notice "Crown copyright, Open Government Licence v3.0."
+      licence_url "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+    end
+  end
+
   describe "declaring" do
     it "reads every declaration back with no argument" do
       expect(un).to have_attributes(key: :un_consolidated, jurisdiction: :un, format: :xml,
@@ -33,7 +45,25 @@ RSpec.describe ActiveSanction::Sources::Definition do
     it "summarises them for a CLI listing" do
       expect(un.to_h).to eq(key: :un_consolidated, jurisdiction: :un, format: :xml,
                             authority: "United Nations Security Council",
-                            urls: { main: "https://scsanctions.un.org/resources/xml/en/consolidated.xml" })
+                            urls: { main: "https://scsanctions.un.org/resources/xml/en/consolidated.xml" },
+                            licence_notice: nil, licence_url: nil)
+    end
+
+    # Optional, like `format`: an internal watchlist has no publisher's terms
+    # to point at, and a source that declares none is not broken.
+    it "carries the publisher's reuse terms when a source states them" do
+      expect(licensed).to have_attributes(
+        licence_notice: "Crown copyright, Open Government Licence v3.0.",
+        licence_url: "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+      )
+    end
+
+    # A notice pointing nowhere is worse than no notice, because it reads as
+    # though somebody checked.
+    it "refuses a licence URL that is not one" do
+      expect do
+        Class.new(ActiveSanction::Sources::Base) { licence_url "see the website" }
+      end.to raise_error(ActiveSanction::Sources::DeclarationError, /not an http\(s\) URL/)
     end
 
     it "reports what has been declared without insisting on it" do

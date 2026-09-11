@@ -100,6 +100,15 @@ module ActiveSanction
       authority "Australian Sanctions Office, Department of Foreign Affairs and Trade"
       format :xlsx
 
+      # Creative Commons Attribution 4.0, with the Commonwealth Coat of Arms
+      # carved out -- the same shape as the UK's: the data is reusable, the
+      # crest is not.
+      licence_notice "Creative Commons Attribution 4.0 International, " \
+                     "attributed to the Department of Foreign Affairs and " \
+                     "Trade. The Commonwealth Coat of Arms is excluded. " \
+                     "Verified 2026-09-11."
+      licence_url "https://www.dfat.gov.au/about-us/about-this-website/copyright"
+
       url :main, "https://www.dfat.gov.au/sites/default/files/Australian_Sanctions_Consolidated_List.xlsx"
 
       # @api private

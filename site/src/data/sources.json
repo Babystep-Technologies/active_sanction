@@ -1,0 +1,223 @@
+{
+  "generated_by": "site/bin/generate_sources.rb, via `rake site:sources`",
+  "sources": [
+    {
+      "key": "australia_dfat",
+      "jurisdiction": "Australia",
+      "authority": "Australian Sanctions Office, Department of Foreign Affairs and Trade",
+      "format": "Excel workbook (.xlsx)",
+      "files": [
+        {
+          "name": "main",
+          "url": "https://www.dfat.gov.au/sites/default/files/Australian_Sanctions_Consolidated_List.xlsx"
+        }
+      ],
+      "licence_notice": "Creative Commons Attribution 4.0 International, attributed to the Department of Foreign Affairs and Trade. The Commonwealth Coat of Arms is excluded. Verified 2026-09-11.",
+      "licence_url": "https://www.dfat.gov.au/about-us/about-this-website/copyright",
+      "record_count": 3906,
+      "cohorts": [
+        {
+          "kind": "individual",
+          "count": 2543
+        },
+        {
+          "kind": "organization",
+          "count": 1041
+        },
+        {
+          "kind": "vessel",
+          "count": 322
+        }
+      ],
+      "measured_at": "2026-09-08T15:31:26Z"
+    },
+    {
+      "key": "canada_sema",
+      "jurisdiction": "Canada",
+      "authority": "Global Affairs Canada",
+      "format": "XML",
+      "files": [
+        {
+          "name": "main",
+          "url": "https://www.international.gc.ca/world-monde/assets/office_docs/international_relations-relations_internationales/sanctions/sema-lmes.xml"
+        }
+      ],
+      "licence_notice": "Reproducible for non-commercial purposes without charge or further permission, with the source identified. Commercial redistribution requires prior written permission from Global Affairs Canada. Verified 2026-09-11.",
+      "licence_url": "https://www.international.gc.ca/gac-amc/notices-avis.aspx?lang=eng",
+      "record_count": 5690,
+      "cohorts": [
+        {
+          "kind": "individual",
+          "count": 3514
+        },
+        {
+          "kind": "organization",
+          "count": 1445
+        },
+        {
+          "kind": "vessel",
+          "count": 731
+        }
+      ],
+      "measured_at": "2026-09-08T15:31:26Z"
+    },
+    {
+      "key": "eu_fsf",
+      "jurisdiction": "European Union",
+      "authority": "European Commission",
+      "format": "XML",
+      "files": [
+        {
+          "name": "main",
+          "url": "https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw"
+        }
+      ],
+      "licence_notice": "Reusable under Commission Decision 2011/833/EU provided the source is acknowledged and no Commission endorsement is implied. Verified 2026-09-11.",
+      "licence_url": "https://eur-lex.europa.eu/eli/dec/2011/833/oj/eng",
+      "record_count": 6234,
+      "cohorts": [
+        {
+          "kind": "individual",
+          "count": 4462
+        },
+        {
+          "kind": "organization",
+          "count": 1772
+        }
+      ],
+      "measured_at": "2026-09-08T15:31:26Z"
+    },
+    {
+      "key": "ofac_consolidated",
+      "jurisdiction": "United States",
+      "authority": "U.S. Department of the Treasury, Office of Foreign Assets Control",
+      "format": "CSV",
+      "files": [
+        {
+          "name": "prim",
+          "url": "https://sanctionslistservice.ofac.treas.gov/api/download/CONS_PRIM.CSV"
+        },
+        {
+          "name": "alt",
+          "url": "https://sanctionslistservice.ofac.treas.gov/api/download/CONS_ALT.CSV"
+        },
+        {
+          "name": "add",
+          "url": "https://sanctionslistservice.ofac.treas.gov/api/download/CONS_ADD.CSV"
+        }
+      ],
+      "licence_notice": "A work of the U.S. government and not subject to domestic copyright (17 U.S.C. 105). Treasury's seals and marks are restricted separately, and nothing here may imply endorsement. Verified 2026-09-11.",
+      "licence_url": "https://home.treasury.gov/subfooter/site-policies-and-notices",
+      "record_count": 481,
+      "cohorts": [
+        {
+          "kind": "individual",
+          "count": 118
+        },
+        {
+          "kind": "organization",
+          "count": 363
+        }
+      ],
+      "measured_at": "2026-09-08T15:31:26Z"
+    },
+    {
+      "key": "ofac_sdn",
+      "jurisdiction": "United States",
+      "authority": "U.S. Department of the Treasury, Office of Foreign Assets Control",
+      "format": "CSV",
+      "files": [
+        {
+          "name": "sdn",
+          "url": "https://sanctionslistservice.ofac.treas.gov/api/download/SDN.CSV"
+        },
+        {
+          "name": "alt",
+          "url": "https://sanctionslistservice.ofac.treas.gov/api/download/ALT.CSV"
+        },
+        {
+          "name": "add",
+          "url": "https://sanctionslistservice.ofac.treas.gov/api/download/ADD.CSV"
+        }
+      ],
+      "licence_notice": "A work of the U.S. government and not subject to domestic copyright (17 U.S.C. 105). Treasury's seals and marks are restricted separately, and nothing here may imply endorsement. Verified 2026-09-11.",
+      "licence_url": "https://home.treasury.gov/subfooter/site-policies-and-notices",
+      "record_count": 19365,
+      "cohorts": [
+        {
+          "kind": "individual",
+          "count": 7519
+        },
+        {
+          "kind": "organization",
+          "count": 9964
+        },
+        {
+          "kind": "vessel",
+          "count": 1540
+        },
+        {
+          "kind": "aircraft",
+          "count": 342
+        }
+      ],
+      "measured_at": "2026-09-08T15:31:26Z"
+    },
+    {
+      "key": "uk_sanctions_list",
+      "jurisdiction": "United Kingdom",
+      "authority": "Foreign, Commonwealth and Development Office",
+      "format": "XML",
+      "files": [
+        {
+          "name": "main",
+          "url": "https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml"
+        }
+      ],
+      "licence_notice": "Crown copyright, reusable under the Open Government Licence v3.0 with attribution. Verified 2026-09-11.",
+      "licence_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+      "record_count": 6340,
+      "cohorts": [
+        {
+          "kind": "individual",
+          "count": 4032
+        },
+        {
+          "kind": "organization",
+          "count": 1644
+        },
+        {
+          "kind": "vessel",
+          "count": 664
+        }
+      ],
+      "measured_at": "2026-09-08T15:31:26Z"
+    },
+    {
+      "key": "un_consolidated",
+      "jurisdiction": "United Nations",
+      "authority": "United Nations Security Council",
+      "format": "XML",
+      "files": [
+        {
+          "name": "main",
+          "url": "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
+        }
+      ],
+      "licence_notice": "Copyright reserved by the United Nations. Published for implementation of Security Council measures; no open reuse licence is stated. Verified 2026-09-11.",
+      "licence_url": "https://www.un.org/en/about-us/copyright",
+      "record_count": 1011,
+      "cohorts": [
+        {
+          "kind": "individual",
+          "count": 736
+        },
+        {
+          "kind": "organization",
+          "count": 275
+        }
+      ],
+      "measured_at": "2026-09-08T15:31:26Z"
+    }
+  ]
+}
