@@ -29,14 +29,20 @@
 # reason after `--`, because "why can this one not run?" is the question the
 # next author will have.
 RSpec.describe "the Ruby samples on the documentation site" do
-  let(:marker) { /<!--\s*sample:\s*(runnable|illustrative)([^>]*?)-->/ }
+  # An HTML comment in Markdown, and an expression comment in MDX, which cannot
+  # carry an HTML comment at all. Both forms mean the same thing, and an author
+  # should not have to remember which kind of file they are in.
+  let(:marker) do
+    %r{(?:<!--|\{/\*)\s*sample:\s*(runnable|illustrative)(.*?)(?:-->|\*/\})}m
+  end
 
   let(:fence) { /^```ruby[^\n]*\n(.*?)^```/m }
 
   let(:root) { File.expand_path("..", __dir__) }
 
   let(:samples) do
-    Dir.glob(File.join(root, "site", "**", "*.md")).flat_map { |page| extract(page) }
+    Dir.glob(File.join(root, "site", "src", "**", "*.{md,mdx}"))
+       .flat_map { |page| extract(page) }
   end
 
   # Blocks in document order, each carrying the marker that most recently

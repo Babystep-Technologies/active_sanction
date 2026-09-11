@@ -10,11 +10,11 @@
 /Gemfile.lock
 /spec/examples.txt
 
-# The documentation site's build output and its own bundle (#103). The site is
-# published from a workflow rather than from a branch, so nothing it generates
-# belongs in the tree.
-/site/_site/
-/site/.jekyll-cache/
-/site/.jekyll-metadata
-/site/Gemfile.lock
-/site/vendor/
+# The documentation site (#103). It is published from a workflow rather than
+# from a branch, so nothing it generates belongs in the tree.
+# `site/package-lock.json` is the deliberate exception and is committed: the
+# workflow installs with `npm ci`, which requires it, and a lockfile is what
+# makes two builds of the same commit the same site.
+/site/node_modules/
+/site/dist/
+/site/.astro/

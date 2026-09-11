@@ -1,11 +1,9 @@
 ---
 title: Guides
-nav_order: 3
-has_children: true
-permalink: /how-to/
+description: One job per page, for somebody who already knows what they are trying to achieve.
+sidebar:
+  order: 1
 ---
-
-# Guides
 
 One job per page, for somebody who already knows what they are trying to
 achieve. A guide assumes competence: it does not teach the domain and it does
@@ -15,10 +13,10 @@ Planned: adding a sanctions source, choosing a store, tuning the threshold,
 syncing on a schedule, rescreening a book of business, publishing a signed
 bundle, and detecting format drift.
 
-Adding a source has a full walkthrough in the gem itself, at
+Adding a source already has a full walkthrough inside the gem, at
 [`docs/adding_a_source.md`](https://github.com/Babystep-Technologies/active_sanction/blob/main/docs/adding_a_source.md).
-That file ships inside the gem and stays the canonical version; this section
-will link to it rather than restate it.
+That file ships with the code and stays the canonical version; this section
+links to it rather than restating it.
 
 ---
 

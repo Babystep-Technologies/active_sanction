@@ -33,60 +33,64 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Pinned, and deliberately not the gem's matrix. The library supports
-      # 3.1 through 4.0 and is built on every one of them; the site is one
-      # artifact built once, and Jekyll's own dependencies -- eventmachine
-      # among them -- have nothing to do with what `active_sanction` runs on.
-      # A Jekyll release must never be the reason the library's matrix goes
-      # red, and a Ruby the library must support must never be the reason the
-      # site will not build.
-      - name: Ruby for the gem's own bundle
+      # Two toolchains, because the site genuinely needs both: Astro builds
+      # the handwritten pages, and YARD renders the generated API reference
+      # out of the library's own signatures. Neither is a dependency of the
+      # gem, and nothing here ships.
+      - name: Ruby, for the generated API documentation
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: true
 
-      # Generated API documentation, rendered from the inline signatures and
-      # the prose above every public method. `--fail-on-warning` is in the
-      # rake task, so a broken cross-reference fails here rather than
-      # publishing as a dead link. Since #62 this renders the public surface
-      # only, and it is 100% documented.
+      # `--fail-on-warning` is in the rake task, so a broken cross-reference
+      # fails here rather than publishing as a dead link. Since #62 this
+      # renders the public surface only, and it is 100% documented.
       - name: Render the API documentation
         run: bundle exec rake doc
 
-      - name: Ruby for the site's bundle
-        uses: ruby/setup-ruby@v1
+      # Pinned, and deliberately not the gem's Ruby matrix. The library is
+      # built on every Ruby from 3.1 to 4.0; the site is one artifact built
+      # once, and Astro's own floor has nothing to do with what
+      # `active_sanction` supports.
+      - name: Node, for the site
+        uses: actions/setup-node@v4
         with:
-          ruby-version: "3.3"
-          bundler-cache: true
-          working-directory: site
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install the site's dependencies
+        working-directory: site
+        run: npm ci
 
       - name: Build the site
         working-directory: site
-        env:
-          JEKYLL_ENV: production
-        run: bundle exec jekyll build --strict_front_matter --trace
+        run: npm run build
 
-      # Under `/api/`, which is where the site's navigation points and where
-      # the handwritten reference links into rather than restating a
-      # signature. Copied rather than built by Jekyll: 600 generated files
-      # have no front matter and nothing for Liquid to do.
+      # Under `/api/`, which is where the navigation points and where the
+      # handwritten reference links into rather than restating a signature.
+      # Copied rather than built by Astro: 600 generated files have no front
+      # matter and nothing for a content collection to do.
       - name: Publish the API documentation under /api/
         run: |
-          mkdir -p site/_site/api
-          cp -R doc/. site/_site/api/
+          mkdir -p site/dist/api
+          cp -R doc/. site/dist/api/
 
-      # After the copy, so that the navigation's link to `/api/` is one of the
-      # links being checked. Internal links and anchors gate; external ones
-      # are counted and not fetched -- see the comment in the script, which is
-      # the same reasoning that keeps the canary out of CI.
+      # After the copy, so the navigation's own link to `/api/` is one of the
+      # links being checked -- which is what catches a deploy that forgot it.
+      #
+      # `--ignore api` skips that directory as a *source* of links while
+      # leaving it a valid *target*. YARD renders the README as its index
+      # page, and every relative link in the README resolves against the
+      # repository rather than against this site; crawling it reports 126
+      # broken links that are all correct where they are written.
       - name: Check every internal link and anchor
-        working-directory: site
-        run: bundle exec ruby bin/linkcheck _site
+        run: bundle exec ruby site/bin/linkcheck site/dist --ignore api
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site/_site
+          path: site/dist
 
   deploy:
     name: Deploy

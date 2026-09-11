@@ -71,10 +71,10 @@ RSpec.describe "what this gem says about its own licence" do
     expect(packaged.grep(%r{\A\.github/})).to be_empty
   end
 
-  # `site/` is the documentation site's Jekyll sources (#103), and this is the
-  # reason the site is not built out of `docs/`: doing so would ship a
-  # `_config.yml`, a theme, a set of layouts and a second Gemfile into every
-  # application that installs this gem.
+  # `site/` is the documentation site's sources (#103), and this is the reason
+  # the site is not built out of `docs/`: doing so would ship an Astro config,
+  # a theme, a set of layouts and a `package.json` into every application that
+  # installs this gem.
   it "ships nothing from site/" do
     expect(packaged.grep(%r{\Asite/})).to be_empty
   end

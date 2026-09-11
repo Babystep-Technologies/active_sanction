@@ -1,0 +1,17 @@
+{
+  "name": "active-sanction-docs",
+  "private": true,
+  "type": "module",
+  "description": "Documentation site for the active_sanction gem. Not packaged, not published to npm.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.35.0",
+    "astro": "^5.18.0",
+    "sharp": "^0.34.0"
+  }
+}

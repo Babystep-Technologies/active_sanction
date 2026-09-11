@@ -1,10 +1,16 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Reads what Jekyll built and reports links that go nowhere (#103).
+# Reads what Astro built and reports links that go nowhere (#103).
 #
-#     $ bundle exec ruby bin/linkcheck _site
-#     $ bundle exec ruby bin/linkcheck _site --external
+#     $ bundle exec ruby site/bin/linkcheck site/dist
+#     $ bundle exec ruby site/bin/linkcheck site/dist --ignore api
+#     $ bundle exec ruby site/bin/linkcheck site/dist --external
+#
+# Ruby rather than one of the Node link checkers, because it runs in the
+# bundle this repository already has -- nokogiri is here for the XML backend
+# the suite covers -- and adding an npm dependency to check links would be one
+# more thing in a lockfile for a job that is forty lines.
 #
 # ### Internal links fail the build. External links do not.
 #
@@ -20,6 +26,16 @@
 # same reasoning that keeps the canary out of CI keeps external checking out
 # of the gating job. `--external` is there for a human, or for a scheduled run
 # that reports rather than blocks.
+#
+# ### `--ignore` is for generated pages, and it is not optional
+#
+# `rake doc` renders the README into YARD's index page, where every relative
+# link in it -- `CONTRIBUTING.md`, `LICENSE.txt`, `docs/bundle_format.md` --
+# resolves against the repository and not against this site. Crawling that
+# output reports 126 broken links which are all correct where they are
+# written. So generated directories are skipped as *sources* of links while
+# staying valid *targets* of them: the navigation's own link to `/api/` is
+# still checked, which is what catches a deploy that forgot to copy it.
 #
 # ### Anchors are checked, because that is the breakage nobody sees
 #
@@ -39,8 +55,9 @@ class LinkCheck
 
   Problem = Struct.new(:page, :link, :reason, keyword_init: true)
 
-  def initialize(root, check_external: false)
+  def initialize(root, ignore: [], check_external: false)
     @root = File.expand_path(root)
+    @ignore = ignore
     @check_external = check_external
     @problems = []
     @external = Set.new
@@ -51,13 +68,20 @@ class LinkCheck
     abort "no HTML under #{@root} -- was the site built?" if pages.empty?
 
     ids = page_ids(pages)
-    pages.each { |page| check_page(page, ids) }
+    sources = pages.reject { |page| ignored?(page) }
+    sources.each { |page| check_page(page, ids) }
     check_external_links if @check_external
 
-    report(pages.length)
+    report(pages.length, sources.length)
   end
 
   private
+
+  # Generated output, skipped as a source of links. Still in `ids`, so links
+  # pointing at it resolve.
+  def ignored?(page)
+    @ignore.any? { |prefix| page.start_with?(File.join(@root, prefix)) }
+  end
 
   # Every id and every `name` anchor on every page, so a fragment can be
   # resolved without re-parsing the target once per link that points at it.
@@ -115,8 +139,8 @@ class LinkCheck
     @problems << Problem.new(page: page, link: target, reason: "no anchor ##{wanted} on that page")
   end
 
-  # Site-absolute hrefs carry the baseurl, which is not part of the built
-  # tree's own layout -- `/active_sanction/reference/` is `_site/reference/`.
+  # Site-absolute hrefs carry the base path, which is not part of the built
+  # tree's own layout -- `/active_sanction/reference/` is `dist/reference/`.
   # Everything else resolves against the directory the link sits in.
   def resolve(page, path)
     candidate =
@@ -158,8 +182,11 @@ class LinkCheck
     nil
   end
 
-  def report(page_count)
-    puts "#{page_count} pages, #{@external.length} distinct external links" \
+  def report(page_count, source_count)
+    skipped = page_count - source_count
+    puts "#{source_count} pages crawled" \
+         "#{", #{skipped} generated pages skipped as sources" if skipped.positive?}, " \
+         "#{@external.length} distinct external links" \
          "#{@check_external ? " (checked)" : " (not checked -- see the comment in this file)"}"
 
     if @problems.empty?
@@ -179,5 +206,10 @@ class LinkCheck
   end
 end
 
-root = ARGV.find { |argument| !argument.start_with?("--") } || "_site"
-exit LinkCheck.new(root, check_external: ARGV.include?("--external")).run
+ignore = []
+ARGV.each_with_index { |argument, i| ignore << ARGV[i + 1] if argument == "--ignore" }
+positional = ARGV.reject.with_index { |a, i| a.start_with?("--") || ARGV[i - 1] == "--ignore" }
+
+exit LinkCheck.new(positional.first || "site/dist",
+                   ignore: ignore.compact,
+                   check_external: ARGV.include?("--external")).run
