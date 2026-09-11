@@ -38,6 +38,15 @@
   overflow-x: auto;
 }
 
+/* The per-source detail block on the catalogue page is the opposite shape:
+   two columns, and the second one carries paragraph-length prose -- a
+   licence notice, a limitations summary. The nowrap rule above is right for
+   a table of short values; forced onto a paragraph it turns the cell into
+   one line a reader scrolls sideways through instead of reading. */
+.sl-markdown-content table.source-detail {
+  white-space: normal;
+}
+
 /* The disclaimer. It is the one piece of prose on this site a reader must not
    skim, and it appears on the landing page and in the footer of every other
    one, because somebody arriving at a reference table from a search engine

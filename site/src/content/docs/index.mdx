@@ -22,6 +22,20 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
+Sync, screen, and read the score:
+
+{/* sample: illustrative -- reaches seven government endpoints and needs a configured store */}
+
+```ruby
+ActiveSanction.sync!
+
+hit = ActiveSanction.screen(
+  name: "Vladimir Putin", type: :individual, date_of_birth: "1952-10-07"
+).first
+
+hit.score                # => 97.3
+```
+
 <div class="screening-aid">
   <strong>This library is a screening aid. It is not legal advice, and it is
   not a compliance program.</strong> Verify every hit against the official
@@ -34,27 +48,33 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <CardGrid>
   <Card title="Get started" icon="rocket">
-    Screening a name for the first time, one path followed start to finish.
-    [Begin here](/active_sanction/tutorial/).
+    For a name you have never screened before: one path, followed start to
+    finish. [Begin here](/active_sanction/tutorial/).
   </Card>
   <Card title="Guides" icon="setting">
-    One job per page, for somebody who already knows what they are trying to
-    achieve. [Browse the guides](/active_sanction/how-to/).
+    For somebody who already knows what they are trying to achieve and wants
+    the steps for one job. [Browse the guides](/active_sanction/how-to/).
   </Card>
   <Card title="Reference" icon="open-book">
-    Sources, configuration, errors, measured accuracy, the bundle format.
+    For somebody looking something up — a source, a setting, an error —
+    rather than reading start to finish.
     [Look something up](/active_sanction/reference/).
   </Card>
   <Card title="Explanation" icon="information">
-    How matching works, and why the defaults are what they are.
-    [Understand why](/active_sanction/explanation/).
+    For somebody who wants to understand why the library works the way it
+    does, not what to type next. [Understand why](/active_sanction/explanation/).
   </Card>
 </CardGrid>
 
-## Folding a name
+The gem is complete on its own — every supported list is fetchable, parseable
+and screenable locally, forever, with no account and no key. A commercial
+hosted service exists, and what it sells is operations rather than capability.
+[The gem and the service](/active_sanction/explanation/) says more.
 
-Screening compares folded strings, never published ones. This is the one thing
-you can try with no data at all:
+---
+
+Screening compares folded strings, never published ones. This is the one
+thing you can try with no data at all:
 
 {/* sample: runnable */}
 
@@ -63,24 +83,4 @@ require "active_sanction"
 
 ActiveSanction::Normalizer.call("O'Brien, Seán").value
 # => "o brien sean"
-
-ActiveSanction::Normalizer.call("Public Joint Stock Company Gazprom", type: :organization).value
-# => "gazprom"
 ```
-
-Everything else needs a synced list:
-
-{/* sample: illustrative -- reaches seven government endpoints and needs a configured store */}
-
-```ruby
-ActiveSanction.sync!
-
-ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: "1952-10-07")
-# => [#<MatchResult score=97.3 source=:ofac_sdn matched_name="PUTIN, Vladimir Vladimirovich">]
-```
-
----
-
-*This landing page is scaffolding.
-[#104](https://github.com/Babystep-Technologies/active_sanction/issues/104)
-writes the real one, along with the source catalogue it links to.*

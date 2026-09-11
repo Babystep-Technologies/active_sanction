@@ -1,0 +1,199 @@
+---
+title: Sources
+description: The seven sanctions lists this gem reads, one uniform block per source.
+sidebar:
+  order: 2
+---
+
+import sourcesData from "../../../data/sources.json";
+
+The seven lists this gem reads today, in the order the README lists them.
+Every field below comes from what the adapter declares and what
+[the canary](https://github.com/Babystep-Technologies/active_sanction#the-upstream-canary)
+last measured into `.github/baselines` — nothing here is typed by hand, and
+the [full account of what each parser does and does not get right](https://github.com/Babystep-Technologies/active_sanction#known-data-limitations-per-source)
+lives in the README, condensed to one paragraph per source below.
+
+export const order = [
+  "ofac_sdn",
+  "ofac_consolidated",
+  "un_consolidated",
+  "eu_fsf",
+  "uk_sanctions_list",
+  "canada_sema",
+  "australia_dfat",
+];
+
+export const editorial = {
+  ofac_sdn: {
+    cadence: "Irregular, often several times a month, as designations are made.",
+    limitations:
+      "The SDN CSVs have no column for date of birth, place of birth, " +
+      "nationality or passport number — all of it is free text in one " +
+      "Remarks field. A heuristic parser recognizes 97.3% of those " +
+      "segments; the rest stays in remarks as unstructured prose.",
+  },
+  ofac_consolidated: {
+    cadence: "Irregular, and much less often than the SDN list.",
+    limitations:
+      "Six sub-lists (SSI, CMIC, NS-PLC, NS-MBS, CAPTA, FSE) share one file " +
+      "with no column saying which is which; the program code this adapter " +
+      "maps is exact for 478 of 481 records. Secondary identifiers are free " +
+      "text, the same as ofac_sdn.",
+  },
+  un_consolidated: {
+    cadence: "As the Security Council amends a sanctions regime.",
+    limitations:
+      "Place of birth, gender, title and designation have no structured " +
+      "field and are appended to remarks instead. One published name is " +
+      "split across four separate name-part columns, and the file carries " +
+      "empty placeholder alias nodes.",
+  },
+  eu_fsf: {
+    cadence: "As the Council adopts or amends a regulation.",
+    limitations:
+      "No name is marked as the official one; which alias is primary is " +
+      "this adapter's decision, not the Commission's. Four birth dates are " +
+      "Hijri rather than Gregorian, and three of those produce no date of " +
+      "birth at all. Conditional GET does not work, so every sync " +
+      "downloads the full 25.7 MB file regardless of whether it changed.",
+  },
+  uk_sanctions_list: {
+    cadence: "Whenever a designation is made, amended or revoked.",
+    limitations:
+      "22% of published birth dates omit a day, a month, or both — spelled " +
+      "out as a placeholder (dd/mm/1962) rather than left blank. The " +
+      "FCDO's own non-Latin script labels disagree with the actual " +
+      "characters on a handful of names. A predecessor list, ConList.csv, " +
+      "is still live and still answers requests, though it stopped being " +
+      "updated on 28 January 2026.",
+  },
+  canada_sema: {
+    cadence: "As the regulations are amended.",
+    limitations:
+      "No nationality, address, place of birth or document number for any " +
+      "record, and a date of birth for only a minority — the weakest list " +
+      "here for corroborating a name match (measured recall 0.880 against " +
+      "the UN's 1.000). Canada publishes no stable identifier, only a " +
+      "citation that gets renumbered when a schedule is amended, and " +
+      "aliases are one comma-joined string with no declared separator.",
+  },
+  australia_dfat: {
+    cadence:
+      "As the Foreign Minister designates, and as the UN amends a regime.",
+    limitations:
+      "No document number of any kind for any record. The published " +
+      "Control Date is not a listing date, though it is on every row; the " +
+      "actual listing date is free text and is only read for 1,438 of " +
+      "3,906 records. Birth dates arrive in nine different spellings, two " +
+      "of which are indistinguishable without reading the spreadsheet's " +
+      "own cell styles.",
+  },
+};
+
+export const bySource = Object.fromEntries(
+  sourcesData.sources.map((source) => [source.key, source])
+);
+
+<table>
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>Jurisdiction</th>
+      <th>Format</th>
+      <th>Records</th>
+    </tr>
+  </thead>
+  <tbody>
+    {order.map((key) => {
+      const source = bySource[key];
+      return (
+        <tr>
+          <td><a href={`#${key.replace(/_/g, "-")}`}><code>{source.key}</code></a></td>
+          <td>{source.jurisdiction}</td>
+          <td>{source.format}</td>
+          <td>{source.record_count.toLocaleString("en-US")}</td>
+        </tr>
+      );
+    })}
+  </tbody>
+</table>
+
+{order.map((key) => {
+  const source = bySource[key];
+  const notes = editorial[key];
+  return (
+    <table id={key.replace(/_/g, "-")} class="source-detail">
+      <caption><code>{source.key}</code></caption>
+      <tbody>
+        <tr>
+          <td>Key</td>
+          <td><code>{source.key}</code></td>
+        </tr>
+        <tr>
+          <td>Jurisdiction</td>
+          <td>{source.jurisdiction}</td>
+        </tr>
+        <tr>
+          <td>Authority</td>
+          <td>{source.authority}</td>
+        </tr>
+        <tr>
+          <td>Publisher's update cadence</td>
+          <td>{notes.cadence}</td>
+        </tr>
+        <tr>
+          <td>Endpoint</td>
+          <td>
+            {source.files.map((file, i) => (
+              <span>
+                {i > 0 && <br />}
+                {source.files.length > 1 && <code>{file.name}</code>}
+                {source.files.length > 1 && ": "}
+                <a href={file.url}>{file.url}</a>
+              </span>
+            ))}
+          </td>
+        </tr>
+        <tr>
+          <td>Format</td>
+          <td>{source.format}</td>
+        </tr>
+        <tr>
+          <td>Approximate record count</td>
+          <td>
+            {source.record_count.toLocaleString("en-US")}
+            {" "}
+            (measured {source.measured_at.slice(0, 10)})
+          </td>
+        </tr>
+        <tr>
+          <td>Known data limitations</td>
+          <td>{notes.limitations}</td>
+        </tr>
+        <tr>
+          <td>Licence and attribution</td>
+          <td>
+            {source.licence_notice}
+            {" "}
+            <a href={source.licence_url}>{source.licence_url}</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+})}
+
+## What is not covered
+
+- No politically-exposed-person data, no adverse media, no beneficial
+  ownership, no OFAC 50 Percent Rule resolution — a subsidiary that is
+  sanctioned only by virtue of its owners is not on any of these files.
+- Seven lists ship: two US, one UN, one Canada, one EU, one UK, one Australia.
+  A jurisdiction outside that set is not covered.
+- Non-Latin script is not transliterated. A Cyrillic name matches a Cyrillic
+  query and nothing else.
+
+## A source that is not here
+
+[Adding a source](/active_sanction/how-to/) walks through registering one.
