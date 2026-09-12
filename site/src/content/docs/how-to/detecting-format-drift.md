@@ -138,3 +138,13 @@ this gem's own code broke rather than that a publisher rate-limited a runner.
 documents the baseline format and the per-key tolerances. When adding a new
 source, commit its baseline in the same pull request as the adapter — see
 [Add a sanctions source](/active_sanction/how-to/adding-a-source/).
+
+**Nothing is reported until two consecutive runs agree.** Government
+endpoints 403 a non-browser user agent and block cloud IP ranges, and a
+canary that cried wolf on one bad afternoon would be muted just as fast as a
+red badge — so a fetch that failed and a file that parsed into something
+different are kept as separate findings, each run's report is saved as a
+workflow artifact, and only a finding both of two consecutive runs made is
+opened as an issue. A clean run opens a rolling pull request keeping the
+baselines current instead, so a number moving there still has a date, an
+author and a review, without anybody hand-editing the JSON.
