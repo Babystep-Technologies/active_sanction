@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://babystep-technologies.github.io/active_sanction/logo.svg" alt="" width="180" height="180">
+</p>
+
 # ActiveSanction
 
 [![CI](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/ci.yml/badge.svg)](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/ci.yml)

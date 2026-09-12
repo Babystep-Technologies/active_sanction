@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="as-logo-title as-logo-desc">
+  <title id="as-logo-title">ActiveSanction</title>
+  <desc id="as-logo-desc">A seal: two Ionic columns flanking an open ledger beneath a radiant gem, wrapped in laurel, on a ribbon reading Active Sanction, under the motto Veritas et Vigilantia.</desc>
+
+  <defs>
+    <!-- One leaf, placed many times along each branch. -->
+    <path id="leaf" d="M0,0 C5,-5 13,-6 19,-1 C13,5 5,5 0,0 Z"/>
+
+    <g id="column" fill="none" stroke="#d9a642" stroke-width="2" stroke-linejoin="round">
+      <!-- Abacus and volutes: the Ionic capital, drawn as two scrolls under a slab. -->
+      <path d="M-32,0 H32 V9 H-32 Z"/>
+      <path d="M-30,9 C-30,22 -22,28 -14,26 C-6,24 -6,14 -13,14 C-19,14 -20,21 -14,22"/>
+      <path d="M30,9 C30,22 22,28 14,26 C6,24 6,14 13,14 C19,14 20,21 14,22"/>
+      <path d="M-14,26 C-6,31 6,31 14,26"/>
+      <path d="M-20,31 H20"/>
+      <!-- Shaft, fluted. -->
+      <path d="M-19,35 H19 V203 H-19 Z"/>
+      <path d="M-11,41 V197 M0,41 V197 M11,41 V197" stroke-width="1.2"/>
+      <!-- Base: torus over plinth. -->
+      <path d="M-24,203 H24 V212 H-24 Z"/>
+      <path d="M-29,212 H29 V224 H-29 Z"/>
+    </g>
+    <!-- The motto rides this arc. Drawn left to right across the top so the
+         letters sit upright to a reader rather than upside down. -->
+    <path id="motto-arc" fill="none" d="M 66,256 A 190,190 0 0 1 446,256"/>
+  </defs>
+
+  <!-- The field, and the double rule that closes it. -->
+  <circle cx="256" cy="256" r="252" fill="#000c21"/>
+  <circle cx="256" cy="256" r="247" fill="none" stroke="#d9a642" stroke-width="7"/>
+  <circle cx="256" cy="256" r="231" fill="none" stroke="#d9a642" stroke-width="2.5"/>
+  <circle cx="256" cy="256" r="225" fill="none" stroke="#d9a642" stroke-width="1"/>
+
+  <!-- Motto. -->
+  <text font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="27" letter-spacing="3.6" fill="#d9a642">
+    <textPath href="#motto-arc" startOffset="50%" text-anchor="middle">VERITAS ET VIGILANTIA</textPath>
+  </text>
+  <g fill="#d9a642">
+    <circle cx="93" cy="330" r="4"/><circle cx="419" cy="330" r="4"/>
+    <circle cx="80" cy="300" r="2.5"/><circle cx="432" cy="300" r="2.5"/>
+  </g>
+
+  <!-- Laurel, one branch each side, opening toward the ribbon. The stems are
+       stroked and the leaves are filled, which is why they are separate
+       groups: an open arc under `fill` paints the crescent it subtends. -->
+  <g stroke="#d9a642" stroke-width="2.2" stroke-linecap="round" fill="none">
+    <path d="M97.4,355.1 Q57.8,256.0 97.4,156.9"/>
+    <path d="M414.6,355.1 Q454.2,256.0 414.6,156.9"/>
+  </g>
+  <g fill="#d9a642" stroke="none">
+    <use href="#leaf" transform="translate(89.7,355.9) rotate(179.0) scale(0.853)"/>
+      <use href="#leaf" transform="translate(79.9,337.4) rotate(185.2) scale(1.197)"/>
+      <use href="#leaf" transform="translate(72.1,317.9) rotate(191.4) scale(1.360)"/>
+      <use href="#leaf" transform="translate(66.5,297.7) rotate(197.6) scale(1.467)"/>
+      <use href="#leaf" transform="translate(63.1,277.0) rotate(203.8) scale(1.529)"/>
+      <use href="#leaf" transform="translate(62.0,256.0) rotate(210.0) scale(1.550)"/>
+      <use href="#leaf" transform="translate(63.1,235.0) rotate(216.2) scale(1.529)"/>
+      <use href="#leaf" transform="translate(66.5,214.3) rotate(222.4) scale(1.467)"/>
+      <use href="#leaf" transform="translate(72.1,194.1) rotate(228.6) scale(1.360)"/>
+      <use href="#leaf" transform="translate(79.9,174.6) rotate(234.8) scale(1.197)"/>
+      <use href="#leaf" transform="translate(89.7,156.1) rotate(241.0) scale(0.853)"/>
+    <use href="#leaf" transform="translate(100.6,338.6) rotate(122.0) scale(0.688)"/>
+      <use href="#leaf" transform="translate(92.6,321.3) rotate(128.2) scale(0.983)"/>
+      <use href="#leaf" transform="translate(86.4,303.2) rotate(134.4) scale(1.119)"/>
+      <use href="#leaf" transform="translate(82.3,284.5) rotate(140.7) scale(1.203)"/>
+      <use href="#leaf" transform="translate(80.3,265.6) rotate(146.9) scale(1.245)"/>
+      <use href="#leaf" transform="translate(80.3,246.4) rotate(153.1) scale(1.245)"/>
+      <use href="#leaf" transform="translate(82.3,227.5) rotate(159.3) scale(1.203)"/>
+      <use href="#leaf" transform="translate(86.4,208.8) rotate(165.6) scale(1.119)"/>
+      <use href="#leaf" transform="translate(92.6,190.7) rotate(171.8) scale(0.983)"/>
+      <use href="#leaf" transform="translate(100.6,173.4) rotate(178.0) scale(0.688)"/>
+    <use href="#leaf" transform="translate(422.3,355.9) rotate(1.0) scale(0.853)"/>
+      <use href="#leaf" transform="translate(432.1,337.4) rotate(-5.2) scale(1.197)"/>
+      <use href="#leaf" transform="translate(439.9,317.9) rotate(-11.4) scale(1.360)"/>
+      <use href="#leaf" transform="translate(445.5,297.7) rotate(-17.6) scale(1.467)"/>
+      <use href="#leaf" transform="translate(448.9,277.0) rotate(-23.8) scale(1.529)"/>
+      <use href="#leaf" transform="translate(450.0,256.0) rotate(-30.0) scale(1.550)"/>
+      <use href="#leaf" transform="translate(448.9,235.0) rotate(-36.2) scale(1.529)"/>
+      <use href="#leaf" transform="translate(445.5,214.3) rotate(-42.4) scale(1.467)"/>
+      <use href="#leaf" transform="translate(439.9,194.1) rotate(-48.6) scale(1.360)"/>
+      <use href="#leaf" transform="translate(432.1,174.6) rotate(-54.8) scale(1.197)"/>
+      <use href="#leaf" transform="translate(422.3,156.1) rotate(-61.0) scale(0.853)"/>
+    <use href="#leaf" transform="translate(411.4,338.6) rotate(58.0) scale(0.688)"/>
+      <use href="#leaf" transform="translate(419.4,321.3) rotate(51.8) scale(0.983)"/>
+      <use href="#leaf" transform="translate(425.6,303.2) rotate(45.6) scale(1.119)"/>
+      <use href="#leaf" transform="translate(429.7,284.5) rotate(39.3) scale(1.203)"/>
+      <use href="#leaf" transform="translate(431.7,265.6) rotate(33.1) scale(1.245)"/>
+      <use href="#leaf" transform="translate(431.7,246.4) rotate(26.9) scale(1.245)"/>
+      <use href="#leaf" transform="translate(429.7,227.5) rotate(20.7) scale(1.203)"/>
+      <use href="#leaf" transform="translate(425.6,208.8) rotate(14.4) scale(1.119)"/>
+      <use href="#leaf" transform="translate(419.4,190.7) rotate(8.2) scale(0.983)"/>
+      <use href="#leaf" transform="translate(411.4,173.4) rotate(2.0) scale(0.688)"/>
+  </g>
+
+  <!-- The architecture: an entablature carried on two columns. -->
+  <g fill="none" stroke="#d9a642" stroke-width="2" stroke-linejoin="round">
+    <path d="M122,150 H390 V161 H122 Z"/>
+    <path d="M131,139 H381 V150 H131 Z"/>
+    <path d="M139,132 H373" stroke-width="1.2"/>
+  </g>
+  <!-- Fleuron over the keystone. -->
+  <g fill="none" stroke="#d9a642" stroke-width="2" stroke-linecap="round">
+    <path d="M256,100 C250,110 244,114 238,114 C230,114 226,108 230,103 C234,99 241,102 240,109"/>
+    <path d="M256,100 C262,110 268,114 274,114 C282,114 286,108 282,103 C278,99 271,102 272,109"/>
+    <path d="M256,100 C253,108 253,118 256,128 C259,118 259,108 256,100 Z" fill="#d9a642"/>
+    <path d="M214,128 C228,120 242,124 256,132 C270,124 284,120 298,128" stroke-width="1.6"/>
+  </g>
+
+  <use href="#column" transform="translate(150,161)"/>
+  <use href="#column" transform="translate(362,161)"/>
+
+  <!-- The gem, and what it throws. -->
+  <g fill="none" stroke="#d9a642" stroke-width="1.6" stroke-linecap="round">
+    <path d="M256.0,174.0 L256.0,146.0"/>
+      <path d="M266.4,175.4 L270.8,158.6"/>
+      <path d="M276.0,179.4 L290.0,155.1"/>
+      <path d="M284.3,185.7 L296.6,173.4"/>
+      <path d="M290.6,194.0 L314.9,180.0"/>
+      <path d="M294.6,203.6 L311.4,199.2"/>
+      <path d="M296.0,214.0 L324.0,214.0"/>
+      <path d="M294.6,224.4 L311.4,228.8"/>
+      <path d="M290.6,234.0 L314.9,248.0"/>
+      <path d="M284.3,242.3 L296.6,254.6"/>
+      <path d="M276.0,248.6 L290.0,272.9"/>
+      <path d="M236.0,248.6 L222.0,272.9"/>
+      <path d="M227.7,242.3 L215.4,254.6"/>
+      <path d="M221.4,234.0 L197.1,248.0"/>
+      <path d="M217.4,224.4 L200.6,228.8"/>
+      <path d="M216.0,214.0 L188.0,214.0"/>
+      <path d="M217.4,203.6 L200.6,199.2"/>
+      <path d="M221.4,194.0 L197.1,180.0"/>
+      <path d="M227.7,185.7 L215.4,173.4"/>
+      <path d="M236.0,179.4 L222.0,155.1"/>
+      <path d="M245.6,175.4 L241.2,158.6"/>
+  </g>
+  <g fill="#d9a642">
+    <path d="M196,196 l3.5,9 9,3.5 -9,3.5 -3.5,9 -3.5,-9 -9,-3.5 9,-3.5 Z"/>
+    <path d="M316,196 l3.5,9 9,3.5 -9,3.5 -3.5,9 -3.5,-9 -9,-3.5 9,-3.5 Z"/>
+  </g>
+  <g transform="translate(256,214)">
+    <path d="M-26,-11 L-15,-23 L15,-23 L26,-11 L0,25 Z" fill="#61041d" stroke="#d9a642" stroke-width="2.4" stroke-linejoin="round"/>
+    <g fill="none" stroke="#d9a642" stroke-width="1.4">
+      <path d="M-26,-11 H26"/>
+      <path d="M-15,-23 L-8,-11 M15,-23 L8,-11"/>
+      <path d="M-8,-11 L0,25 M8,-11 L0,25"/>
+      <path d="M-26,-11 L-8,-11 M26,-11 L8,-11" stroke-width="0"/>
+    </g>
+  </g>
+
+  <!-- The ledger: what a sanctions list is, before it is a file. -->
+  <g transform="translate(256,318)">
+    <!-- Pages. -->
+    <path d="M0,-24 C-24,-38 -60,-42 -92,-38 L-92,36 C-60,32 -24,36 0,48 Z" fill="#000c21" stroke="#d9a642" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M0,-24 C24,-38 60,-42 92,-38 L92,36 C60,32 24,36 0,48 Z" fill="#000c21" stroke="#d9a642" stroke-width="2.6" stroke-linejoin="round"/>
+    <!-- Leaves under each page, so the book has thickness. -->
+    <g fill="none" stroke="#d9a642" stroke-width="1.2">
+      <path d="M-92,36 C-60,32 -24,36 0,48"/>
+      <path d="M92,36 C60,32 24,36 0,48"/>
+      <path d="M-90,41 C-58,37 -24,41 0,53 C24,41 58,37 90,41"/>
+    </g>
+    <!-- Column headings, and the entries under them. -->
+    <g font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="11" letter-spacing="1.6" fill="#d9a642" text-anchor="middle">
+      <text x="-47" y="-18">ACTA</text>
+      <text x="47" y="-18">EVENTUS</text>
+    </g>
+    <g fill="none" stroke="#d9a642" stroke-width="1.1" stroke-linecap="round" opacity="0.92">
+      <path d="M-80,-12 H-14 M80,-12 H14" stroke-width="1.4"/>
+      <path d="M-80.0,-4.0 L-16.0,-4.0"/>
+        <path d="M-80.0,2.8 L-16.0,3.4"/>
+        <path d="M-80.0,9.5 L-16.0,10.8"/>
+        <path d="M-80.0,16.3 L-16.0,18.2"/>
+        <path d="M-80.0,23.0 L-16.0,25.6"/>
+        <path d="M-80.0,29.8 L-16.0,33.0"/>
+        <path d="M-80.0,36.5 L-16.0,40.4"/>
+        <path d="M-80.0,43.3 L-16.0,47.8"/>
+      <path d="M16.0,-4.0 L80.0,-4.0"/>
+        <path d="M16.0,2.8 L80.0,3.4"/>
+        <path d="M16.0,9.5 L80.0,10.8"/>
+        <path d="M16.0,16.3 L80.0,18.2"/>
+        <path d="M16.0,23.0 L80.0,25.6"/>
+        <path d="M16.0,29.8 L80.0,33.0"/>
+        <path d="M16.0,36.5 L80.0,40.4"/>
+        <path d="M16.0,43.3 L80.0,47.8"/>
+      <path d="M-52,-6 V44 M52,-6 V44" stroke-width="0.9" opacity="0.6"/>
+    </g>
+    <!-- Spine, and the marker in it. -->
+    <path d="M0,-24 V48" fill="none" stroke="#d9a642" stroke-width="2.6"/>
+    <path d="M-7,44 H7 V72 L0,64 L-7,72 Z" fill="#61041d" stroke="#d9a642" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+
+  <!-- The ribbon carries the name, and is the last thing drawn because it
+       crosses the columns and the book. -->
+  <g stroke="#d9a642" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M92,368 L48,356 L66,382 L48,408 L92,400 Z" fill="#61041d"/>
+    <path d="M420,368 L464,356 L446,382 L464,408 L420,400 Z" fill="#61041d"/>
+    <path d="M92,360 Q256,345 420,360 L420,406 Q256,391 92,406 Z" fill="#61041d"/>
+  </g>
+  <text x="256" y="389" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="29" letter-spacing="2.2" fill="#d9a642" text-anchor="middle">ACTIVE SANCTION</text>
+
+  <!-- Scrolls tucked under the ribbon's ends, as the original has. -->
+  <g fill="none" stroke="#d9a642" stroke-width="1.8" stroke-linejoin="round">
+    <path d="M118,412 C128,406 140,406 150,412 C140,418 128,418 118,412 Z"/>
+    <path d="M362,412 C372,406 384,406 394,412 C384,418 372,418 362,412 Z"/>
+  </g>
+
+  <g font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" fill="#d9a642" text-anchor="middle">
+    <text x="256" y="432" font-size="17" letter-spacing="2.4">OPEN SOURCE</text>
+    <text x="256" y="452" font-size="17" letter-spacing="2.4">LIBRARY</text>
+    <text x="256" y="479" font-size="18" letter-spacing="1.5">&lt; / &gt;</text>
+  </g>
+  <g fill="#d9a642">
+    <circle cx="212" cy="472" r="2.6"/><circle cx="300" cy="472" r="2.6"/>
+    <path d="M224,472 h14" stroke="#d9a642" stroke-width="1.6"/>
+    <path d="M274,472 h14" stroke="#d9a642" stroke-width="1.6"/>
+  </g>
+</svg>

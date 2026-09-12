@@ -26,6 +26,13 @@ export default defineConfig({
       description:
         "Screen a name against government sanctions lists, in Ruby, in your own process.",
 
+      // The seal reduced to a ring, a gem and an open ledger. The full seal is
+      // `public/logo.svg` and is unreadable at the 32px the header gives it --
+      // the motto alone is 21 letters around a circle. One file serves as the
+      // header mark and the favicon both, so the two can never drift.
+      logo: { src: "./public/logo-mark.svg", alt: "" },
+      favicon: "/logo-mark.svg",
+
       social: [
         {
           icon: "github",

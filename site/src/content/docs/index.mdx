@@ -6,6 +6,14 @@ description: >-
   name you screen leaves it.
 template: splash
 hero:
+  # Raw HTML rather than `image.file`, so the seal stays the single copy in
+  # `public/` that the README and the social card also point at. `alt` is
+  # empty on purpose: the mark repeats the title beside it, and a screen
+  # reader should not hear the name twice.
+  image:
+    html: >-
+      <img src="/active_sanction/logo.svg" alt="" width="280" height="280"
+      loading="eager" decoding="async">
   tagline: >-
     Screen a name against government sanctions lists, in Ruby, in your own
     process. Seven lists, one record model, and an account of every point a
