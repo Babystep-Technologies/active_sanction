@@ -1,20 +1,105 @@
-/* The site's own colours, sitting on Starlight's custom properties rather than
-   overriding its rules. Everything here is a token, so a later change to the
-   theme does not have to be chased through selectors.
+/* The site's own colours and type, sitting on Starlight's custom properties
+   rather than overriding its rules. Everything here is a token, so a later
+   change to the theme does not have to be chased through selectors.
 
-   The accent is the sibling project's blue, kept so the two sites read as
-   coming from the same place. */
+   The palette is the seal's, sampled from it rather than picked to go with it:
+   navy #000c21 is the field, gold #d9a642 the engraving, crimson #61041d the
+   ribbon and the gem. Those three are the whole brand, and the rules below do
+   nothing but place them where Starlight already has a slot. */
+
+/* Self-hosted rather than fetched from a font CDN. The site is static, builds
+   offline, and asks nothing of a third party at read time -- which is the same
+   position the gem takes about the lists it reads. */
+@import "@fontsource-variable/eb-garamond";
+
 :root {
-  --sl-color-accent-low: #131e4f;
-  --sl-color-accent: #2337ff;
-  --sl-color-accent-high: #c7d2fe;
+  /* The seal is cut in Roman capitals, so the display face is a Garamond:
+     the same skeleton, five centuries later. Georgia carries the fallback
+     because it is the serif that is actually installed everywhere, and it is
+     also the face `logo.svg` names -- a reader who loads the mark before the
+     webfont sees one family, not two. */
+  --as-font-display: "EB Garamond Variable", Georgia, "Iowan Old Style",
+    "Times New Roman", serif;
+
+  --as-navy: #000c21;
+  --as-gold: #d9a642;
+  --as-crimson: #61041d;
+}
+
+/* Dark theme, and the one the seal was drawn for: gold on navy.
+   `--sl-color-accent-high` is the light end of the accent in dark mode and the
+   dark end in light mode, which is why the two blocks look inverted. */
+:root {
+  --sl-color-accent-low: #3b2a0b;
+  --sl-color-accent: #b8862f;
+  --sl-color-accent-high: #eccd85;
+
   --sl-color-white: #ffffff;
+  --sl-color-gray-1: #eaedf5;
+  --sl-color-gray-2: #c0c6d9;
+  --sl-color-gray-3: #888fa8;
+  --sl-color-gray-4: #525a75;
+  --sl-color-gray-5: #333b55;
+  --sl-color-gray-6: #1d2440;
+  --sl-color-black: #000c21;
+
+  /* The disclaimer's frame. Starlight's own red is a warning colour; the
+     seal's crimson says the same thing in the project's own voice. */
+  --sl-color-red: #e0708a;
+  --sl-color-red-low: #3a0713;
 }
 
 :root[data-theme="light"] {
-  --sl-color-accent-low: #c7d2fe;
-  --sl-color-accent: #2337ff;
-  --sl-color-accent-high: #131e4f;
+  --sl-color-accent-low: #f4e6c4;
+  --sl-color-accent: #9a6b16;
+  --sl-color-accent-high: #6b3d0a;
+
+  /* `--sl-color-white` is the strongest *text* colour, not a background, and
+     it flips with the theme: white on navy above, near-black on paper here.
+     Setting it to #fff in this block is what makes the sidebar's group
+     headings disappear into the page. */
+  --sl-color-white: #101a2e;
+  --sl-color-gray-1: #182238;
+  --sl-color-gray-2: #3b465e;
+  --sl-color-gray-3: #6b7590;
+  --sl-color-gray-4: #98a1b8;
+  --sl-color-gray-5: #d3d8e5;
+  --sl-color-gray-6: #eef1f7;
+  --sl-color-black: #ffffff;
+
+  --sl-color-red: #8c1230;
+  --sl-color-red-low: #fbeaee;
+}
+
+/* Type. The display face carries the headings and the wordmark; the body stays
+   on Starlight's system stack, because a Garamond at 14px in a table of seven
+   sources is a worse read than the sans it replaced. Serif for what is
+   scanned, sans for what is read. */
+.site-title,
+.hero h1,
+.content-panel h1,
+.sl-markdown-content :is(h1, h2, h3, h4) {
+  font-family: var(--as-font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* A Garamond sets small at a given size, so the headings need the size back. */
+.sl-markdown-content :is(h1, h2) {
+  font-size: calc(var(--sl-text-h2) * 1.12);
+  line-height: 1.25;
+}
+
+.site-title {
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+}
+
+/* The hero's mark, on the landing page only. Sized in `em` of the hero so it
+   tracks the breakpoint Starlight already has for the two-column layout. */
+.hero img {
+  max-width: min(58vw, 260px);
+  height: auto;
 }
 
 /* The source catalogue is seven rows of eight columns and the accuracy
