@@ -51,6 +51,32 @@ same pull request. A case nobody has written down is a case that regresses
 silently, and the accuracy report is the only place a two-point weight change
 becomes visible.
 
+## If you are working with a coding agent
+
+Both of the procedures above are written down for one, in
+[`.claude/skills/`](.claude/skills)
+([#113](https://github.com/Babystep-Technologies/active_sanction/issues/113)):
+[`adding-a-source`](.claude/skills/adding-a-source/SKILL.md) for a list the gem
+does not read yet, and
+[`repairing-a-source`](.claude/skills/repairing-a-source/SKILL.md) for a
+publisher that changed its file. The rules they are both held to are one file,
+[`.claude/rules/adapter-rules.md`](.claude/rules/adapter-rules.md), and
+[`AGENTS.md`](AGENTS.md) is the entry point for a tool that does not read
+Claude skills.
+
+They exist because `docs/adding_a_source.md` is written for a human reading it
+start to finish and an agent does not read it that way — it greps, finds
+section 5, and misses the three rules in section 6 that make an id stable. The
+failure is silent: the adapter parses, the spec passes, and the ids change on
+every sync. None of it is a second copy of the reasoning; every rule links back
+to the section that argues for it, and
+[`spec/agent_instructions_spec.rb`](spec/agent_instructions_spec.rb) fails the
+build when one of those links stops resolving. Nothing under `.claude/` is
+packaged into the gem.
+
+Reading them costs a contributor who does not use an agent nothing, and they
+are worth a look either way: they are the checklist form of everything below.
+
 ## From a clone to a green suite
 
 Ruby 3.1 or newer. The version this gem is developed on is in

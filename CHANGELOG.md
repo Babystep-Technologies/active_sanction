@@ -389,6 +389,39 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
   own Node, deliberately separate from the gem's 3.1-to-4.0 Ruby matrix: an Astro release
   must never be the reason the library's build goes red.
 
+#### Instructions for a coding agent
+
+- **Two skills under `.claude/skills/`**, so an agent asked to add a sanctions list, or to fix
+  one whose publisher changed its format, arrives with the procedure already loaded instead of
+  inferring it ([#113](https://github.com/Babystep-Technologies/active_sanction/issues/113)).
+  `adding-a-source` is the walkthrough compressed into a working order; `repairing-a-source` is
+  the canary-to-fix loop. Two rather than one, because they are two jobs with different failure
+  modes: adding a list goes wrong by guessing at a rule nobody would guess, and repairing one
+  goes wrong by fixing the parse while quietly changing what a field means.
+- **The reason this is in the gem rather than in somebody's dotfiles** is that
+  `docs/adding_a_source.md` is 1,083 lines written for a human reading it start to finish, and
+  an agent does not read it that way. It greps, finds section 5, and misses the three rules in
+  section 6 that make an id stable — and the failure is silent, because the adapter parses, the
+  spec passes, and the ids change on every sync. A skill costs a contributor who does not use
+  one nothing, sits next to the code it describes, and goes stale visibly.
+- **One copy of the rules, in `.claude/rules/adapter-rules.md`**, which both skills read: every
+  date is a `PartialDate`, an id never depends on anything outside the record's own bytes, the
+  publisher's free text is kept verbatim, a fixture is trimmed from a real published file and
+  never written by hand, and no skill fetches a government endpoint on its own — publishers 403
+  non-browser user agents, so the command is named and a person runs it. Each rule links to the
+  section of `docs/adding_a_source.md` that argues for it rather than restating the argument.
+- **`spec/agent_instructions_spec.rb` is what makes "goes stale visibly" true.** Every relative
+  link in an agent-facing document has to resolve and every anchor has to name a heading that
+  still exists, because a pointer into a retitled section still lands somewhere real, at the top,
+  silently — the same breakage the site's link checker exists for. It also holds the skill
+  frontmatter to its shape, including the unquoted ` #` that YAML reads as a comment and
+  truncates a description at without an error anywhere.
+- **`AGENTS.md` for tools that do not read Claude skills**, as a thin pointer to
+  `CONTRIBUTING.md` rather than a third copy of the same rules.
+- **None of it ships.** `.claude/` was already excluded by the gemspec's leading-dot rule and
+  `AGENTS.md` is now named alongside `Gemfile` and `Rakefile`: both are instructions for working
+  on this repository and say nothing to an application that installed the gem.
+
 #### API stability, and what may change
 
 - **The public surface is enumerated rather than inferred**, in
