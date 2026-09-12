@@ -1,0 +1,224 @@
+---
+title: Error hierarchy
+description: Every error class, its parent, when it is raised, and whether it is retryable.
+sidebar:
+  order: 4
+---
+
+import errorsData from "../../../data/errors.json";
+
+Every class `ActiveSanction::Error` covers, alphabetically. Organised for
+lookup by class name — an operator with an exception class in front of them,
+not a narrative to read start to finish. For the tree shape and what to do
+about `retryable?` in a request path, see
+[Handle errors](/active_sanction/how-to/handling-errors/).
+
+The class list, its parent, and which attributes it adds are generated from
+the class hierarchy itself — see
+[`site/bin/generate_errors.rb`](https://github.com/Babystep-Technologies/active_sanction/blob/main/site/bin/generate_errors.rb) —
+so a subclass added under an existing parent appears here without an edit to
+this page. When it is raised and what `retryable?` resolves to are written by
+hand below, from reading the raising code.
+
+## Every member carries
+
+`source_id` (which list, or `nil`), `status` (the HTTP status behind the
+failure, where there was one), and `to_h` (both of those plus the message and
+`retryable?`, as a `Hash`) — from the `Error` module every class here mixes
+in. Rows below list only what a class adds beyond these three.
+
+`InvalidArgument` is also a Ruby `::ArgumentError`, and `MissingKey` is also a
+`::KeyError` — Ruby gives an exception one superclass, and both already had a
+standard-library class before this gem existed. `rescue ActiveSanction::Error`
+still catches both.
+
+## The four bundle failures
+
+`Snapshot::Bundle` raises four errors, and they warrant four different
+responses:
+
+| Class | Means | Response |
+|---|---|---|
+| `Snapshot::Bundle::Corrupt` | The bytes are damaged: truncated, a digest or record-count mismatch, a bad magic line | Obtain the bundle again |
+| `Snapshot::Bundle::UntrustedSignature` | The bytes are intact and signed by somebody other than the expected publisher | Do not screen against it |
+| `Snapshot::Bundle::Unsigned` | (a subclass of the above) Verification was asked for and there is no signature at all | Do not screen against it |
+| `Snapshot::Bundle::UnsupportedFormat` | Written under a format version, schema, or encoding this reader does not implement | Upgrade the gem |
+
+`Corrupt` and `UntrustedSignature` are deliberately different errors: "these
+bytes were damaged" and "these bytes came from somewhere else" are different
+incidents, and only one is fixed by downloading the file again.
+
+export const editorial = {
+  ConfigurationError: {
+    retryable: "Never (false, unconditionally).",
+    raised: "This installation is set up wrong: a blank user_agent, a negative timeout, a value a Configuration writer refuses.",
+  },
+  FetchError: {
+    retryable: "From the HTTP status: 408, 425, 429, and 5xx are true; every other status is false.",
+    raised: "The bytes could not be obtained. Raised directly by the fetch layer; HttpClient::Error and its subclasses cover net/http's own failures.",
+  },
+  "HttpClient::ConnectionError": {
+    retryable: "Always true — a DNS failure, a refused or reset connection, a TLS failure.",
+    raised: "The request never completed.",
+  },
+  "HttpClient::Error": {
+    retryable: "Inherited from FetchError: from the HTTP status, false when there is none.",
+    raised: "Base for every failure HttpClient raises where the server never produced a status to hand back. Not raised directly.",
+  },
+  "HttpClient::InvalidRedirect": {
+    retryable: "Never.",
+    raised: "A Location that cannot be resolved, or that leaves HTTP entirely.",
+  },
+  "HttpClient::RedirectLoop": {
+    retryable: "Never.",
+    raised: "A redirect chain that returns to a URL already visited.",
+  },
+  "HttpClient::ResponseError": {
+    retryable: "From the HTTP status carried on #response (inherited from FetchError).",
+    raised: "Raised by Response#success! for a status the caller declared fatal.",
+  },
+  "HttpClient::TimeoutError": {
+    retryable: "Always true.",
+    raised: "The connection or a read exceeded its timeout, and retries did not save it.",
+  },
+  "HttpClient::TooManyRedirects": {
+    retryable: "Never.",
+    raised: "The redirect chain exceeded max_redirects without reaching a body.",
+  },
+  IntegrityError: {
+    retryable: "Never.",
+    raised: "The bytes are not what they claim to be. Raised directly only where no more specific subclass below applies.",
+  },
+  InvalidArgument: {
+    retryable: "Never.",
+    raised: "A public method was called with something it cannot use.",
+  },
+  "Matcher::NotSynced": {
+    retryable: "Never — retrying does not create a snapshot that never existed.",
+    raised: "Nothing has ever been synced, so Matcher has nothing to screen against.",
+  },
+  MissingKey: {
+    retryable: "Never.",
+    raised: "A field or column asked for by name that does not exist.",
+  },
+  ParseError: {
+    retryable: "Never.",
+    raised: "The bytes arrived and could not be read as the declared format.",
+  },
+  "Parsers::XmlRecords::MalformedDocument": {
+    retryable: "Never (inherited from ParseError).",
+    raised: "Raised by an XML backend when the payload stops being well-formed XML.",
+  },
+  "PayloadCache::ChecksumMismatch": {
+    retryable: "Never.",
+    raised: "A cached payload's bytes no longer hash to the checksum recorded beside them.",
+  },
+  "PayloadCache::CorruptEntry": {
+    retryable: "Never.",
+    raised: "A cached payload cannot be trusted: the sidecar is unreadable, or its bytes do not match it.",
+  },
+  "PayloadCache::PayloadMissing": {
+    retryable: "Never.",
+    raised: "Nothing is stored under that source and checksum, or its blob is gone.",
+  },
+  QueryError: {
+    retryable: "Never.",
+    raised: "A screening query that cannot be run: an empty sources: list, a threshold outside 0..100, a limit of zero.",
+  },
+  "Snapshot::Bundle::Corrupt": {
+    retryable: "Never — the fix is obtaining the bundle again, not retrying the same bytes.",
+    raised: "A bundle is not what it says it is. See the four bundle failures above.",
+  },
+  "Snapshot::Bundle::Unsigned": {
+    retryable: "Never.",
+    raised: "Verification was asked for and the bundle carries no signature at all. See the four bundle failures above.",
+  },
+  "Snapshot::Bundle::UnsupportedFormat": {
+    retryable: "Never — the fix is upgrading the gem, not retrying.",
+    raised: "Written under a format version, schema, or encoding this reader does not implement. See the four bundle failures above.",
+  },
+  "Snapshot::Bundle::UntrustedSignature": {
+    retryable: "Never.",
+    raised: "The bundle is intact and somebody other than the expected publisher signed it. See the four bundle failures above.",
+  },
+  "Snapshot::ChecksumMismatch": {
+    retryable: "Never.",
+    raised: "A stored snapshot's content no longer hashes to the checksum stored beside it.",
+  },
+  SourceError: {
+    retryable: "Never (the base's own default) — a subclass below almost always overrides this.",
+    raised: "Something went wrong with one list. Raised directly only where the failure fits none of FetchError, ParseError, or IntegrityError.",
+  },
+  "Sources::DeclarationError": {
+    retryable: "Never.",
+    raised: "An adapter does not declare what Sources::Base requires, or is asked for a declaration it never made.",
+  },
+  "Sources::DuplicateKey": {
+    retryable: "Never.",
+    raised: "Two adapters try to register under the same key.",
+  },
+  "Sources::MissingPayload": {
+    retryable: "Always true.",
+    raised: "A source's file could not be obtained: the publisher confirmed a copy this process does not hold, and re-asking for it in full did not produce one either.",
+  },
+  "Sources::UnknownSource": {
+    retryable: "Never.",
+    raised: "A source key nothing is registered under is asked for.",
+  },
+  "Storage::CorruptSnapshot": {
+    retryable: "Never.",
+    raised: "A stored snapshot's bytes cannot be read as one, or claim to be a different source than the one they are filed under.",
+  },
+  "Storage::MissingSnapshot": {
+    retryable: "Never.",
+    raised: "A source has never been synced, or its snapshot has been deleted, asked for by name.",
+  },
+  "Storage::UnsupportedSchema": {
+    retryable: "Never.",
+    raised: "A stored snapshot was written under a schema version newer than this reader implements.",
+  },
+  StorageError: {
+    retryable: "Never (the base's own default).",
+    raised: "The store could not answer. Raised directly only where no more specific subclass applies.",
+  },
+  "Sync::Failed": {
+    retryable: "true only when every source that failed in the run failed retryably.",
+    raised: "Raised by Sync::Report#success!, for a caller that wants any failure in a run to be fatal. Never raised by the run itself.",
+  },
+  UnsupportedError: {
+    retryable: "Never.",
+    raised: "This object cannot do that: a backend without the capability asked for, an abstract method a subclass never implemented.",
+  },
+  "ValidatorStore::CorruptStore": {
+    retryable: "Never.",
+    raised: "A validator store's backing bytes cannot be read as validators.",
+  },
+};
+
+## Every class, alphabetically
+
+<table>
+  <thead>
+    <tr>
+      <th>Class</th>
+      <th>Parent</th>
+      <th>Retryable</th>
+      <th>Attributes added</th>
+      <th>Raised when</th>
+    </tr>
+  </thead>
+  <tbody>
+    {errorsData.errors.map((error) => {
+      const notes = editorial[error.name];
+      return (
+        <tr id={error.name.toLowerCase().replace(/::/g, "-")}>
+          <td><code>{error.name}</code></td>
+          <td><code>{error.parent}</code></td>
+          <td>{notes.retryable}</td>
+          <td>{error.own_attributes.length > 0 ? error.own_attributes.join(", ") : "—"}</td>
+          <td>{notes.raised}</td>
+        </tr>
+      );
+    })}
+  </tbody>
+</table>

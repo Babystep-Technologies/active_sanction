@@ -1,0 +1,110 @@
+{
+  "generated_by": "site/bin/generate_configuration.rb, via `rake site:configuration`",
+  "settings": [
+    {
+      "name": "cache_dir",
+      "type": "String",
+      "default": "$XDG_CACHE_HOME/active_sanction, or ~/.cache/active_sanction when unset"
+    },
+    {
+      "name": "candidate_limit",
+      "type": "Integer",
+      "default": "200"
+    },
+    {
+      "name": "doctor_tolerance",
+      "type": "Float",
+      "default": "0.1"
+    },
+    {
+      "name": "logger",
+      "type": "T.untyped",
+      "default": "nil"
+    },
+    {
+      "name": "max_redirects",
+      "type": "Integer",
+      "default": "5"
+    },
+    {
+      "name": "max_retries",
+      "type": "Integer",
+      "default": "2"
+    },
+    {
+      "name": "normalizer_dictionary",
+      "type": "ActiveSanction::Normalizer::Dictionary",
+      "default": "Normalizer::Dictionary"
+    },
+    {
+      "name": "open_timeout",
+      "type": "Numeric",
+      "default": "10"
+    },
+    {
+      "name": "read_timeout",
+      "type": "Numeric",
+      "default": "60"
+    },
+    {
+      "name": "retain_payloads",
+      "type": "Integer",
+      "default": "3"
+    },
+    {
+      "name": "retry_backoff",
+      "type": "Numeric",
+      "default": "1.0"
+    },
+    {
+      "name": "scorer_weights",
+      "type": "ActiveSanction::Scorer::Weights",
+      "default": "Scorer::Weights"
+    },
+    {
+      "name": "screening_limit",
+      "type": "Integer",
+      "default": "10"
+    },
+    {
+      "name": "screening_threshold",
+      "type": "Float",
+      "default": "75.0"
+    },
+    {
+      "name": "sources",
+      "type": "T.nilable(T::Array[Symbol])",
+      "default": "nil"
+    },
+    {
+      "name": "stale_after",
+      "type": "T.nilable(Numeric)",
+      "default": "86400"
+    },
+    {
+      "name": "storage",
+      "type": "ActiveSanction::Storage::Base",
+      "default": "Storage::FileSystem"
+    },
+    {
+      "name": "storage_dir",
+      "type": "String",
+      "default": "~/.active_sanction"
+    },
+    {
+      "name": "sync_concurrency",
+      "type": "Integer",
+      "default": "1"
+    },
+    {
+      "name": "user_agent",
+      "type": "String",
+      "default": "\"active_sanction/0.1.0 (+https://github.com/Babystep-Technologies/active_sanction)\""
+    },
+    {
+      "name": "xml_backend",
+      "type": "Symbol",
+      "default": ":rexml"
+    }
+  ]
+}

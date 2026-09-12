@@ -27,6 +27,12 @@ Metrics/BlockLength:
   Exclude:
     - "spec/**/*_spec.rb"
     - "active_sanction.gemspec"
+    # Every task here carries the same explanatory comment style as the rest
+    # of this codebase -- why it exists and what it is not part of -- rather
+    # than a bare one-liner, so the namespace blocks run long by the same
+    # reasoning Metrics/MethodLength already grants a value object's
+    # constructor: what is long is the documentation, not the logic.
+    - "Rakefile"
 
 Style/Documentation:
   Enabled: false
@@ -56,6 +62,9 @@ RSpec/DescribeClass:
     - "spec/site_samples_spec.rb"
     - "spec/site_sources_data_spec.rb"
     - "spec/site_weights_data_spec.rb"
+    - "spec/site_configuration_data_spec.rb"
+    - "spec/site_errors_data_spec.rb"
+    - "spec/site_accuracy_data_spec.rb"
     - "spec/site_tutorial_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
