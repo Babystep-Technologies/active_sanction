@@ -52,8 +52,13 @@ export default defineConfig({
       // the labels are for whoever reads them (#102).
       sidebar: [
         {
+          // A link rather than a group, because the tutorial is one page and
+          // a group holding it would be a heading with its own title repeated
+          // underneath. The other three quadrants keep their groups and hide
+          // their index page instead, which is the same fix for the shape
+          // they have.
           label: "Get started",
-          autogenerate: { directory: "tutorial" },
+          link: "/tutorial/",
         },
         {
           label: "Guides",

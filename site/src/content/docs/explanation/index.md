@@ -3,6 +3,11 @@ title: Explanation
 description: How matching works, and why the defaults are what they are.
 sidebar:
   order: 1
+  # The group heading in the sidebar is already this page's title, so listing
+  # it underneath repeats the word and buys nothing. Hidden from the tree,
+  # not from the site: the landing page's cards still link here, and so does
+  # every cross-reference between quadrants.
+  hidden: true
 ---
 
 Why the library works the way it does. Discursive rather than instructive:
