@@ -27,6 +27,10 @@ declined for being too useful, and no contribution is relicensed — see
 contributor licence agreement precisely because there is no relicensing right
 to reserve.
 
+## Where documentation goes
+
+Reference and explanation belong on [the documentation site](https://babystep-technologies.github.io/active_sanction/); the README links to them rather than restating them. The README stays the narrative and the quickstart — what stays there, what stays disclaimer, what a reader needs to evaluate the library without leaving GitHub — and everything else that the site has taken ownership of leaves the README as a one-line pointer. If a change touches a section the site already covers, update the site page rather than growing the README back; if a fact would then exist in full in both places, that is a bug, not a style choice.
+
 ## The two most useful contributions
 
 **A new list.** [`docs/adding_a_source.md`](docs/adding_a_source.md) is written
@@ -50,7 +54,16 @@ becomes visible.
 ## From a clone to a green suite
 
 Ruby 3.1 or newer. The version this gem is developed on is in
-[`.ruby-version`](.ruby-version), and CI builds every series from the floor up.
+[`.ruby-version`](.ruby-version), and CI builds every series from the floor
+up — 3.1, 3.2, 3.3, 3.4 and 4.0 — plus `ruby-head`, which is allowed to fail:
+a change upstream is news rather than a broken build, so that job reports in
+the checks list and leaves the badge green.
+[`spec/supported_rubies_spec.rb`](spec/supported_rubies_spec.rb) reads that
+matrix, `.ruby-version`, the gemspec's `required_ruby_version` and RuboCop's
+`TargetRubyVersion`, and fails when they stop agreeing — the version a
+change is written on being the one version no build ever ran is how that
+drift stays invisible
+([#80](https://github.com/Babystep-Technologies/active_sanction/issues/80)).
 
     $ git clone https://github.com/Babystep-Technologies/active_sanction.git
     $ cd active_sanction
@@ -89,6 +102,122 @@ rewrites:
 [`benchmark/results/accuracy.md`](benchmark/results/accuracy.md) is committed
 for the same reason the source baselines are: a diff there is a change in what
 this library finds, which is otherwise invisible in a code review.
+
+## Static typing
+
+Every file in `lib/` is `# typed: strict`, and new files are born that way: a
+signature written beside the code costs a line, and one retrofitted a
+milestone later costs an afternoon of reading the code back.
+
+    $ bundle exec srb tc      # or `bundle exec rake`, which runs it last
+
+`sorbet-runtime` is a dependency of the gem, because the signatures are
+inline `sig` blocks and inline `sig` blocks are ordinary method calls. It is
+pure Ruby and compiles nothing, so it clears the same bar the gemspec sets
+for Nokogiri. The static half — `sorbet` and `tapioca` — is in the Gemfile
+and never reaches an application.
+
+**What the types are for, and where they deliberately stop.** The canonical
+model is declared: `Entity` states that `dates_of_birth` is an array of
+`PartialDate`, so an adapter handing over the string a publisher wrote is a
+type error rather than a bug found three layers downstream. The runtime half
+of a signature is shallow — it sees the Array and not what is in it — so the
+adapter conformance group goes on asserting the element types per fixture,
+which is what covers an adapter written outside this repository. Everything
+a publisher wrote is `T.untyped` on the way in, because the value objects
+already coerce it and raise `InvalidArgument` — an `ArgumentError`, so the
+code around this library keeps its existing rescue — with messages written
+for whoever has to fix the record, and a type error would say less. Three
+places are `T.untyped` on purpose and say why in a comment where they sit:
+the source registry (duck-typed on `.key` and `.new`, which is what makes a
+bank's internal watchlist a first-class source), `XmlRecords::Backends`
+(same, for a backend registered from outside), and `Snapshot#entities` (the
+storage conformance group builds a snapshot of half-deserialized hashes on
+purpose, to prove it catches a store that hands them back).
+
+A host that wants none of it can turn every check off before requiring the
+gem, which is supported and tested:
+
+```ruby
+T::Configuration.default_checked_level = :never
+require "active_sanction"
+```
+
+**Consumers who typecheck their own code** need nothing from us but the gem:
+
+    $ bundle exec tapioca gem active_sanction
+
+reads the inline signatures through `sorbet-runtime` and writes an RBI that
+says what this version actually declares. No `rbi/active_sanction.rbi` is
+shipped, deliberately — a hand-maintained copy of the signatures would be a
+second source of truth, and a signature that lies is worse than none.
+
+The RBIs under `sorbet/` are the checker's own working files — generated
+definitions for the gems `lib/` reaches, plus one hand-written shim for the
+Rails generator surface — and are excluded from the packaged gem. Regenerate
+one with `bin/tapioca gem <name>`.
+
+## Benchmarks and the upstream canary
+
+`benchmark/` holds measurements that answer a design question rather than
+pass or fail, so they are not part of `rake`:
+
+    $ bundle exec rake benchmark:similarity          # the matching algorithms
+    $ bundle exec rake benchmark:index               # index build, memory, query latency
+    $ bundle exec rake benchmark:scorer              # scoring latency, and what a threshold buys
+    $ bundle exec rake benchmark:accuracy            # precision, recall and F1 against the labeled set
+    $ bundle exec rake benchmark:latency             # what a whole screening call costs
+    $ bundle exec rake benchmark:rescreen            # applying a diff to a book, against the naive full rescreen
+    $ RUBYOPT=--yjit bundle exec rake benchmark:similarity
+
+The labeled set behind `benchmark:accuracy` is
+[`benchmark/fixtures/labeled_set.yml`](benchmark/fixtures/labeled_set.yml):
+87 queries against the real published records the source fixtures hold, each
+one labeled with what it is supposed to find and what kind of damage it is
+doing to the name. Both harnesses hide the labeled records inside a
+synthetic corpus the size and shape of the real lists; run either against a
+real synced corpus instead with `BACKGROUND=store bundle exec rake
+benchmark:accuracy`.
+
+**The upstream canary** is a scheduled workflow that fetches every list from
+its real publisher on weekdays and compares what it measures against the
+baselines committed under [`.github/baselines`](.github/baselines)
+([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)),
+filing an issue when a government has changed something the gem must adapt
+to. It never runs as part of CI and never turns the CI badge red — a red
+build should mean our code broke, not that a source went down.
+[Detect when a publisher changes its format](https://babystep-technologies.github.io/active_sanction/how-to/detecting-format-drift/#the-upstream-canary-the-same-idea-run-on-a-schedule-against-real-endpoints)
+has the commands and the full mechanics; when adding a new source, commit
+its baseline in the same pull request as the adapter.
+
+## API documentation
+
+    $ bundle exec rake doc          # renders doc/
+    $ bundle exec yard stats --list-undoc
+
+Every public module, class, method and attribute in `lib/` carries a
+comment, and `rake doc` renders them. Types are not written twice:
+`yard-sorbet` reads the inline `sig` blocks and turns them into `@param` and
+`@return`, so the signature the checker reads is the signature the
+documentation shows. What is deliberately left undocumented is internal
+constants — column names, regex fragments, the `MEMBERS` lists the value
+objects serialize through — named for the code that reads them, where a
+comment restating the name would be noise.
+
+## Releasing
+
+`bundle exec rake install` installs the gem locally. A release is: bump
+`VERSION` in [`lib/active_sanction/version.rb`](lib/active_sanction/version.rb),
+move the `Unreleased` section of [`CHANGELOG.md`](CHANGELOG.md) under the new
+version with its date, then `bundle exec rake release`, which tags, pushes
+and publishes to [rubygems.org](https://rubygems.org).
+
+`MATCHER_VERSION` in the same file is bumped on a different occasion and for
+a different reason — whenever a change to the normalizer, the index, the
+similarity algorithms or the scorer could move a score — because an auditor
+asking "would this screening come out the same today?" needs the answer to
+that specific question rather than a release number that also answers
+several others.
 
 ## Sign your work
 

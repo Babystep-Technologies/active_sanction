@@ -1,0 +1,177 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Reads what README.md points at and reports links that go nowhere (#108).
+#
+#     $ bin/readme_linkcheck
+#     $ bin/readme_linkcheck README.md site/dist
+#
+# The README is the one document read on the GitHub repository page and
+# inside an installed gem, neither of which is Astro's build -- so
+# site/bin/linkcheck, which crawls site/dist, never sees it. This is the same
+# tool for the other side of the boundary: a relative link resolved against
+# the repository, an in-page `#anchor` resolved against this file's own
+# headings, and -- when site/dist has already been built in this job, which
+# it has by the time `pages.yml` reaches this step -- a link into the
+# published site resolved against that build's real ids, the same way
+# site/bin/linkcheck resolves one page's links against another's.
+#
+# Internal links fail the build; external links (anything not covered by the
+# two rules above) do not, for the reason site/bin/linkcheck gives: they are
+# somebody else's uptime, and half of what a README about sanctions lists
+# links to is a government endpoint.
+
+require "set"
+require "uri"
+
+class ReadmeLinkCheck
+  LINK = /\[([^\]]*)\]\(([^)\s]+)\)/
+  NON_HTTP = %w[mailto: tel: data: javascript:].freeze
+
+  Problem = Struct.new(:target, :reason, keyword_init: true)
+
+  def initialize(readme_path, site_dist: nil, site_base: nil)
+    @readme_path = readme_path
+    @root = File.dirname(File.expand_path(readme_path))
+    @site_dist = site_dist
+    @site_base = site_base
+    @problems = []
+  end
+
+  def run
+    text = File.read(@readme_path)
+    heading_ids = slugify_headings(text)
+    checked = 0
+
+    text.scan(LINK).map(&:last).each do |target|
+      next if NON_HTTP.any? { |prefix| target.start_with?(prefix) }
+
+      checked += 1
+      check(target, heading_ids)
+    end
+
+    report(checked)
+  end
+
+  private
+
+  def check(target, heading_ids)
+    if target.start_with?("#")
+      check_own_anchor(target, heading_ids)
+    elsif @site_base && target.start_with?(@site_base)
+      check_site_link(target)
+    elsif target.start_with?("http://", "https://")
+      nil # external: somebody else's uptime, not this build's to gate
+    else
+      check_relative_link(target)
+    end
+  end
+
+  def check_own_anchor(target, heading_ids)
+    fragment = target.delete_prefix("#")
+    return if heading_ids.include?(fragment)
+
+    @problems << Problem.new(target: target, reason: "no heading ##{fragment} in #{relative(@readme_path)}")
+  end
+
+  def check_relative_link(target)
+    path, _, fragment = target.partition("#")
+    resolved = File.expand_path(path, @root)
+
+    unless File.exist?(resolved)
+      @problems << Problem.new(target: target, reason: "no such file: #{path}")
+      return
+    end
+    return if fragment.empty? || !resolved.end_with?(".md")
+
+    heading_ids = slugify_headings(File.read(resolved))
+    return if heading_ids.include?(fragment)
+
+    @problems << Problem.new(target: target, reason: "no heading ##{fragment} in #{path}")
+  end
+
+  # Only reachable once `site/dist` exists, i.e. after the site has already
+  # been built earlier in the same job -- see the comment at the top of this
+  # file for why that is when this runs rather than always.
+  def check_site_link(target)
+    return unless @site_dist && Dir.exist?(@site_dist)
+
+    path, _, fragment = target.delete_prefix(@site_base).partition("#")
+    page, candidate = site_page(path)
+
+    unless File.exist?(candidate)
+      @problems << Problem.new(target: target, reason: "no page built at #{page}")
+      return
+    end
+    return if fragment.empty?
+
+    wanted = decode_fragment(fragment)
+    return if html_ids(candidate).include?(wanted)
+
+    @problems << Problem.new(target: target, reason: "no anchor ##{wanted} on #{page}")
+  end
+
+  # Astro renders "/foo/" (or the site root) as "foo/index.html".
+  def site_page(path)
+    return ["/", File.join(@site_dist, "index.html")] if path.empty?
+    return [path, File.join(@site_dist, path, "index.html")] if path.end_with?("/")
+
+    [path, File.join(@site_dist, path)]
+  end
+
+  def decode_fragment(fragment)
+    URI.decode_www_form_component(fragment)
+  rescue ArgumentError
+    fragment
+  end
+
+  def html_ids(path)
+    require "nokogiri"
+    nodes = Nokogiri::HTML(File.read(path)).css("[id], a[name]")
+    nodes.filter_map { |node| node["id"] || node["name"] }.to_set
+  end
+
+  # A rough version of GitHub's own heading slugger: strip everything but
+  # letters, digits, spaces, underscores and hyphens, lowercase, then turn
+  # runs of whitespace into a single hyphen. Good enough for this file's
+  # headings, none of which carry inline code or emoji.
+  def slugify_headings(text)
+    text.each_line.filter_map { |line| line[/\A#+\s+(.+)/, 1] }
+        .to_set { |heading| slugify(heading) }
+  end
+
+  def slugify(text)
+    text.downcase
+        .gsub(/[^[:alnum:]\s_-]/, "")
+        .strip
+        .gsub(/\s+/, "-")
+  end
+
+  def relative(path)
+    path.start_with?(@root) ? path.sub("#{@root}/", "") : path
+  end
+
+  def report(checked)
+    site_status = if @site_dist && Dir.exist?(@site_dist)
+                    "site links checked against #{relative(@site_dist)}"
+                  else
+                    "site links not checked -- no build at #{@site_dist.inspect}"
+                  end
+    puts "#{checked} links checked in #{relative(@readme_path)}, #{site_status}"
+
+    if @problems.empty?
+      puts "every internal link resolves, anchors included"
+      return 0
+    end
+
+    @problems.each { |problem| puts "  #{problem.target} -- #{problem.reason}" }
+    puts "#{@problems.length} broken"
+    1
+  end
+end
+
+readme = ARGV[0] || "README.md"
+site_dist = ARGV[1] || "site/dist"
+
+exit ReadmeLinkCheck.new(readme, site_dist: site_dist,
+                                 site_base: "https://babystep-technologies.github.io/active_sanction/").run
