@@ -68,6 +68,13 @@ Gem::Specification.new do |spec|
   # It exists to be published at a URL, and an application that installed this
   # gem has no use for the machinery that publishes it.
   #
+  # `AGENTS.md` and `.claude/` (#113) are instructions for a coding agent
+  # working *on* this repository -- which adapter to copy, which gates to run,
+  # which commands reach a government endpoint and must not be run unattended.
+  # They are toolchain in the same sense the Rakefile is, and say nothing to an
+  # application that installed the gem. The leading-dot rule below already
+  # excludes `.claude/`; `AGENTS.md` is named because it sits at the root.
+  #
   # What is deliberately kept is `docs/`, which is linked from the README and
   # is as much a part of the library as the code is. That is the whole reason
   # the site is not built out of `docs/`: doing so would ship an Astro config
@@ -77,6 +84,7 @@ Gem::Specification.new do |spec|
       (?:test|spec|features|sorbet|benchmark|canary|bin|site|\.github)/ |
       Gemfile |
       Rakefile |
+      AGENTS\.md |
       \.
     )
   }x
