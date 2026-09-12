@@ -1,0 +1,230 @@
+{
+  "generated_by": "site/bin/generate_errors.rb, via `rake site:errors`",
+  "errors": [
+    {
+      "name": "ConfigurationError",
+      "parent": "StandardError",
+      "own_attributes": [],
+      "own_overrides_retryable": true
+    },
+    {
+      "name": "FetchError",
+      "parent": "SourceError",
+      "own_attributes": [],
+      "own_overrides_retryable": true
+    },
+    {
+      "name": "HttpClient::ConnectionError",
+      "parent": "HttpClient::Error",
+      "own_attributes": [],
+      "own_overrides_retryable": true
+    },
+    {
+      "name": "HttpClient::Error",
+      "parent": "FetchError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "HttpClient::InvalidRedirect",
+      "parent": "HttpClient::Error",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "HttpClient::RedirectLoop",
+      "parent": "HttpClient::Error",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "HttpClient::ResponseError",
+      "parent": "HttpClient::Error",
+      "own_attributes": [
+        "response"
+      ],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "HttpClient::TimeoutError",
+      "parent": "HttpClient::Error",
+      "own_attributes": [],
+      "own_overrides_retryable": true
+    },
+    {
+      "name": "HttpClient::TooManyRedirects",
+      "parent": "HttpClient::Error",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "IntegrityError",
+      "parent": "SourceError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "InvalidArgument",
+      "parent": "ArgumentError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Matcher::NotSynced",
+      "parent": "StorageError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "MissingKey",
+      "parent": "KeyError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "ParseError",
+      "parent": "SourceError",
+      "own_attributes": [
+        "line",
+        "locator",
+        "offset",
+        "record"
+      ],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Parsers::XmlRecords::MalformedDocument",
+      "parent": "ParseError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "PayloadCache::ChecksumMismatch",
+      "parent": "PayloadCache::CorruptEntry",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "PayloadCache::CorruptEntry",
+      "parent": "IntegrityError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "PayloadCache::PayloadMissing",
+      "parent": "StorageError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "QueryError",
+      "parent": "InvalidArgument",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Snapshot::Bundle::Corrupt",
+      "parent": "IntegrityError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Snapshot::Bundle::Unsigned",
+      "parent": "Snapshot::Bundle::UntrustedSignature",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Snapshot::Bundle::UnsupportedFormat",
+      "parent": "StorageError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Snapshot::Bundle::UntrustedSignature",
+      "parent": "IntegrityError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Snapshot::ChecksumMismatch",
+      "parent": "IntegrityError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "SourceError",
+      "parent": "StandardError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Sources::DeclarationError",
+      "parent": "ConfigurationError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Sources::DuplicateKey",
+      "parent": "ConfigurationError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Sources::MissingPayload",
+      "parent": "FetchError",
+      "own_attributes": [],
+      "own_overrides_retryable": true
+    },
+    {
+      "name": "Sources::UnknownSource",
+      "parent": "ConfigurationError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Storage::CorruptSnapshot",
+      "parent": "StorageError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Storage::MissingSnapshot",
+      "parent": "StorageError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Storage::UnsupportedSchema",
+      "parent": "StorageError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "StorageError",
+      "parent": "StandardError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "Sync::Failed",
+      "parent": "StandardError",
+      "own_attributes": [
+        "report"
+      ],
+      "own_overrides_retryable": true
+    },
+    {
+      "name": "UnsupportedError",
+      "parent": "StandardError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    },
+    {
+      "name": "ValidatorStore::CorruptStore",
+      "parent": "StorageError",
+      "own_attributes": [],
+      "own_overrides_retryable": false
+    }
+  ]
+}

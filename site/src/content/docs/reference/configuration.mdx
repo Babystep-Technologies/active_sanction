@@ -1,0 +1,113 @@
+---
+title: Configuration
+description: Every setting Configuration accepts, its type, and its default.
+sidebar:
+  order: 3
+---
+
+import configurationData from "../../../data/configuration.json";
+
+Every setting `ActiveSanction.configure` and `Client.new` accept. Type and
+default come from `Configuration` itself — see
+[`site/bin/generate_configuration.rb`](https://github.com/Babystep-Technologies/active_sanction/blob/main/site/bin/generate_configuration.rb) —
+so a setting added or retyped here needs no edit to this page. The one line of
+effect for each is written by hand below the table. Full method signatures are
+in the [generated API documentation](/active_sanction/api/ActiveSanction/Configuration.html).
+
+An unknown setting, or a value a writer refuses, raises `ConfigurationError`
+at the point it is set. See the [error hierarchy](/active_sanction/reference/errors/).
+
+export const effect = {
+  user_agent: "Sent on every request. Cannot be blank — some publishers 403 a request with none.",
+  open_timeout: "Seconds to establish a connection.",
+  read_timeout: "Seconds to wait for the next chunk of a body, not for the whole of one.",
+  max_redirects: "Redirect hops followed before giving up.",
+  max_retries: "Attempts after the first, for a retryable failure.",
+  retry_backoff: "Seconds before the first retry, doubling on each one after it.",
+  cache_dir: "Where raw payloads and conditional-GET validators are cached. Recoverable by fetching again; safe to delete.",
+  storage_dir: "Where the filesystem store keeps parsed snapshots, when `storage` is left at its default.",
+  storage: "Where synced lists are read from and written to. Any Storage::Base — FileSystem, ActiveRecord, Memory, or your own.",
+  retain_payloads: "Raw payloads kept per source, for re-parsing or diffing a suspicious file.",
+  stale_after: "Seconds before `stale?` reports a source due for a sync. `nil` disables the clock; does not cap how long a cached copy may be used.",
+  sources: "Which lists a sync runs, by key. `nil` means every registered source.",
+  sync_concurrency: "How many publishers are fetched from at once — never how hard any one of them is asked.",
+  doctor_tolerance: "How far one of the doctor's measurements may move from the last sync before it is reported. Overridden per run with `tolerance:`.",
+  xml_backend: "Which XML library the XML toolkit parses with. `:nokogiri` for a host already parsing large documents.",
+  candidate_limit: "Names the index hands the scorer per query. Overridden per query with `limit:`.",
+  screening_threshold: "The lowest score a screening call reports, on the 0..100 scale. Overridden per query with `threshold:`.",
+  screening_limit: "Results a screening call returns, highest score first. Overridden per query with `limit:`.",
+  normalizer_dictionary: "The token lists the normalizer strips per entity type. See how matching works.",
+  scorer_weights: "What each signal the scorer reads is worth. See how matching works.",
+  logger: "Anything Logger-shaped, or `nil`.",
+};
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Effect</th>
+    </tr>
+  </thead>
+  <tbody>
+    {configurationData.settings.map((setting) => (
+      <tr id={setting.name.replace(/_/g, "-")}>
+        <td><code>{setting.name}</code></td>
+        <td><code>{setting.type}</code></td>
+        <td><code>{setting.default}</code></td>
+        <td>{effect[setting.name]}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+## Two settings that travel with every result
+
+`scorer_weights` and `normalizer_dictionary` are not simple values — they are
+objects with their own defaults, described in full on
+[How matching works](/active_sanction/explanation/how-matching-works/) rather
+than restated here. `scorer_weights` is stamped onto every `MatchResult`, so a
+tuned installation's decisions stay explainable after the defaults move.
+
+## `screening_threshold` and `candidate_limit`
+
+The two settings a host most often tunes.
+
+- **`screening_threshold`** trades recall for precision. See
+  [the accuracy report](/active_sanction/reference/accuracy/) for what moving
+  it away from the default costs, measured rather than guessed.
+- **`candidate_limit`** trades recall for latency: it bounds how many names the
+  index hands the scorer before a threshold is applied. See
+  [performance characteristics](/active_sanction/reference/performance/).
+
+## Reading and changing configuration
+
+{/* sample: runnable */}
+
+```ruby
+ActiveSanction.configure do |c|
+  c.user_agent = "my-app/1.0 (compliance@example.com)"
+  c.screening_threshold = 80
+end
+
+ActiveSanction.config.screening_threshold   # => 80.0
+```
+
+`Client.new` accepts every setting above as a keyword argument, for a process
+holding more than one configuration at once:
+
+{/* sample: illustrative -- needs a synced OFAC snapshot to be a useful client */}
+
+```ruby
+audit_client = ActiveSanction::Client.new(sources: %i[ofac_sdn], screening_threshold: 60)
+```
+
+`Configuration#with` derives a copy from an existing, frozen configuration
+with some settings changed:
+
+{/* sample: illustrative -- config here is a placeholder for a held Configuration */}
+
+```ruby
+audit = config.with(storage: pinned_store, sources: %i[ofac_sdn])
+```

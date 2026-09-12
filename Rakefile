@@ -79,6 +79,32 @@ namespace :site do
     ruby "site/bin/generate_weights.rb"
   end
 
+  # The configuration reference page (#109): every setting's type and default,
+  # read from Configuration.settings and a freshly built Configuration rather
+  # than typed onto the page. spec/site_configuration_data_spec.rb fails when
+  # it has drifted.
+  desc "Regenerate site/src/data/configuration.json from Configuration (#109)"
+  task :configuration do
+    ruby "site/bin/generate_configuration.rb"
+  end
+
+  # The error hierarchy reference page (#109): every class the library can
+  # raise, found by walking the object space rather than kept as a hand-typed
+  # list that silently misses the next subclass. spec/site_errors_data_spec.rb
+  # fails when it has drifted.
+  desc "Regenerate site/src/data/errors.json from the ActiveSanction::Error hierarchy (#109)"
+  task :errors do
+    ruby "site/bin/generate_errors.rb"
+  end
+
+  # The accuracy reference page (#109): the site's only rendering of
+  # benchmark/results/accuracy.md, copied rather than retyped so the two can
+  # never disagree. spec/site_accuracy_data_spec.rb fails when it has drifted.
+  desc "Regenerate the accuracy reference page from benchmark/results/accuracy.md (#109)"
+  task :accuracy do
+    ruby "site/bin/generate_accuracy.rb"
+  end
+
   desc "Build the documentation site, with the API docs under /api/ (#103)"
   task :build do
     sh "npm", "ci", chdir: "site"
