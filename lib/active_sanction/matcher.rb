@@ -19,16 +19,16 @@ module ActiveSanction
   #   matcher = ActiveSanction::Matcher.build(store)
   #
   #   results = matcher.screen(
-  #     name:          "Vladimir Putin",
+  #     name:          "Bosco Ntaganda",
   #     type:          :individual,
-  #     date_of_birth: "1952-10-07",
-  #     countries:     %w[RU],
+  #     date_of_birth: "1973",
+  #     countries:     %w[CD],
   #     sources:       %i[ofac_sdn un_consolidated],
   #     threshold:     75,
   #     limit:         10
   #   )
   #
-  #   results.first.score        # => 97.3
+  #   results.first.score        # => 100.0
   #   results.first.snapshot_id  # => "sha256:9f86d081884c7d65..."
   #
   # Stage five, and the only one with nothing after it. It runs the pipeline
@@ -221,8 +221,8 @@ module ActiveSanction
 
     # The hits, highest score first:
     #
-    #   matcher.screen(name: "Vladimir Putin", threshold: 75)
-    #   matcher.screen("Vladimir Putin")            # a name and nothing else
+    #   matcher.screen(name: "Bosco Ntaganda", threshold: 75)
+    #   matcher.screen("Bosco Ntaganda")            # a name and nothing else
     #   matcher.screen(query, limit: 25)            # a Query, with one option changed
     #
     # An empty array is a real answer and the common one -- most customers are
@@ -249,7 +249,7 @@ module ActiveSanction
 
     # A book of names against one list version:
     #
-    #   matcher.screen_all(["Vladimir Putin", "Gazprom"], threshold: 80)
+    #   matcher.screen_all(["Bosco Ntaganda", "Gazprom"], threshold: 80)
     #   matcher.screen_all(customers.map { |c| { name: c.name, dob: c.born_on } })
     #
     # Index-aligned: the nth element is the nth query's results, and it is an

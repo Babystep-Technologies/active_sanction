@@ -14,12 +14,12 @@ require "active_sanction/scorer/weights"
 module ActiveSanction
   # One hit, and everything needed to defend it years later.
   #
-  #   result = ActiveSanction.screen(name: "Vladimir Putin", type: :individual).first
+  #   result = ActiveSanction.screen(name: "Bosco Ntaganda", type: :individual).first
   #
-  #   result.score            # => 97.3
-  #   result.entity.id        # => "ofac_sdn:36320"
+  #   result.score            # => 100.0
+  #   result.entity.id        # => "un_consolidated:6908021"
   #   result.matched_name     # => the specific Name that produced the score
-  #   result.source           # => :ofac_sdn
+  #   result.source           # => :un_consolidated
   #   result.explanation      # => [Reason, ...], summing to the score
   #   result.snapshot_id      # => "sha256:9f86d081884c7d65..."
   #   result.matcher_version  # => "1"

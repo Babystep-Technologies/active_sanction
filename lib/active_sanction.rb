@@ -69,7 +69,7 @@ module ActiveSanction
     # The client the module-level calls answer through, built from the
     # defaults on first use so that nothing has to remember to initialize it.
     #
-    #   ActiveSanction.client.screen("Vladimir Putin")   # same as ActiveSanction.screen(...)
+    #   ActiveSanction.client.screen("Bosco Ntaganda")   # same as ActiveSanction.screen(...)
     #
     # Everything below is sugar over this object. A process that needs two
     # configurations at once -- a pinned list version for an audit re-run
@@ -167,7 +167,7 @@ module ActiveSanction
 
     # Screens one name against every configured list:
     #
-    #   ActiveSanction.screen(name: "Vladimir Putin", type: :individual, threshold: 75)
+    #   ActiveSanction.screen(name: "Bosco Ntaganda", type: :individual, threshold: 75)
     #
     # Sugar over .matcher, which is where everything this does is documented.
     sig { params(query: T.untyped, overrides: T.untyped).returns(T::Array[MatchResult]) }
@@ -228,7 +228,7 @@ module ActiveSanction
     # Applies a snapshot diff to a book of subjects, and returns the alerts:
     #
     #   book = [
-    #     ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin", date_of_birth: "1952-10-07"),
+    #     ActiveSanction::Subject.new(id: "cust_1", name: "Bosco Ntaganda", date_of_birth: "1973"),
     #     ActiveSanction::Subject.new(id: "cust_2", name: "Jane Miller")
     #   ]
     #

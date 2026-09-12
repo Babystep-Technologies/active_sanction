@@ -38,7 +38,7 @@ module SyntheticCorpus
 
   SURNAMES = %w[
     abbas zawahiri qaddafi nasrallah zaydan teir zahhar hakim mansour saleh
-    putin lavrov shoigu ivanov petrov sidorov volkov orlov sokolov popov
+    ntaganda lavrov shoigu ivanov petrov sidorov volkov orlov sokolov popov
     garcia rodriguez martinez lopez gonzalez perez sanchez ramirez torres flores
     zhang wang chen liu yang huang zhao wu zhou xu
     al-masri al-suri al-libi al-jazairi al-yemeni

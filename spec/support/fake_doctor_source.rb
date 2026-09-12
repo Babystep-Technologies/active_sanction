@@ -51,12 +51,12 @@ class FakeDoctorSource
   # an example can take one away and watch the doctor notice.
   def self.entity(source, id = 1, **without)
     fields = {
-      names: [ActiveSanction::Name.new(value: "PUTIN, Vladimir Vladimirovich"),
-              ActiveSanction::Name.new(value: "PUTIN, Vladimir", kind: :aka)],
-      addresses: [ActiveSanction::Address.new(country: "RU")],
+      names: [ActiveSanction::Name.new(value: "NTAGANDA, Bosco"),
+              ActiveSanction::Name.new(value: "NTAGENDA, Bosco", kind: :aka)],
+      addresses: [ActiveSanction::Address.new(country: "CD")],
       identifiers: [ActiveSanction::Identifier.new(kind: :passport, value: "51NO#{id}")],
-      dates_of_birth: [ActiveSanction::PartialDate.new(year: 1952, month: 10, day: 7)],
-      nationalities: ["RU"], programs: ["UKRAINE-EO14024"], remarks: "Born in Leningrad"
+      dates_of_birth: [ActiveSanction::PartialDate.new(year: 1973)],
+      nationalities: ["CD"], programs: ["DRC"], remarks: "Born in Rwanda"
     }
     ActiveSanction::Entity.new(id: "#{source}:#{id}", source: source, source_ref: id.to_s,
                                type: :individual, **fields.merge(without))

@@ -15,8 +15,8 @@ ActiveSanction fetches the lists a jurisdiction publishes, parses each of them i
 ```ruby
 ActiveSanction.sync!
 
-ActiveSanction.screen(name: "Vladimir Putin", type: :individual, date_of_birth: "1952-10-07")
-# => [#<MatchResult score=97.3 source=:ofac_sdn matched_name="PUTIN, Vladimir Vladimirovich">]
+ActiveSanction.screen(name: "Bosco Ntaganda", type: :individual, date_of_birth: "1973")
+# => [#<MatchResult score=100.0 source=:un_consolidated matched_name="Bosco Ntaganda">]
 ```
 
 ## A screening aid, not legal advice
@@ -108,20 +108,22 @@ The first run downloads each list in full. Later ones ask every publisher whethe
 
 ```ruby
 results = ActiveSanction.screen(
-  name:          "Vladimir Putin",
+  name:          "Bosco Ntaganda",
   type:          :individual,
-  date_of_birth: "1952-10-07",
-  countries:     %w[RU]
+  date_of_birth: "1973",
+  countries:     %w[CD]
 )
 
 hit = results.first
-hit.score                       # => 97.3
-hit.source                      # => :ofac_sdn
-hit.matched_name.value          # => "PUTIN, Vladimir Vladimirovich"
+hit.score                       # => 100.0
+hit.source                      # => :un_consolidated
+hit.matched_name.value          # => "Bosco Ntaganda", an alias; the UN
+                                #    publishes him as "BOSCO TAGANDA"
 hit.explanation.map(&:to_s)
-# => ["+76.3 name: matched primary name \"PUTIN, Vladimir Vladimirovich\"",
-#     "+15.0 dob: date of birth 1952-10-07 matches",
-#     "+6.0 nationality: RU matches"]
+# => ["+100.0 name: matched alias \"Bosco Ntaganda\" (aka)",
+#     "+6.0 dob: date of birth 1973 overlaps listed 1973 to 1974",
+#     "+6.0 nationality: CD matches",
+#     "-12.0 clamp: 112.0 capped to 100.0"]
 
 JSON.generate(hit.to_h)         # into your audit record
 ```
@@ -492,20 +494,20 @@ A few things are easy to get wrong here, so they are worth stating rather than l
 
 ```ruby
 results = ActiveSanction.screen(
-  name:          "Vladimir Putin",
+  name:          "Bosco Ntaganda",
   type:          :individual,
-  date_of_birth: "1952-10-07",
-  countries:     %w[RU],
+  date_of_birth: "1973",
+  countries:     %w[CD],
   sources:       %i[ofac_sdn un_consolidated],   # default: every synced list
   threshold:     75,
   limit:         10
 )
 
 hit = results.first
-hit.score            # => 97.3
+hit.score            # => 100.0
 hit.entity           # => Entity
 hit.matched_name     # => the specific Name that produced the score
-hit.source           # => :ofac_sdn
+hit.source           # => :un_consolidated
 hit.explanation      # => [Reason, ...], summing to the score
 hit.snapshot_id      # => "sha256:9f86d081884c7d65..."
 hit.matcher_version  # => "1"
@@ -534,7 +536,7 @@ CLIENT = ActiveSanction::Client.new(
 )
 
 CLIENT.sync!
-CLIENT.screen(name: "Vladimir Putin")
+CLIENT.screen(name: "Bosco Ntaganda")
 CLIENT.screen_all(customers.map { |c| { name: c.name, dob: c.born_on } })   # one array of results per query
 ```
 

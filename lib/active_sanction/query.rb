@@ -11,10 +11,10 @@ module ActiveSanction
   # search is to be run.
   #
   #   query = ActiveSanction::Query.build(
-  #     name:          "Vladimir Putin",
+  #     name:          "Bosco Ntaganda",
   #     type:          :individual,
-  #     date_of_birth: "1952-10-07",
-  #     countries:     %w[RU],
+  #     date_of_birth: "1973",
+  #     countries:     %w[CD],
   #     sources:       %i[ofac_sdn un_consolidated],
   #     threshold:     75,
   #     limit:         10
@@ -117,8 +117,8 @@ module ActiveSanction
 
       # Whatever a caller had, as a Query:
       #
-      #   Query.build("Vladimir Putin")
-      #   Query.build(name: "Vladimir Putin", threshold: 80)
+      #   Query.build("Bosco Ntaganda")
+      #   Query.build(name: "Bosco Ntaganda", threshold: 80)
       #   Query.build(query, limit: 5)         # the same query, with one option changed
       #
       # A bare String or Name is a query about that name and nothing else,

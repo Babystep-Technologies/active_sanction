@@ -17,7 +17,7 @@ module ActiveSanction
   # about a book of business.
   #
   #   book = [
-  #     ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin", date_of_birth: "1952-10-07"),
+  #     ActiveSanction::Subject.new(id: "cust_1", name: "Bosco Ntaganda", date_of_birth: "1973"),
   #     ActiveSanction::Subject.new(id: "cust_2", name: "Jane Miller")
   #   ]
   #

@@ -3,10 +3,10 @@
 RSpec.describe ActiveSanction do
   after { described_class.reset! }
 
-  def putin
+  def ntaganda
     ActiveSanction::Entity.new(
       id: "ofac_sdn:1", source: :ofac_sdn, type: :individual,
-      names: [ActiveSanction::Name.new(value: "PUTIN, Vladimir Vladimirovich")]
+      names: [ActiveSanction::Name.new(value: "NTAGANDA, Bosco")]
     )
   end
 
@@ -28,7 +28,7 @@ RSpec.describe ActiveSanction do
 
   describe ".storage" do
     it "is the configured store" do
-      store = synced(putin)
+      store = synced(ntaganda)
       described_class.configure { |c| c.storage = store }
 
       expect(described_class.storage).to be(store)
@@ -36,42 +36,42 @@ RSpec.describe ActiveSanction do
   end
 
   describe ".screen" do
-    before { described_class.configure { |c| c.storage = synced(putin) } }
+    before { described_class.configure { |c| c.storage = synced(ntaganda) } }
 
     it "screens a name against the configured lists" do
-      expect(described_class.screen(name: "Vladimir Putin").first.entity.id).to eq("ofac_sdn:1")
+      expect(described_class.screen(name: "Bosco Ntaganda").first.entity.id).to eq("ofac_sdn:1")
     end
 
     it "takes the search options the matcher takes" do
-      expect(described_class.screen(name: "Vladimir Putin", threshold: 99)).to eq([])
+      expect(described_class.screen(name: "Bosco Ntaganda", threshold: 99)).to eq([])
     end
 
     it "returns results stamped for an audit" do
-      expect(described_class.screen("Vladimir Putin").first.snapshot_id).to start_with("sha256:")
+      expect(described_class.screen("Bosco Ntaganda").first.snapshot_id).to start_with("sha256:")
     end
 
     it "raises rather than reporting clear when nothing has been synced" do
       described_class.configure { |c| c.storage = ActiveSanction::Storage::Memory.new }
       described_class.reload!
 
-      expect { described_class.screen("Vladimir Putin") }.to raise_error(ActiveSanction::Matcher::NotSynced)
+      expect { described_class.screen("Bosco Ntaganda") }.to raise_error(ActiveSanction::Matcher::NotSynced)
     end
   end
 
   describe ".screen_all" do
-    before { described_class.configure { |c| c.storage = synced(putin) } }
+    before { described_class.configure { |c| c.storage = synced(ntaganda) } }
 
     it "returns one array of results per name" do
-      expect(described_class.screen_all(["Vladimir Putin", "Jane Wilson of Dorset"]).map(&:size)).to eq([1, 0])
+      expect(described_class.screen_all(["Bosco Ntaganda", "Jane Wilson of Dorset"]).map(&:size)).to eq([1, 0])
     end
   end
 
   describe ".rescreen" do
-    before { described_class.configure { |c| c.storage = synced(putin) } }
+    before { described_class.configure { |c| c.storage = synced(ntaganda) } }
 
     it "applies a diff to a book through the default client" do
       changes = described_class.diff(:ofac_sdn, from: ActiveSanction::Snapshot.new(source: :ofac_sdn, entities: []))
-      book = [ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin"),
+      book = [ActiveSanction::Subject.new(id: "cust_1", name: "Bosco Ntaganda"),
               ActiveSanction::Subject.new(id: "cust_2", name: "Jane Wilson of Dorset")]
 
       alerts = described_class.rescreen(book, diff: changes, threshold: 75)
@@ -85,7 +85,7 @@ RSpec.describe ActiveSanction do
       FakeSyncSource.new(:un_consolidated, entities: entities)
     end
 
-    before { described_class.configure { |c| c.storage = synced(putin) } }
+    before { described_class.configure { |c| c.storage = synced(ntaganda) } }
 
     it "fetches, parses and stores the sources it is given" do
       described_class.sync!(un)
@@ -101,10 +101,10 @@ RSpec.describe ActiveSanction do
     # one has to drop it when a list changes or a process goes on screening
     # against the version it booted with.
     it "drops the shared matcher when a list changed" do
-      described_class.screen("Vladimir Putin")
+      described_class.screen("Bosco Ntaganda")
       described_class.sync!(un)
 
-      expect(described_class.screen("Vladimir Putin").map(&:source)).to eq(%i[ofac_sdn un_consolidated])
+      expect(described_class.screen("Bosco Ntaganda").map(&:source)).to eq(%i[ofac_sdn un_consolidated])
     end
 
     # The whole point of the run: it reports a failure rather than raising one.
@@ -131,7 +131,7 @@ RSpec.describe ActiveSanction do
       FakeDoctorSource.new(:un_consolidated, entities: entities)
     end
 
-    before { described_class.configure { |c| c.storage = synced(putin) } }
+    before { described_class.configure { |c| c.storage = synced(ntaganda) } }
 
     it "diagnoses the sources it is given" do
       expect(described_class.doctor(un).sources).to eq(%i[un_consolidated])
@@ -163,7 +163,7 @@ RSpec.describe ActiveSanction do
   end
 
   describe ".matcher" do
-    before { described_class.configure { |c| c.storage = synced(putin) } }
+    before { described_class.configure { |c| c.storage = synced(ntaganda) } }
 
     # Building one indexes every stored list, so it happens once and is held.
     it "builds one matcher and holds it" do
@@ -173,7 +173,7 @@ RSpec.describe ActiveSanction do
     end
 
     it "screens the same matcher from many threads" do
-      answers = Array.new(8) { Thread.new { described_class.screen("Vladimir Putin").map(&:score) } }
+      answers = Array.new(8) { Thread.new { described_class.screen("Bosco Ntaganda").map(&:score) } }
 
       expect(answers.map(&:value).uniq.size).to eq(1)
     end
@@ -190,7 +190,7 @@ RSpec.describe ActiveSanction do
     # A matcher is built once and never updated, which is what lets it be
     # screened from many threads without a lock. A sync replaces it.
     it "drops the held matcher so the next call builds one over what is stored now" do
-      described_class.configure { |c| c.storage = synced(putin) }
+      described_class.configure { |c| c.storage = synced(ntaganda) }
       before = described_class.matcher
 
       expect(described_class.reload!.matcher).not_to be(before)
@@ -216,7 +216,7 @@ RSpec.describe ActiveSanction do
     # client replaced, so configuring builds a new one rather than editing this.
     it "is replaced by configure, which is what drops a matcher built over the old store" do
       before = described_class.client
-      described_class.configure { |c| c.storage = synced(putin) }
+      described_class.configure { |c| c.storage = synced(ntaganda) }
 
       expect(described_class.client).not_to be(before)
     end
@@ -244,7 +244,7 @@ RSpec.describe ActiveSanction do
     end
 
     it "keeps a store the application named, which is not derived from the directory" do
-      store = synced(putin)
+      store = synced(ntaganda)
       described_class.configure { |c| c.storage = store }
       described_class.configure { |c| c.max_retries = 0 }
 
@@ -287,7 +287,7 @@ RSpec.describe ActiveSanction do
 
   describe ".reset!" do
     it "drops the matcher too, which held the store the old configuration named" do
-      described_class.configure { |c| c.storage = synced(putin) }
+      described_class.configure { |c| c.storage = synced(ntaganda) }
       described_class.matcher
       described_class.reset!
 
@@ -295,7 +295,7 @@ RSpec.describe ActiveSanction do
     end
 
     it "drops the default client, so the next call builds one from the defaults" do
-      described_class.configure { |c| c.storage = synced(putin) }
+      described_class.configure { |c| c.storage = synced(ntaganda) }
       before = described_class.client
 
       expect(described_class.reset!.client).not_to be(before)

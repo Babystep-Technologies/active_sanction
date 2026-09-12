@@ -3,7 +3,7 @@
 RSpec.describe ActiveSanction::Query do
   after { ActiveSanction.reset! }
 
-  def query(**overrides) = described_class.build(name: "Vladimir Putin", **overrides)
+  def query(**overrides) = described_class.build(name: "Bosco Ntaganda", **overrides)
 
   describe "the evidence" do
     it "builds the subject the scorer compares against" do
@@ -13,11 +13,11 @@ RSpec.describe ActiveSanction::Query do
     # Folding is what a screening call does once and a naive one does per
     # candidate. See Scorer::Subject.
     it "folds the name once, at construction" do
-      expect(query.form.value).to eq("vladimir putin")
+      expect(query.form.value).to eq("bosco ntaganda")
     end
 
     it "keeps the name as the caller wrote it, which is what a report quotes" do
-      expect(query.name).to eq("Vladimir Putin")
+      expect(query.name).to eq("Bosco Ntaganda")
     end
 
     it "refuses a name that folds away to nothing" do
@@ -25,7 +25,7 @@ RSpec.describe ActiveSanction::Query do
     end
 
     it "reads the dates of birth" do
-      expect(query(date_of_birth: "1952-10-07").dates_of_birth.map(&:to_s)).to eq(["1952-10-07"])
+      expect(query(date_of_birth: "1973").dates_of_birth.map(&:to_s)).to eq(["1973"])
     end
 
     it "reads the identifiers" do
@@ -41,7 +41,7 @@ RSpec.describe ActiveSanction::Query do
     end
 
     it "reads countries as nationalities" do
-      expect(query(countries: %w[RU]).nationalities).to eq(%w[RU])
+      expect(query(countries: %w[CD]).nationalities).to eq(%w[CD])
     end
 
     it "reads country as nationalities" do
@@ -49,15 +49,15 @@ RSpec.describe ActiveSanction::Query do
     end
 
     it "reads source as sources" do
-      expect(described_class.build(name: "Putin", source: :ofac_sdn).sources).to eq(%i[ofac_sdn])
+      expect(described_class.build(name: "Ntaganda", source: :ofac_sdn).sources).to eq(%i[ofac_sdn])
     end
 
     it "emits the canonical plural from to_h" do
-      expect(described_class.build(name: "Putin", dob: "1952").to_h.keys).to include(:dates_of_birth)
+      expect(described_class.build(name: "Ntaganda", dob: "1952").to_h.keys).to include(:dates_of_birth)
     end
 
     it "refuses two spellings of the same field, which is a typo rather than a merge" do
-      expect { described_class.build(name: "Putin", dob: "1952", dates_of_birth: "1953") }
+      expect { described_class.build(name: "Ntaganda", dob: "1952", dates_of_birth: "1953") }
         .to raise_error(ArgumentError, /same field/)
     end
   end
@@ -142,15 +142,15 @@ RSpec.describe ActiveSanction::Query do
 
   describe ".build" do
     it "takes a bare name, which is what a batch of names is a list of" do
-      expect(described_class.build("Vladimir Putin").name).to eq("Vladimir Putin")
+      expect(described_class.build("Bosco Ntaganda").name).to eq("Bosco Ntaganda")
     end
 
     it "takes a Name" do
-      expect(described_class.build(ActiveSanction::Name.new(value: "Vladimir Putin")).name).to eq("Vladimir Putin")
+      expect(described_class.build(ActiveSanction::Name.new(value: "Bosco Ntaganda")).name).to eq("Bosco Ntaganda")
     end
 
     it "takes a hash of attributes" do
-      expect(described_class.build(name: "Putin", threshold: 80).threshold).to eq(80.0)
+      expect(described_class.build(name: "Ntaganda", threshold: 80).threshold).to eq(80.0)
     end
 
     it "returns a query it was handed unchanged" do
@@ -168,30 +168,31 @@ RSpec.describe ActiveSanction::Query do
     end
 
     it "lets an override win over the hash it was given" do
-      expect(described_class.build({ name: "Putin", limit: 5 }, limit: 9).limit).to eq(9)
+      expect(described_class.build({ name: "Ntaganda", limit: 5 }, limit: 9).limit).to eq(9)
     end
 
     it "lets an override name the field by its other spelling" do
-      expect(described_class.build({ name: "Putin", dates_of_birth: "1952" }, dob: "1953").dates_of_birth.map(&:to_s))
-        .to eq(["1953"])
+      built = described_class.build({ name: "Ntaganda", dates_of_birth: "1952" }, dob: "1953")
+
+      expect(built.dates_of_birth.map(&:to_s)).to eq(["1953"])
     end
   end
 
   describe "serialization" do
     it "round-trips through to_h" do
-      original = query(type: :individual, dob: "1952-10-07", countries: %w[RU], sources: %i[ofac_sdn], threshold: 80)
+      original = query(type: :individual, dob: "1973", countries: %w[CD], sources: %i[ofac_sdn], threshold: 80)
 
       expect(described_class.from_h(original.to_h)).to eq(original)
     end
 
     it "round-trips through JSON, which is how one reaches an audit record" do
-      original = query(type: :individual, dob: "1952-10-07", identifier: "AB-123456")
+      original = query(type: :individual, dob: "1973", identifier: "AB-123456")
 
       expect(described_class.from_h(JSON.parse(JSON.generate(original.to_h)))).to eq(original)
     end
 
     it "refuses an attribute it does not have" do
-      expect { described_class.from_h(name: "Putin", fuzzy: true) }
+      expect { described_class.from_h(name: "Ntaganda", fuzzy: true) }
         .to raise_error(ArgumentError, /unknown Query attribute/)
     end
   end
@@ -202,7 +203,7 @@ RSpec.describe ActiveSanction::Query do
     end
 
     it "compares by value" do
-      built = described_class.build(name: "Vladimir Putin", threshold: 80)
+      built = described_class.build(name: "Bosco Ntaganda", threshold: 80)
 
       expect(query(threshold: 80)).to eq(built)
     end
@@ -216,7 +217,7 @@ RSpec.describe ActiveSanction::Query do
     end
 
     it "says what it is" do
-      expect(query.inspect).to eq('#<ActiveSanction::Query "Vladimir Putin" threshold=75.0 limit=10>')
+      expect(query.inspect).to eq('#<ActiveSanction::Query "Bosco Ntaganda" threshold=75.0 limit=10>')
     end
   end
 end

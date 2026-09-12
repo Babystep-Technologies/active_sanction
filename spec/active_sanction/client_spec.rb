@@ -16,7 +16,7 @@ RSpec.describe ActiveSanction::Client do
     )
   end
 
-  def putin(source = :ofac_sdn) = entity(source, 1, "PUTIN, Vladimir Vladimirovich")
+  def ntaganda(source = :ofac_sdn) = entity(source, 1, "NTAGANDA, Bosco")
   def gazprom(source = :un_consolidated) = entity(source, 2, "GAZPROM NEFT")
 
   # A store holding one snapshot per source it is given.
@@ -28,7 +28,7 @@ RSpec.describe ActiveSanction::Client do
     end
   end
 
-  def both = store(ofac_sdn: [putin], un_consolidated: [gazprom])
+  def both = store(ofac_sdn: [ntaganda], un_consolidated: [gazprom])
 
   # A registered adapter with the network taken out, so that a sync given no
   # arguments has a list of its own to resolve `config.sources` against.
@@ -114,7 +114,7 @@ RSpec.describe ActiveSanction::Client do
     it "screens against its own store" do
       client = described_class.new(storage: both)
 
-      expect(client.screen("Vladimir Putin").first.entity.id).to eq("ofac_sdn:1")
+      expect(client.screen("Bosco Ntaganda").first.entity.id).to eq("ofac_sdn:1")
     end
 
     # The acceptance criterion this class exists for: one tenant's obligations
@@ -123,15 +123,15 @@ RSpec.describe ActiveSanction::Client do
       ofac = described_class.new(storage: both, sources: %i[ofac_sdn])
       un = described_class.new(storage: both, sources: %i[un_consolidated])
 
-      expect([ofac.screen("Gazprom Neft"), un.screen("Vladimir Putin")]).to eq([[], []])
+      expect([ofac.screen("Gazprom Neft"), un.screen("Bosco Ntaganda")]).to eq([[], []])
     end
 
     # The other half of the acceptance criterion, and the reason the hosted
     # service needs this: an audit re-run screens against the list version a
     # decision was actually made under, beside live traffic on today's.
     it "screens a pinned list version beside the current one" do
-      current = described_class.new(storage: store(ofac_sdn: [putin]))
-      january = described_class.new(storage: store(ofac_sdn: [putin, gazprom(:ofac_sdn)]))
+      current = described_class.new(storage: store(ofac_sdn: [ntaganda]))
+      january = described_class.new(storage: store(ofac_sdn: [ntaganda, gazprom(:ofac_sdn)]))
 
       expect([current, january].map { |client| client.screen("Gazprom Neft").size }).to eq([0, 1])
     end
@@ -142,24 +142,24 @@ RSpec.describe ActiveSanction::Client do
     it "defaults a query to its own threshold, not the default client's" do
       client = described_class.new(storage: both, screening_threshold: 99)
 
-      expect(client.screen("Vladimir Putin")).to eq([])
+      expect(client.screen("Bosco Ntaganda")).to eq([])
     end
 
     it "leaves the default client's threshold where it found it" do
-      described_class.new(storage: both, screening_threshold: 99).screen("Vladimir Putin")
+      described_class.new(storage: both, screening_threshold: 99).screen("Bosco Ntaganda")
 
       expect(ActiveSanction.config.screening_threshold)
         .to eq(ActiveSanction::Configuration::DEFAULT_SCREENING_THRESHOLD)
     end
 
     it "takes the search options a matcher takes" do
-      expect(described_class.new(storage: both).screen(name: "Vladimir Putin", threshold: 99)).to eq([])
+      expect(described_class.new(storage: both).screen(name: "Bosco Ntaganda", threshold: 99)).to eq([])
     end
 
     it "raises rather than reporting clear when nothing has been synced" do
       client = described_class.new(storage: ActiveSanction::Storage::Memory.new)
 
-      expect { client.screen("Vladimir Putin") }.to raise_error(ActiveSanction::Matcher::NotSynced)
+      expect { client.screen("Bosco Ntaganda") }.to raise_error(ActiveSanction::Matcher::NotSynced)
     end
   end
 
@@ -167,7 +167,7 @@ RSpec.describe ActiveSanction::Client do
     it "returns one array of results per name" do
       client = described_class.new(storage: both)
 
-      expect(client.screen_all(["Vladimir Putin", "Jane Wilson of Dorset"]).map(&:size)).to eq([1, 0])
+      expect(client.screen_all(["Bosco Ntaganda", "Jane Wilson of Dorset"]).map(&:size)).to eq([1, 0])
     end
   end
 
@@ -189,7 +189,7 @@ RSpec.describe ActiveSanction::Client do
 
     it "screens the same client from eight threads and gets one answer" do
       client = described_class.new(storage: both)
-      answers = Array.new(8) { Thread.new { client.screen("Vladimir Putin").map(&:score) } }
+      answers = Array.new(8) { Thread.new { client.screen("Bosco Ntaganda").map(&:score) } }
 
       expect(answers.map(&:value).uniq.size).to eq(1)
     end
@@ -200,7 +200,7 @@ RSpec.describe ActiveSanction::Client do
       ofac = described_class.new(storage: both, sources: %i[ofac_sdn])
       un = described_class.new(storage: both, sources: %i[un_consolidated])
       answers = Array.new(8) do |at|
-        Thread.new { at.even? ? ofac.screen("Vladimir Putin") : un.screen("Vladimir Putin") }
+        Thread.new { at.even? ? ofac.screen("Bosco Ntaganda") : un.screen("Bosco Ntaganda") }
       end
 
       expect(answers.map { |thread| thread.value.map(&:source) }).to eq([%i[ofac_sdn], []] * 4)
@@ -209,7 +209,7 @@ RSpec.describe ActiveSanction::Client do
     it "screens two clients whose thresholds differ from eight threads without either reading the other's" do
       low = described_class.new(storage: both, screening_threshold: 10)
       high = described_class.new(storage: both, screening_threshold: 99)
-      answers = Array.new(8) { |at| Thread.new { (at.even? ? low : high).screen("Vladimir Putin").any? } }
+      answers = Array.new(8) { |at| Thread.new { (at.even? ? low : high).screen("Bosco Ntaganda").any? } }
 
       expect(answers.map(&:value)).to eq([true, false] * 4)
     end
@@ -221,20 +221,20 @@ RSpec.describe ActiveSanction::Client do
     end
 
     it "stores what it fetched in its own store" do
-      client = described_class.new(storage: store(ofac_sdn: [putin]))
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]))
       client.sync!(un)
 
       expect(client.storage.read_snapshot(:un_consolidated).record_count).to eq(1)
     end
 
     it "leaves the default client's store alone" do
-      described_class.new(storage: store(ofac_sdn: [putin])).sync!(un)
+      described_class.new(storage: store(ofac_sdn: [ntaganda])).sync!(un)
 
       expect(ActiveSanction::Storage::Memory.new.sources).to eq([])
     end
 
     it "returns what each source did" do
-      client = described_class.new(storage: store(ofac_sdn: [putin]))
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]))
 
       expect(client.sync!(un).first).to have_attributes(source: :un_consolidated, status: :updated)
     end
@@ -244,7 +244,7 @@ RSpec.describe ActiveSanction::Client do
     it "runs under its own settings" do
       seen = []
       source = FakeSyncSource.new(:un_consolidated, entities: []) { seen << ActiveSanction.config.user_agent }
-      described_class.new(storage: store(ofac_sdn: [putin]), user_agent: "acme/1.0").sync!(source)
+      described_class.new(storage: store(ofac_sdn: [ntaganda]), user_agent: "acme/1.0").sync!(source)
 
       expect(seen).to eq(["acme/1.0"])
     end
@@ -259,14 +259,14 @@ RSpec.describe ActiveSanction::Client do
           seen << ActiveSanction.config.user_agent
         end
       end
-      described_class.new(storage: store(ofac_sdn: [putin]), user_agent: "acme/1.0").sync!(*sources, concurrency: 4)
+      described_class.new(storage: store(ofac_sdn: [ntaganda]), user_agent: "acme/1.0").sync!(*sources, concurrency: 4)
 
       expect(Array.new(seen.size) { seen.pop }).to eq(["acme/1.0"] * 4)
     end
 
     it "syncs the sources its configuration names when it is given none" do
       register_demo_list
-      client = described_class.new(storage: store(ofac_sdn: [putin]), sources: %i[demo_list])
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]), sources: %i[demo_list])
 
       expect(client.sync!.sources).to eq(%i[demo_list])
     end
@@ -274,16 +274,16 @@ RSpec.describe ActiveSanction::Client do
     # A matcher is built once and never updated, so a client that synced has to
     # drop its own or it goes on screening the version it booted with.
     it "drops its matcher when a list changed" do
-      client = described_class.new(storage: store(ofac_sdn: [putin]))
-      client.screen("Vladimir Putin")
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]))
+      client.screen("Bosco Ntaganda")
       client.sync!(un)
 
-      expect(client.screen("Vladimir Putin").map(&:source)).to eq(%i[ofac_sdn un_consolidated])
+      expect(client.screen("Bosco Ntaganda").map(&:source)).to eq(%i[ofac_sdn un_consolidated])
     end
 
     it "captures a failing source rather than raising" do
       failing = FakeSyncSource.new(:un_consolidated, error: ActiveSanction::FetchError.new("503", status: 503))
-      client = described_class.new(storage: store(ofac_sdn: [putin]))
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]))
 
       expect(client.sync!(failing)).to have_attributes(failed?: true, exit_code: 1)
     end
@@ -291,14 +291,14 @@ RSpec.describe ActiveSanction::Client do
 
   describe "#doctor" do
     it "diagnoses against its own store" do
-      client = described_class.new(storage: store(ofac_sdn: [putin]))
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]))
       source = FakeDoctorSource.new(:un_consolidated, entities: [FakeDoctorSource.entity(:un_consolidated)])
 
       expect(client.doctor(source).sources).to eq(%i[un_consolidated])
     end
 
     it "stores nothing, so a diagnosis cannot change what is screened against" do
-      client = described_class.new(storage: store(ofac_sdn: [putin]))
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]))
       client.doctor(FakeDoctorSource.new(:un_consolidated, entities: [FakeDoctorSource.entity(:un_consolidated)]))
 
       expect(client.storage.sources).to eq(%i[ofac_sdn])
@@ -307,7 +307,7 @@ RSpec.describe ActiveSanction::Client do
 
   describe "#diff" do
     it "reads the current snapshot from its own store" do
-      client = described_class.new(storage: store(ofac_sdn: [putin]))
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]))
 
       expect(client.diff(:ofac_sdn, from: ActiveSanction::Snapshot.new(source: :ofac_sdn, entities: [])).added.size)
         .to eq(1)
@@ -318,9 +318,9 @@ RSpec.describe ActiveSanction::Client do
     def snapshot(entities) = ActiveSanction::Snapshot.new(source: :ofac_sdn, entities: entities)
 
     it "applies a diff to a book, and stamps the client's backend onto every alert" do
-      client = described_class.new(storage: store(ofac_sdn: [putin]), backend: :hosted)
-      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([putin]))
-      book = [ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin")]
+      client = described_class.new(storage: store(ofac_sdn: [ntaganda]), backend: :hosted)
+      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([ntaganda]))
+      book = [ActiveSanction::Subject.new(id: "cust_1", name: "Bosco Ntaganda")]
 
       alerts = client.rescreen(book, diff: changes, threshold: 75)
 
@@ -332,18 +332,18 @@ RSpec.describe ActiveSanction::Client do
     # an index build over the whole corpus.
     it "does not build the client's matcher" do
       client = described_class.new(storage: both)
-      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([putin]))
+      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([ntaganda]))
 
-      client.rescreen([ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin")], diff: changes)
+      client.rescreen([ActiveSanction::Subject.new(id: "cust_1", name: "Bosco Ntaganda")], diff: changes)
 
       expect(client.loaded?).to be(false)
     end
 
     it "screens under its own configuration" do
       client = described_class.new(storage: both, screening_threshold: 99)
-      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([putin]))
+      changes = ActiveSanction::Diff.new(from: snapshot([]), to: snapshot([ntaganda]))
 
-      expect(client.rescreen([ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin")], diff: changes))
+      expect(client.rescreen([ActiveSanction::Subject.new(id: "cust_1", name: "Bosco Ntaganda")], diff: changes))
         .to be_empty
     end
   end
@@ -413,7 +413,7 @@ RSpec.describe ActiveSanction::Client do
 
     let(:key) { OpenSSL::PKey::EC.generate("prime256v1") }
     let(:path) { File.join(dir, "ofac_sdn.asb") }
-    let(:exporter) { described_class.new(storage: store(ofac_sdn: [putin])) }
+    let(:exporter) { described_class.new(storage: store(ofac_sdn: [ntaganda])) }
     let(:importer) { described_class.new(storage: ActiveSanction::Storage::Memory.new) }
 
     it "writes the list a store holds, and answers what it wrote" do
@@ -449,7 +449,7 @@ RSpec.describe ActiveSanction::Client do
       exporter.export(:ofac_sdn, to: path)
       importer.import(path)
 
-      expect(importer.screen(name: "Vladimir Putin").map(&:source)).to eq(%i[ofac_sdn])
+      expect(importer.screen(name: "Bosco Ntaganda").map(&:source)).to eq(%i[ofac_sdn])
     end
 
     it "drops a matcher built before the import" do
@@ -469,7 +469,7 @@ RSpec.describe ActiveSanction::Client do
       exporter.export(:ofac_sdn, to: path, sign_with: key)
       importer.import(path, verify_with: key)
 
-      expect(importer.screen(name: "Vladimir Putin").map(&:verified?)).to eq([true])
+      expect(importer.screen(name: "Bosco Ntaganda").map(&:verified?)).to eq([true])
     end
 
     it "refuses a bundle signed by somebody else" do
@@ -509,7 +509,7 @@ RSpec.describe ActiveSanction::Client do
     end
 
     it "is reachable from the module, through the default client" do
-      ActiveSanction.configure { |config| config.storage = store(ofac_sdn: [putin]) }
+      ActiveSanction.configure { |config| config.storage = store(ofac_sdn: [ntaganda]) }
       ActiveSanction.export(:ofac_sdn, to: path)
 
       expect(ActiveSanction.import(path).record_count).to eq(1)

@@ -14,14 +14,14 @@ module ActiveSanction
     # What the caller knows about the person or company being screened.
     #
     #   subject = ActiveSanction::Scorer::Subject.new(
-    #     name:           "Vladimir Putin",
+    #     name:           "Bosco Ntaganda",
     #     type:           :individual,
-    #     dates_of_birth: "1952-10-07",
-    #     nationalities:  %w[RU],
+    #     dates_of_birth: "1973",
+    #     nationalities:  %w[CD],
     #     identifiers:    [{ kind: :passport, value: "AB-123 456" }]
     #   )
     #
-    #   subject.form.value   # => "vladimir putin"
+    #   subject.form.value   # => "bosco ntaganda"
     #
     # One side of every comparison the scorer makes, and the mirror image of
     # the Entity on the other side: the same four kinds of evidence, arriving
@@ -104,7 +104,7 @@ module ActiveSanction
 
       # `name` is a String, a Name or an already-folded Form. The three
       # collections each accept a single value as a collection of one, since
-      # `dates_of_birth: "1952-10-07"` is what a caller with one date writes.
+      # `dates_of_birth: "1973"` is what a caller with one date writes.
       #
       # Dates accept anything PartialDate reads, including the free text these
       # lists publish; identifiers accept an Identifier, its hash, or a bare

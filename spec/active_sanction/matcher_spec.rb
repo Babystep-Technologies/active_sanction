@@ -14,8 +14,8 @@ RSpec.describe ActiveSanction::Matcher do
 
   def dob(value) = [ActiveSanction::PartialDate.parse(value)]
 
-  def putin
-    listed("ofac_sdn:1", "PUTIN, Vladimir Vladimirovich", dates_of_birth: dob("1952-10-07"), nationalities: %w[RU])
+  def ntaganda
+    listed("ofac_sdn:1", "NTAGANDA, Bosco", dates_of_birth: dob("1973"), nationalities: %w[CD])
   end
 
   def store(*entities, source: :ofac_sdn)
@@ -27,22 +27,22 @@ RSpec.describe ActiveSanction::Matcher do
   end
 
   def matcher(*entities, **options)
-    described_class.build(store(*(entities.empty? ? [putin] : entities)), **options)
+    described_class.build(store(*(entities.empty? ? [ntaganda] : entities)), **options)
   end
 
   describe ".build" do
     it "indexes every list the store holds" do
-      expect(matcher(putin, listed("ofac_sdn:2", "ABBAS, Abu")).size).to eq(2)
+      expect(matcher(ntaganda, listed("ofac_sdn:2", "ABBAS, Abu")).size).to eq(2)
     end
 
     it "records the checksum of the list version it indexed" do
-      built = store(putin)
+      built = store(ntaganda)
 
-      expect(matcher(putin).snapshot_id(:ofac_sdn)).to eq(built.read_snapshot(:ofac_sdn).checksum)
+      expect(matcher(ntaganda).snapshot_id(:ofac_sdn)).to eq(built.read_snapshot(:ofac_sdn).checksum)
     end
 
     it "indexes only the sources it was asked for" do
-      entities = [putin, listed("un:1", "ABBAS, Abu", source: :un_consolidated)]
+      entities = [ntaganda, listed("un:1", "ABBAS, Abu", source: :un_consolidated)]
 
       expect(described_class.build(store(*entities), sources: %i[ofac_sdn]).sources).to eq(%i[ofac_sdn])
     end
@@ -55,12 +55,12 @@ RSpec.describe ActiveSanction::Matcher do
     end
 
     it "raises for a named source that has never been synced" do
-      expect { described_class.build(store(putin), sources: %i[un_consolidated]) }
+      expect { described_class.build(store(ntaganda), sources: %i[un_consolidated]) }
         .to raise_error(ActiveSanction::Storage::MissingSnapshot)
     end
 
     it "refuses an empty list of sources rather than reading it as all of them" do
-      expect { described_class.build(store(putin), sources: []) }.to raise_error(ArgumentError, /omit it/)
+      expect { described_class.build(store(ntaganda), sources: []) }.to raise_error(ArgumentError, /omit it/)
     end
 
     it "refuses lists that hold no name anything could screen against" do
@@ -69,7 +69,7 @@ RSpec.describe ActiveSanction::Matcher do
     end
 
     it "builds over the configured store when it is given none" do
-      ActiveSanction.configure { |c| c.storage = store(putin) }
+      ActiveSanction.configure { |c| c.storage = store(ntaganda) }
 
       expect(described_class.build.size).to eq(1)
     end
@@ -81,8 +81,8 @@ RSpec.describe ActiveSanction::Matcher do
 
   describe "#screen" do
     it "finds a listed person from the name a caller would type" do
-      expect(matcher.screen(name: "Vladimir Putin").first.matched_name.value)
-        .to eq("PUTIN, Vladimir Vladimirovich")
+      expect(matcher.screen(name: "Bosco Ntaganda").first.matched_name.value)
+        .to eq("NTAGANDA, Bosco")
     end
 
     it "returns an empty array for a name nothing on the list looks like" do
@@ -90,92 +90,92 @@ RSpec.describe ActiveSanction::Matcher do
     end
 
     it "takes a bare name" do
-      expect(matcher.screen("Vladimir Putin").size).to eq(1)
+      expect(matcher.screen("Bosco Ntaganda").size).to eq(1)
     end
 
     it "takes a query object" do
-      expect(matcher.screen(ActiveSanction::Query.build("Vladimir Putin")).size).to eq(1)
+      expect(matcher.screen(ActiveSanction::Query.build("Bosco Ntaganda")).size).to eq(1)
     end
 
     it "scores the whole subject, not only the name" do
-      screened = matcher.screen(name: "Vladimir Putin", date_of_birth: "1952-10-07", countries: %w[RU])
+      screened = matcher.screen(name: "Bosco Ntaganda", date_of_birth: "1973", countries: %w[CD])
 
-      expect(screened.first.score).to be > matcher.screen(name: "Vladimir Putin").first.score
+      expect(screened.first.score).to be > matcher.screen(name: "Bosco Ntaganda").first.score
     end
 
     it "stamps every result with the list version it came off" do
-      expect(matcher.screen("Vladimir Putin").first.snapshot_id).to start_with("sha256:")
+      expect(matcher.screen("Bosco Ntaganda").first.snapshot_id).to start_with("sha256:")
     end
 
     it "stamps every result with the backend that answered" do
-      expect(matcher.screen("Vladimir Putin").first.backend).to eq(:local)
+      expect(matcher.screen("Bosco Ntaganda").first.backend).to eq(:local)
     end
 
     it "carries the query onto the result" do
-      expect(matcher.screen(name: "Vladimir Putin", threshold: 40).first.query.threshold).to eq(40.0)
+      expect(matcher.screen(name: "Bosco Ntaganda", threshold: 40).first.query.threshold).to eq(40.0)
     end
   end
 
   describe "the ranking" do
     def crowd
-      [putin, listed("ofac_sdn:2", "PUTIN, Vladimir"), listed("ofac_sdn:3", "ABBAS, Abu")]
+      [ntaganda, listed("ofac_sdn:2", "TAGANDA, Bosco"), listed("ofac_sdn:3", "ABBAS, Abu")]
     end
 
     it "returns the hits highest score first" do
-      scores = matcher(*crowd).screen(name: "Vladimir Putin", threshold: 0).map(&:score)
+      scores = matcher(*crowd).screen(name: "Bosco Ntaganda", threshold: 0).map(&:score)
 
       expect(scores).to eq(scores.sort.reverse)
     end
 
     it "caps the results at the limit" do
-      expect(matcher(*crowd).screen(name: "Vladimir Putin", threshold: 0, limit: 1).size).to eq(1)
+      expect(matcher(*crowd).screen(name: "Bosco Ntaganda", threshold: 0, limit: 1).size).to eq(1)
     end
 
     it "drops everything under the threshold" do
-      expect(matcher(*crowd).screen(name: "Vladimir Putin", threshold: 80).map { |hit| hit.entity.id })
-        .to eq(["ofac_sdn:2"])
+      expect(matcher(*crowd).screen(name: "Bosco Ntaganda", threshold: 80).map { |hit| hit.entity.id })
+        .to eq(["ofac_sdn:1"])
     end
 
     # A screening decision is re-derived during an audit, so which of two
     # equally scored records is listed first has to be the same answer later.
     it "orders equal scores by entity id, which is the same answer in a year" do
-      twins = [listed("ofac_sdn:9", "PUTIN, Vladimir"), listed("ofac_sdn:2", "PUTIN, Vladimir")]
+      twins = [listed("ofac_sdn:9", "NTAGENDA, Bosco"), listed("ofac_sdn:2", "NTAGENDA, Bosco")]
 
-      expect(matcher(*twins).screen("Vladimir Putin").map { |hit| hit.entity.id })
+      expect(matcher(*twins).screen("Bosco Ntaganda").map { |hit| hit.entity.id })
         .to eq(%w[ofac_sdn:2 ofac_sdn:9])
     end
 
     # An entity is retrieved once for every one of its names the query looks
     # like, and the scorer already takes the maximum over them.
     it "reports an entity reached through two of its names once" do
-      both = listed("ofac_sdn:1", "PUTIN, Vladimir Vladimirovich", "Vladimir Putin")
+      both = listed("ofac_sdn:1", "NTAGANDA, Bosco", "Bosco Ntaganda")
 
-      expect(matcher(both).screen("Vladimir Putin").size).to eq(1)
+      expect(matcher(both).screen("Bosco Ntaganda").size).to eq(1)
     end
 
     it "never scores an entity against a type it is not" do
-      ship = listed("ofac_sdn:5", "PUTIN, Vladimir Vladimirovich", type: :vessel)
+      ship = listed("ofac_sdn:5", "NTAGANDA, Bosco", type: :vessel)
 
-      expect(matcher(ship).screen(name: "Vladimir Putin", type: :individual)).to eq([])
+      expect(matcher(ship).screen(name: "Bosco Ntaganda", type: :individual)).to eq([])
     end
   end
 
   describe "the source filter" do
     def mixed
-      [putin, listed("un:1", "PUTIN, Vladimir Vladimirovich", source: :un_consolidated)]
+      [ntaganda, listed("un:1", "NTAGANDA, Bosco", source: :un_consolidated)]
     end
 
     it "screens every list when the query names none" do
-      expect(matcher(*mixed).screen("Vladimir Putin").map(&:source)).to contain_exactly(:ofac_sdn, :un_consolidated)
+      expect(matcher(*mixed).screen("Bosco Ntaganda").map(&:source)).to contain_exactly(:ofac_sdn, :un_consolidated)
     end
 
     it "screens only the lists the query names" do
-      expect(matcher(*mixed).screen(name: "Vladimir Putin", sources: %i[un_consolidated]).map(&:source))
+      expect(matcher(*mixed).screen(name: "Bosco Ntaganda", sources: %i[un_consolidated]).map(&:source))
         .to eq([:un_consolidated])
     end
 
     it "stamps each hit with its own list's checksum" do
-      checksums = matcher(*mixed).screen("Vladimir Putin").map(&:snapshot_id)
+      checksums = matcher(*mixed).screen("Bosco Ntaganda").map(&:snapshot_id)
 
       expect(checksums.uniq.size).to eq(2)
     end
@@ -184,22 +184,22 @@ RSpec.describe ActiveSanction::Matcher do
     # and both belong in a report -- even where the two publishers happened to
     # give them the same reference.
     it "reports one person listed by two governments once per list" do
-      twice = [listed("1", "PUTIN, Vladimir Vladimirovich"),
-               listed("1", "PUTIN, Vladimir Vladimirovich", source: :un_consolidated)]
+      twice = [listed("1", "NTAGANDA, Bosco"),
+               listed("1", "NTAGANDA, Bosco", source: :un_consolidated)]
 
-      expect(matcher(*twice).screen("Vladimir Putin").map(&:source)).to eq(%i[ofac_sdn un_consolidated])
+      expect(matcher(*twice).screen("Bosco Ntaganda").map(&:source)).to eq(%i[ofac_sdn un_consolidated])
     end
 
     # A run that quietly covers one of the two lists it was asked for is
     # indistinguishable from one that covers both, and both report clear.
     it "refuses a query naming a list this matcher does not hold" do
-      expect { matcher.screen(name: "Vladimir Putin", sources: %i[un_consolidated]) }
+      expect { matcher.screen(name: "Bosco Ntaganda", sources: %i[un_consolidated]) }
         .to raise_error(ActiveSanction::Storage::MissingSnapshot, /does not hold un_consolidated/)
     end
   end
 
   describe "#screen_all" do
-    def book = ["Vladimir Putin", "Jane Wilson of Dorset", "Vladimir Putin"]
+    def book = ["Bosco Ntaganda", "Jane Wilson of Dorset", "Bosco Ntaganda"]
 
     it "returns one array of results per query, in the order they were given" do
       expect(matcher.screen_all(book).map(&:size)).to eq([1, 0, 1])
@@ -214,7 +214,7 @@ RSpec.describe ActiveSanction::Matcher do
     end
 
     it "takes hashes as readily as names" do
-      expect(matcher.screen_all([{ name: "Vladimir Putin", type: :individual }]).first.size).to eq(1)
+      expect(matcher.screen_all([{ name: "Bosco Ntaganda", type: :individual }]).first.size).to eq(1)
     end
 
     # A rescreening of a customer book against a new list version is one event
@@ -226,7 +226,7 @@ RSpec.describe ActiveSanction::Matcher do
     end
 
     it "refuses something that is not a list of queries" do
-      expect { matcher.screen_all("Vladimir Putin") }.to raise_error(ArgumentError, /Array of queries/)
+      expect { matcher.screen_all("Bosco Ntaganda") }.to raise_error(ArgumentError, /Array of queries/)
     end
   end
 
@@ -234,29 +234,29 @@ RSpec.describe ActiveSanction::Matcher do
     # Nothing on the query path reads configuration: a weight changed halfway
     # through a batch cannot produce a run that is half one set of numbers.
     it "screens with the weights it was built under, not the ones set since" do
-      built = matcher(putin)
+      built = matcher(ntaganda)
       ActiveSanction.configure { |c| c.scorer_weights = { nationality_match: 20.0 } }
 
-      expect(built.screen(name: "Vladimir Putin", countries: %w[RU]).first.weights)
+      expect(built.screen(name: "Bosco Ntaganda", countries: %w[CD]).first.weights)
         .to eq(ActiveSanction::Scorer::Weights.default)
     end
 
     it "takes weights of its own" do
-      built = matcher(putin, weights: { nationality_match: 20.0 })
+      built = matcher(ntaganda, weights: { nationality_match: 20.0 })
 
-      expect(built.screen(name: "Vladimir Putin", countries: %w[RU]).first.weights.nationality_match).to eq(20.0)
+      expect(built.screen(name: "Bosco Ntaganda", countries: %w[CD]).first.weights.nationality_match).to eq(20.0)
     end
 
     it "records the weights it screened with on every result" do
-      expect(matcher.screen("Vladimir Putin").first.weights).to eq(ActiveSanction::Scorer::Weights.default)
+      expect(matcher.screen("Bosco Ntaganda").first.weights).to eq(ActiveSanction::Scorer::Weights.default)
     end
 
     it "takes a candidate cap of its own" do
-      expect(matcher(putin, candidate_limit: 1).candidate_limit).to eq(1)
+      expect(matcher(ntaganda, candidate_limit: 1).candidate_limit).to eq(1)
     end
 
     it "refuses a candidate cap of zero, which retrieves nothing and screens nobody" do
-      expect { matcher(putin, candidate_limit: 0) }.to raise_error(ArgumentError, /at least 1/)
+      expect { matcher(ntaganda, candidate_limit: 0) }.to raise_error(ArgumentError, /at least 1/)
     end
   end
 
@@ -326,15 +326,15 @@ RSpec.describe ActiveSanction::Matcher do
     end
 
     it "gives every thread the same answer" do
-      built = matcher(putin, listed("ofac_sdn:2", "ABBAS, Abu"))
-      answers = Array.new(8) { Thread.new { built.screen("Vladimir Putin").map(&:score) } }.map(&:value)
+      built = matcher(ntaganda, listed("ofac_sdn:2", "ABBAS, Abu"))
+      answers = Array.new(8) { Thread.new { built.screen("Bosco Ntaganda").map(&:score) } }.map(&:value)
 
       expect(answers.uniq.size).to eq(1)
     end
 
     it "screens correctly under concurrent queries for different names" do
-      built = matcher(putin, listed("ofac_sdn:2", "ABBAS, Abu"))
-      names = %w[Putin Abbas] * 8
+      built = matcher(ntaganda, listed("ofac_sdn:2", "ABBAS, Abu"))
+      names = %w[Ntaganda Abbas] * 8
       found = names.map { |name| Thread.new { built.screen(name: name, threshold: 40).size } }.map(&:value)
 
       expect(found).to all(eq(1))
@@ -351,32 +351,32 @@ RSpec.describe ActiveSanction::Matcher do
     end
 
     it "holds nothing attested for a list this installation synced itself" do
-      expect(matcher(putin).verified).to be_empty
+      expect(matcher(ntaganda).verified).to be_empty
     end
 
     it "records a list that came out of a verified bundle" do
-      expect(described_class.build(verified_store(putin)).verified).to eq(%i[ofac_sdn])
+      expect(described_class.build(verified_store(ntaganda)).verified).to eq(%i[ofac_sdn])
     end
 
     it "answers per source" do
-      built = described_class.build(verified_store(putin))
+      built = described_class.build(verified_store(ntaganda))
 
       expect([built.verified?(:ofac_sdn), built.verified?(:un_consolidated)]).to eq([true, false])
     end
 
     it "stamps every result off an attested list" do
-      built = described_class.build(verified_store(putin))
+      built = described_class.build(verified_store(ntaganda))
 
-      expect(built.screen(name: "Vladimir Putin").map(&:verified?)).to eq([true])
+      expect(built.screen(name: "Bosco Ntaganda").map(&:verified?)).to eq([true])
     end
 
     it "stamps every result off a list nobody vouched for" do
-      expect(matcher(putin).screen(name: "Vladimir Putin").map(&:verified?)).to eq([false])
+      expect(matcher(ntaganda).screen(name: "Bosco Ntaganda").map(&:verified?)).to eq([false])
     end
 
     it "refuses to be told a list it does not hold was verified" do
       built = lambda do
-        described_class.new(index: ActiveSanction::Index.build([putin]), snapshots: { ofac_sdn: "sha256:1" },
+        described_class.new(index: ActiveSanction::Index.build([ntaganda]), snapshots: { ofac_sdn: "sha256:1" },
                             verified: %i[eu_fsf])
       end
 

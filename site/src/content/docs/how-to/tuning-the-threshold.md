@@ -25,7 +25,7 @@ ActiveSanction.configure { |c| c.screening_threshold = 65 }
 <!-- sample: illustrative -- needs a synced store -->
 
 ```ruby
-ActiveSanction.screen(name: "Vladimir Putin", threshold: 85)
+ActiveSanction.screen(name: "Bosco Ntaganda", threshold: 85)
 ```
 
 A per-query `threshold:` overrides the configured default for that one call

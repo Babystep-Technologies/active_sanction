@@ -11,16 +11,16 @@ RSpec.describe ActiveSanction::Rescreen::Alert do
                                programs: ["SDGT"])
   end
 
-  def match_result(name: "PUTIN, Vladimir Vladimirovich", snapshot_id: "sha256:new")
+  def match_result(name: "NTAGANDA, Bosco", snapshot_id: "sha256:new")
     scored = ActiveSanction::Scorer.call(
-      ActiveSanction::Scorer::Subject.new(name: "Vladimir Putin"), entity(41_234, name), threshold: 0
+      ActiveSanction::Scorer::Subject.new(name: "Bosco Ntaganda"), entity(41_234, name), threshold: 0
     )
-    ActiveSanction::MatchResult.from_scorer(scored, query: ActiveSanction::Query.build("Vladimir Putin"),
+    ActiveSanction::MatchResult.from_scorer(scored, query: ActiveSanction::Query.build("Bosco Ntaganda"),
                                                     snapshot_id: snapshot_id,
                                                     weights: ActiveSanction::Scorer::Weights.build(nil))
   end
 
-  let(:book_entry) { ActiveSanction::Subject.new(id: "cust_1", name: "Vladimir Putin") }
+  let(:book_entry) { ActiveSanction::Subject.new(id: "cust_1", name: "Bosco Ntaganda") }
 
   def alert(change: :newly_listed, result: match_result, previous_result: nil, fields: [],
             subject: book_entry, snapshot_id: "sha256:new", previous_snapshot_id: "sha256:old")
@@ -88,12 +88,12 @@ RSpec.describe ActiveSanction::Rescreen::Alert do
 
   describe "the summary a human reads" do
     it "prints the subject, what changed, the record and the score" do
-      expect(alert.to_s).to match(/\Acust_1 {2}newly listed {2}ofac_sdn:41234 {2}PUTIN, Vladimir Vladimirovich/)
+      expect(alert.to_s).to match(/\Acust_1 {2}newly listed {2}ofac_sdn:41234 {2}NTAGANDA, Bosco/)
     end
 
     it "prints a movement when both sides scored" do
       built = alert(change: :details_changed,
-                    previous_result: match_result(name: "PUTIN, Vladimir", snapshot_id: "sha256:old"))
+                    previous_result: match_result(name: "NTAGENDA, Bosco", snapshot_id: "sha256:old"))
 
       expect(built.to_s).to include("#{built.previous_score} -> #{built.score}")
     end
@@ -108,7 +108,7 @@ RSpec.describe ActiveSanction::Rescreen::Alert do
   describe "serialization" do
     it "round-trips through JSON" do
       built = alert(change: :details_changed, fields: %i[names programs],
-                    previous_result: match_result(name: "PUTIN, Vladimir", snapshot_id: "sha256:old"))
+                    previous_result: match_result(name: "NTAGENDA, Bosco", snapshot_id: "sha256:old"))
 
       expect(described_class.from_h(JSON.parse(JSON.generate(built.to_h)))).to eq(built)
     end
