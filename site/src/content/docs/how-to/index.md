@@ -3,6 +3,11 @@ title: Guides
 description: One job per page, for somebody who already knows what they are trying to achieve.
 sidebar:
   order: 1
+  # The group heading in the sidebar is already this page's title, so listing
+  # it underneath repeats the word and buys nothing. Hidden from the tree,
+  # not from the site: the landing page's cards still link here, and so does
+  # every cross-reference between quadrants.
+  hidden: true
 ---
 
 One job per page, for somebody who already knows what they are trying to

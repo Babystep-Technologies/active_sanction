@@ -3,6 +3,11 @@ title: Reference
 description: Sources, configuration, errors, measured accuracy, performance, the bundle format, and the adapter contract.
 sidebar:
   order: 1
+  # The group heading in the sidebar is already this page's title, so listing
+  # it underneath repeats the word and buys nothing. Hidden from the tree,
+  # not from the site: the landing page's cards still link here, and so does
+  # every cross-reference between quadrants.
+  hidden: true
 ---
 
 Looked things up in, not read start to finish. Descriptive rather than
