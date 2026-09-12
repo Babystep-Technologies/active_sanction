@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://babystep-technologies.github.io/active_sanction/logo.svg" alt="" width="180" height="180">
+  <img src="https://babystep.tech/active_sanction/logo.svg" alt="" width="180" height="180">
 </p>
 
 # ActiveSanction
 
 [![CI](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/ci.yml/badge.svg)](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/ci.yml)
 
-**[Full documentation, guides and the source catalogue →](https://babystep-technologies.github.io/active_sanction/)**
+**[Full documentation, guides and the source catalogue →](https://babystep.tech/active_sanction/)**
 
 Screen a name against government sanctions lists, in Ruby, in your own process.
 
@@ -53,8 +53,8 @@ ActiveSanction.screen(name: "Bosco Ntaganda", type: :individual, date_of_birth: 
 - **It is not a case management system.** No alert queue, no dispositions, no audit store. It produces the record; keeping it is your application's job.
 - **It screens names against lists, and nothing more.** No politically-exposed-person data, no adverse media, no beneficial ownership, no OFAC 50 Percent Rule resolution — a subsidiary that is sanctioned only by virtue of its owners is not on any of these files and will not be found here.
 - **Seven lists ship: two US, one UN, one Canada, one EU, one UK, one Australia.** If your obligations cover a jurisdiction outside that set, this gem does not cover them.
-- **Non-Latin script is not transliterated.** `Путин` does not fold to `putin`; a Cyrillic name matches a Cyrillic query and nothing else. What makes it survivable is that these publishers ship a romanized name alongside the original — see [Normalizing a name](https://babystep-technologies.github.io/active_sanction/explanation/how-matching-works/#normalizing-a-name) for what that does and does not leave open.
-- **It does not monitor your deployment.** It syncs when you tell it to, and it diagnoses when you tell it to. `ActiveSanction.doctor` will notice that a publisher changed its format, but only in a job you schedule — nothing in your process runs overnight on its own, and nothing wakes anybody when it finds something. What does run overnight is [the upstream canary](https://babystep-technologies.github.io/active_sanction/how-to/detecting-format-drift/#the-upstream-canary-the-same-idea-run-on-a-schedule-against-real-endpoints), on this repository rather than on yours: it watches the seven published lists on weekdays and files an issue here when one of them changes, which is how the adapters get fixed — but it knows nothing about whether *your* sync ran ([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)).
+- **Non-Latin script is not transliterated.** `Путин` does not fold to `putin`; a Cyrillic name matches a Cyrillic query and nothing else. What makes it survivable is that these publishers ship a romanized name alongside the original — see [Normalizing a name](https://babystep.tech/active_sanction/explanation/how-matching-works/#normalizing-a-name) for what that does and does not leave open.
+- **It does not monitor your deployment.** It syncs when you tell it to, and it diagnoses when you tell it to. `ActiveSanction.doctor` will notice that a publisher changed its format, but only in a job you schedule — nothing in your process runs overnight on its own, and nothing wakes anybody when it finds something. What does run overnight is [the upstream canary](https://babystep.tech/active_sanction/how-to/detecting-format-drift/#the-upstream-canary-the-same-idea-run-on-a-schedule-against-real-endpoints), on this repository rather than on yours: it watches the seven published lists on weekdays and files an issue here when one of them changes, which is how the adapters get fixed — but it knows nothing about whether *your* sync ran ([#69](https://github.com/Babystep-Technologies/active_sanction/issues/69)).
 - **There is no CLI.** It is a library, called from an initializer, a rake task or a job.
 
 ## Installation
@@ -153,7 +153,7 @@ That is the whole of the working library. Everything below is either a fact abou
 
 ## The lists
 
-Seven lists ship today: two US, one UN, one Canada, one EU, one UK, one Australia. The key, jurisdiction, authority, endpoint, format and record count for each — generated from the adapter registry and the canary's last measurement, never hand-typed — are in the [source catalogue](https://babystep-technologies.github.io/active_sanction/reference/sources/).
+Seven lists ship today: two US, one UN, one Canada, one EU, one UK, one Australia. The key, jurisdiction, authority, endpoint, format and record count for each — generated from the adapter registry and the canary's last measurement, never hand-typed — are in the [source catalogue](https://babystep.tech/active_sanction/reference/sources/).
 
 No publisher commits to a schedule, and none of them announce a change out of band, which is why every fetch here is conditional: asking daily costs one request per file on the days nothing happened. Sync on your own risk appetite rather than on a publisher's calendar.
 
@@ -201,19 +201,19 @@ Four further consequences of the same file:
 * **Birth dates arrive in nine spellings, two of which are only distinguishable through the spreadsheet's styles.** 4,183 are Excel serial numbers, 2,709 are the year somebody was born written as a plain number, and the two are the same kind of cell — a reader that ignores `xl/styles.xml` gets one of the two wrong for every row. The rest are `dd/mm/yyyy` text (day first: DFAT writes Australian dates, and not one of the 2,013 has a middle component above twelve), `mm/yyyy`, `Approximately 1963`, `Approximately: Between 1972 and 1975`, `12 April 1965`, ten-year lists, and pairs separated by a carriage return the workbook escapes as `_x000D_`. Four records out of 3,906 carry a fragment typed wrong at the source — `1980.1981`, `/02/1961`, `7/02/1950/11/1950`, `10/061962` — and each is kept verbatim in `remarks` rather than dropped.
 * **An address is one free-text column and is not decomposed.** DFAT publishes no street, city or country parts, so the whole published string is `Address#street`. Where one cell enumerates several addresses `a) ... b) ...`, which is 859 rows, they are split; a semicolon is not split on, because it appears inside single addresses too.
 
-**All seven — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name](https://babystep-technologies.github.io/active_sanction/explanation/how-matching-works/#normalizing-a-name), and [the blend, and what it cannot fix](https://babystep-technologies.github.io/active_sanction/explanation/how-matching-works/#the-blend-and-what-it-cannot-fix).
+**All seven — non-Latin script is not transliterated.** Cyrillic, Arabic, Han, Kana and Hangul are casefolded and stripped of marks in their own script, and never romanized. These lists publish a non-Latin name as an *additional* variant rather than instead of a Latin one, which is what makes it survivable; the residue is a record carrying one romanization queried with another. See [Normalizing a name](https://babystep.tech/active_sanction/explanation/how-matching-works/#normalizing-a-name), and [the blend, and what it cannot fix](https://babystep.tech/active_sanction/explanation/how-matching-works/#the-blend-and-what-it-cannot-fix).
 
 ## Reading a score
 
 A score is a number from 0 to 100, and it is **the sum of the reasons on the result** — rounded once, with no arithmetic anywhere in this library that can move one without the other. `hit.explanation` is the thing to read; the number is a summary of it, and a 97 that is all name similarity is a different finding from an 82 with a passport number matching even though the score alone does not say so.
 
-The default threshold is **75**, measured rather than chosen: it is where F1 peaks against a labeled set of real published records. [How matching works](https://babystep-technologies.github.io/active_sanction/explanation/how-matching-works/) has the precision/recall/F1 curve, what raising or lowering the threshold costs, and the full account of how a score is built and why absence is never treated as conflict. [Tune the threshold for your risk appetite](https://babystep-technologies.github.io/active_sanction/how-to/tuning-the-threshold/) is the how-to.
+The default threshold is **75**, measured rather than chosen: it is where F1 peaks against a labeled set of real published records. [How matching works](https://babystep.tech/active_sanction/explanation/how-matching-works/) has the precision/recall/F1 curve, what raising or lowering the threshold costs, and the full account of how a score is built and why absence is never treated as conflict. [Tune the threshold for your risk appetite](https://babystep.tech/active_sanction/how-to/tuning-the-threshold/) is the how-to.
 
 ## Where the lists live
 
-Storage is an interface with five methods, and **nothing on the query path names a concrete store**: `Storage::FileSystem` (the default, gzipped JSON on disk), `Storage::ActiveRecord` (your own database, plus an indexed prefilter), `Storage::Memory`, or one you write yourself. [Choose a storage backend](https://babystep-technologies.github.io/active_sanction/how-to/choosing-a-store/) has the trade-offs and the conformance group every adapter is held to.
+Storage is an interface with five methods, and **nothing on the query path names a concrete store**: `Storage::FileSystem` (the default, gzipped JSON on disk), `Storage::ActiveRecord` (your own database, plus an indexed prefilter), `Storage::Memory`, or one you write yourself. [Choose a storage backend](https://babystep.tech/active_sanction/how-to/choosing-a-store/) has the trade-offs and the conformance group every adapter is held to.
 
-A store is where *this* machine keeps its lists. To move one *between* machines — an air-gapped host, or a mirror for the afternoon a publisher is down — export it as a signed bundle: one file, one command, and a signature an auditor can check. See [Publish and verify a signed bundle](https://babystep-technologies.github.io/active_sanction/how-to/publishing-a-signed-bundle/).
+A store is where *this* machine keeps its lists. To move one *between* machines — an air-gapped host, or a mirror for the afternoon a publisher is down — export it as a signed bundle: one file, one command, and a signature an auditor can check. See [Publish and verify a signed bundle](https://babystep.tech/active_sanction/how-to/publishing-a-signed-bundle/).
 
 ## Performance
 
@@ -263,7 +263,7 @@ Everything has a working default; `ActiveSanction.configure` exists so that a ca
 | `candidate_limit` | `200` | Names the index hands the scorer per query |
 | `screening_threshold` | `75.0` | See [Reading a score](#reading-a-score). Overridden per query with `threshold:` |
 | `screening_limit` | `10` | Results returned, highest first. A review queue, not a report |
-| `normalizer_dictionary` | The four shipped token lists | See [Normalizing a name](https://babystep-technologies.github.io/active_sanction/explanation/how-matching-works/#normalizing-a-name) |
+| `normalizer_dictionary` | The four shipped token lists | See [Normalizing a name](https://babystep.tech/active_sanction/explanation/how-matching-works/#normalizing-a-name) |
 | `scorer_weights` | `Scorer::Weights.default` | What each signal is worth. Changing one changes what every past decision would score today, which is why `weights` travels on every `MatchResult` |
 | `logger` | `nil` | Anything Logger-shaped |
 
@@ -277,11 +277,11 @@ ActiveSanction.reset!    # drops the default client and starts from the defaults
 
 ## Handling errors
 
-`rescue ActiveSanction::Error` catches everything this library raises from a public method, and under it sit the answers to the only three questions a caller embedding this in a request path actually has — *retry this*, *alert somebody*, *this is a bug in my call* — none of which should be answered by matching on a message string. The hierarchy is public API within a major version. [Handle errors](https://babystep-technologies.github.io/active_sanction/how-to/handling-errors/) has the full tree, the `retryable?` table, and what to log.
+`rescue ActiveSanction::Error` catches everything this library raises from a public method, and under it sit the answers to the only three questions a caller embedding this in a request path actually has — *retry this*, *alert somebody*, *this is a bug in my call* — none of which should be answered by matching on a message string. The hierarchy is public API within a major version. [Handle errors](https://babystep.tech/active_sanction/how-to/handling-errors/) has the full tree, the `retryable?` table, and what to log.
 
 ## Adding a source
 
-[`docs/adding_a_source.md`](docs/adding_a_source.md) is the end-to-end walkthrough: reading the publisher's file before writing anything, choosing the format toolkit, mapping its fields onto the canonical model, deriving a stable id for a list that publishes none, trimming a fixture, wiring up the conformance spec, and registering the adapter — from inside this gem or from an application that never forks it. It ends with a complete worked adapter, its fixture and its spec. [Add a sanctions source](https://babystep-technologies.github.io/active_sanction/how-to/adding-a-source/) is the shorter field guide, pointing into the file's sections rather than restating them.
+[`docs/adding_a_source.md`](docs/adding_a_source.md) is the end-to-end walkthrough: reading the publisher's file before writing anything, choosing the format toolkit, mapping its fields onto the canonical model, deriving a stable id for a list that publishes none, trimming a fixture, wiring up the conformance spec, and registering the adapter — from inside this gem or from an application that never forks it. It ends with a complete worked adapter, its fixture and its spec. [Add a sanctions source](https://babystep.tech/active_sanction/how-to/adding-a-source/) is the shorter field guide, pointing into the file's sections rather than restating them.
 
 A source registered from outside this gem is a first-class source: a bank's internal watchlist is screened, stored, diffed and stamped exactly as OFAC's is.
 
@@ -460,13 +460,13 @@ which is how a well-behaved crawler has identified itself since Googlebot. The a
 
 ### Storage
 
-Storage is five methods (`Storage::Base`), and the rule they exist to enforce is that **nothing on the query path may name a concrete store**: a source nobody has synced reads back as `nil`, never as an empty snapshot, and nothing partial is ever returned — a truncated file, an edited record or a dropped row raises `Storage::CorruptSnapshot` rather than screening against a list that is quietly missing people. [Choose a storage backend](https://babystep-technologies.github.io/active_sanction/how-to/choosing-a-store/) has `FileSystem`, `ActiveRecord` and `Memory` in full, plus the conformance group — `"a storage adapter"` — every one of them and every one a host writes is held to.
+Storage is five methods (`Storage::Base`), and the rule they exist to enforce is that **nothing on the query path may name a concrete store**: a source nobody has synced reads back as `nil`, never as an empty snapshot, and nothing partial is ever returned — a truncated file, an edited record or a dropped row raises `Storage::CorruptSnapshot` rather than screening against a list that is quietly missing people. [Choose a storage backend](https://babystep.tech/active_sanction/how-to/choosing-a-store/) has `FileSystem`, `ActiveRecord` and `Memory` in full, plus the conformance group — `"a storage adapter"` — every one of them and every one a host writes is held to.
 
-A store is where *this* machine keeps its lists. Moving one to another machine — an air-gapped host, or a mirror for the afternoon a publisher is down — is a signed bundle: one file, a signature an auditor can check, and the same bundle for the same snapshot every time. [`docs/bundle_format.md`](docs/bundle_format.md) is the byte-level format, specified in enough detail to be implemented outside Ruby; [Publish and verify a signed bundle](https://babystep-technologies.github.io/active_sanction/how-to/publishing-a-signed-bundle/) is the two commands and the decisions around them.
+A store is where *this* machine keeps its lists. Moving one to another machine — an air-gapped host, or a mirror for the afternoon a publisher is down — is a signed bundle: one file, a signature an auditor can check, and the same bundle for the same snapshot every time. [`docs/bundle_format.md`](docs/bundle_format.md) is the byte-level format, specified in enough detail to be implemented outside Ruby; [Publish and verify a signed bundle](https://babystep.tech/active_sanction/how-to/publishing-a-signed-bundle/) is the two commands and the decisions around them.
 
 ### Syncing every list, and what happens when one is down
 
-`ActiveSanction.sync!` fetches, parses and stores every configured source, isolating each behind its own rescue so a UN outage does not stop OFAC from syncing. **A failed source keeps its previous snapshot** — screening against yesterday's list with a visible age on it is safe; screening against an empty one is not, which is why the thing to alert on is the age of what is being screened against, not just whether the last run reported a failure. [Sync on a schedule, and handle a source that is down](https://babystep-technologies.github.io/active_sanction/how-to/syncing-on-a-schedule/) has the rake task, the exit code, and what to alert on.
+`ActiveSanction.sync!` fetches, parses and stores every configured source, isolating each behind its own rescue so a UN outage does not stop OFAC from syncing. **A failed source keeps its previous snapshot** — screening against yesterday's list with a visible age on it is safe; screening against an empty one is not, which is why the thing to alert on is the age of what is being screened against, not just whether the last run reported a failure. [Sync on a schedule, and handle a source that is down](https://babystep.tech/active_sanction/how-to/syncing-on-a-schedule/) has the rake task, the exit code, and what to alert on.
 
 ### Noticing what changed between two syncs, and rescreening a book against it
 
@@ -474,11 +474,11 @@ Screening is not a one-time event. A customer cleared last month may be listed t
 
 A few things are easy to get wrong here, so they are worth stating rather than leaving to be discovered: **delistings matter as much as listings** — `diff.removed` is what lets a customer back through the door, and a service that only re-screens against new records never notices one; **an amendment is not a delisting plus a listing** — the two snapshots are joined by entity id, so a corrected passport number reports as one `Diff::Change` rather than a removal and an addition that would put a false delisting in front of an analyst; **a first sync is a baseline, not nineteen thousand new listings** — a diff with no `from` reports `baseline?` and nothing to re-screen, because the right response to a first sync is a deliberate full screening run; and **order is never a change**, including a reordered alias, so a publisher re-emitting the same file in a different row order diffs to nothing.
 
-[Rescreen a book of business against a diff](https://babystep-technologies.github.io/active_sanction/how-to/rescreening-a-book/) has the full mechanics — `Subject`, what `:newly_listed` / `:delisted` / `:details_changed` mean, streaming a large book past a small diff, and what this deliberately does not remember (see [What it does not do](#what-it-does-not-do)).
+[Rescreen a book of business against a diff](https://babystep.tech/active_sanction/how-to/rescreening-a-book/) has the full mechanics — `Subject`, what `:newly_listed` / `:delisted` / `:details_changed` mean, streaming a large book past a small diff, and what this deliberately does not remember (see [What it does not do](#what-it-does-not-do)).
 
 ### Noticing when a publisher has changed its format
 
-**The dangerous change is the one where the file still parses cleanly and means something different** — 19,321 entities carrying zero passports looks exactly as healthy as 19,321 carrying 23,429 if the only thing anyone counts is records, and a sync would not notice that for months. `ActiveSanction.doctor` measures fill rates and free-text coverage against the last stored snapshot and reports a severity per source. [Detect when a publisher changes its format](https://babystep-technologies.github.io/active_sanction/how-to/detecting-format-drift/) has the full mechanics, how to read `warn` versus `error`, and the upstream canary that runs the same checks on a schedule against the real endpoints.
+**The dangerous change is the one where the file still parses cleanly and means something different** — 19,321 entities carrying zero passports looks exactly as healthy as 19,321 carrying 23,429 if the only thing anyone counts is records, and a sync would not notice that for months. `ActiveSanction.doctor` measures fill rates and free-text coverage against the last stored snapshot and reports a severity per source. [Detect when a publisher changes its format](https://babystep.tech/active_sanction/how-to/detecting-format-drift/) has the full mechanics, how to read `warn` versus `error`, and the upstream canary that runs the same checks on a schedule against the real endpoints.
 
 ### Normalizing, scoring and the identifiers that make it a screening tool
 
@@ -486,7 +486,7 @@ A few things are easy to get wrong here, so they are worth stating rather than l
 
 `ActiveSanction::Scorer` blends four string algorithms and a phonetic pass into one name similarity — a weighted mean rather than the weighted maximum the well-known Python ratio uses, deliberately, because a maximum would put `Mohammed` against `MOHAMMED AL-ZAWAHIRI` in the nineties on a corpus where a quarter of the individuals share a handful of given names. What actually separates a coincidence from a corroborated match is the identifiers a compliance officer already has: an exact passport match is worth **+40**, a full date of birth **+15**, a nationality agreement **+6** — and every adjustment fires only when *both* sides carry the field, because treating a missing field as disagreement would under-score exactly the jurisdictions that publish least. One name transliterated two different ways — `QADHAFI, Muammar` against `Muammar Gaddafi` — is the residual case this does not solve; the mitigation is the identifier fields, not a bigger phonetic weight.
 
-[How matching works](https://babystep-technologies.github.io/active_sanction/explanation/how-matching-works/) is the full argument, end to end: the five-stage pipeline, the adjustments table, why 75 is the default threshold, and the reproducibility fields a `MatchResult` carries.
+[How matching works](https://babystep.tech/active_sanction/explanation/how-matching-works/) is the full argument, end to end: the five-stage pipeline, the adjustments table, why 75 is the default threshold, and the reproducibility fields a `MatchResult` carries.
 
 ### Screening a name
 
@@ -522,7 +522,7 @@ An empty array is the ordinary answer — most customers are not on a sanctions 
 
 #### Every result is a reproducibility stamp
 
-`MatchResult` is the most permanent object in the gem — it is what ends up in a customer's audit record, read by people who have neither this process nor this version of the gem — so it serializes to a documented shape and `MatchResult.from_h` rebuilds it losslessly. [Reproducibility](https://babystep-technologies.github.io/active_sanction/explanation/how-matching-works/#reproducibility) has the four fields that make a past decision re-derivable. `backend` is a fifth, not there: a hosted backend answers the same call against data somebody else keeps fresh, and an audit record has to say which one answered.
+`MatchResult` is the most permanent object in the gem — it is what ends up in a customer's audit record, read by people who have neither this process nor this version of the gem — so it serializes to a documented shape and `MatchResult.from_h` rebuilds it losslessly. [Reproducibility](https://babystep.tech/active_sanction/explanation/how-matching-works/#reproducibility) has the four fields that make a past decision re-derivable. `backend` is a fifth, not there: a hosted backend answers the same call against data somebody else keeps fresh, and an audit record has to say which one answered.
 
 #### Holding a client, and screening from many threads
 

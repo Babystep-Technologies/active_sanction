@@ -103,6 +103,17 @@ jobs:
         with:
           path: site/dist
 
+      # The same bytes again, in an ordinary artifact. `upload-pages-artifact`
+      # produces a tarball only `deploy-pages` knows how to read, and the
+      # babystep.tech job needs the directory. Uploading twice costs a few
+      # seconds and is the only way both deploys are guaranteed to publish
+      # the build that was link-checked, rather than two separate builds.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-dist
+          path: site/dist
+          retention-days: 1
+
   deploy:
     name: Deploy
     # Pull requests build and check; only the trunk publishes. A fork's pull
@@ -123,3 +134,64 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # babystep.tech is not GitHub Pages. It is a React site in a Cloud Storage
+  # bucket behind a Google Cloud load balancer whose URL map has exactly one
+  # rule: everything goes to that bucket. So publishing the documentation
+  # under `babystep.tech/active_sanction/` needs no load balancer change at
+  # all -- only objects under an `active_sanction/` prefix. The bucket already
+  # sets `mainPageSuffix: index.html`, which is what makes a directory URL
+  # like `/active_sanction/tutorial/` resolve, and its default object ACL
+  # already grants `allUsers: READER`, so uploads are public without this job
+  # setting an ACL.
+  publish-babystep-tech:
+    name: Publish to babystep.tech
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: babystep-tech
+      url: https://babystep.tech/active_sanction/
+
+    # `id-token: write` is the whole point: it mints the OIDC token Google
+    # federates. There is no service-account key anywhere in this repository,
+    # which matters more than usual now that the repository is public.
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site-dist
+          path: site-dist
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Copied rather than rsynced, deliberately. This bucket also serves the
+      # marketing site, and `rsync --delete-unmatched-destination-objects`
+      # against an empty or mistyped prefix would take that site with it. The
+      # cost of copying is that superseded hashed assets accumulate under the
+      # prefix; they are unreferenced and harmless, and no correctness
+      # depends on them being gone.
+      - name: Upload the built site under /active_sanction
+        run: |
+          gcloud storage cp --recursive --cache-control="public, max-age=3600" \
+            site-dist/* "gs://${{ vars.DOCS_BUCKET }}/active_sanction/"
+
+      # Cloud CDN caches on CACHE_ALL_STATIC with an hour's default TTL, so
+      # without this a publish is live somewhere between immediately and an
+      # hour from now. Scoped to the prefix: invalidating `/*` would evict the
+      # marketing site's cache too, for no reason.
+      - name: Invalidate the CDN for the docs path only
+        run: |
+          gcloud compute url-maps invalidate-cdn-cache "${{ vars.DOCS_URL_MAP }}" \
+            --project="${{ vars.DOCS_URL_MAP_PROJECT }}" \
+            --path="/active_sanction/*" --async

@@ -8,12 +8,17 @@ import starlight from "@astrojs/starlight";
 // ships inside the gem, and the site links into it rather than copying it --
 // two copies of a procedure means one of them is wrong within a release.
 export default defineConfig({
-  // The canonical URL, and the one setting here that is expensive to change
-  // later: every inbound link, every search result and the `canonical` tag on
-  // every page are built from it. Moving to a custom domain means changing
-  // `site`, dropping the `base`, adding a CNAME to `public/`, and pointing
-  // DNS -- worth doing before launch rather than after.
-  site: "https://babystep-technologies.github.io",
+  // The canonical URL. Every search result and every `canonical` tag is built
+  // from it, so it names the address the site is meant to be read at, not
+  // every address it answers on. The site is published twice -- to GitHub
+  // Pages and to babystep.tech -- and babystep.tech is the one that counts;
+  // the Pages copy carries canonical tags pointing here, which is what keeps
+  // two live copies from competing as two sites.
+  //
+  // `base` stays. babystep.tech serves this under a path rather than a
+  // subdomain, and it is the same path GitHub Pages uses, so one build is
+  // correct at both addresses.
+  site: "https://babystep.tech",
   base: "/active_sanction",
 
   // `dist/` rather than Astro's default, to match the sibling project's
