@@ -278,7 +278,7 @@ RSpec.describe ActiveSanction::Error do
     end
 
     it "raises a QueryError for a screening call that cannot be run" do
-      expect { ActiveSanction::Query.new(name: "Vladimir Putin", threshold: 300) }
+      expect { ActiveSanction::Query.new(name: "Bosco Ntaganda", threshold: 300) }
         .to raise_error(ActiveSanction::QueryError, /between 0 and 100/)
     end
   end

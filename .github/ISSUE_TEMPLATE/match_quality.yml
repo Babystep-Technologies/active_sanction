@@ -44,7 +44,7 @@ body:
       description: >-
         The publisher's own primary name, and which list it is on. It is
         already public, so naming it discloses nothing.
-      placeholder: "PUTIN, Vladimir Vladimirovich — ofac_sdn"
+      placeholder: "NTAGANDA, Bosco — ofac_sdn"
     validations:
       required: true
 

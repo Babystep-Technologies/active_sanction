@@ -110,8 +110,8 @@ RSpec.describe ActiveSanction::Normalizer::Form do
     end
 
     it "splits the collapsed string into tokens" do
-      expect(described_class.new("PUTIN, Vladimir Vladimirovich").tokens)
-        .to eq(%w[putin vladimir vladimirovich])
+      expect(described_class.new("NTAGANDA, Bosco").tokens)
+        .to eq(%w[ntaganda bosco])
     end
   end
 

@@ -13,14 +13,14 @@ module ActiveSanction
   #
   #   subject = ActiveSanction::Subject.new(
   #     id:            "cust_1",
-  #     name:          "Vladimir Putin",
+  #     name:          "Bosco Ntaganda",
   #     type:          :individual,
-  #     date_of_birth: "1952-10-07",
-  #     country:       "RU"
+  #     date_of_birth: "1973",
+  #     country:       "CD"
   #   )
   #
   #   subject.id     # => "cust_1"
-  #   subject.name   # => "Vladimir Putin"
+  #   subject.name   # => "Bosco Ntaganda"
   #
   # ### Why an id is the whole of what this adds
   #
@@ -108,7 +108,7 @@ module ActiveSanction
       # Whatever a caller had, as a Subject:
       #
       #   Subject.build(subject)                                  # itself
-      #   Subject.build(id: "cust_1", name: "Vladimir Putin")     # a Hash, string keys or symbol
+      #   Subject.build(id: "cust_1", name: "Bosco Ntaganda")     # a Hash, string keys or symbol
       #
       # What a book of business is streamed through, so a host can hand this
       # library the rows it already has rather than mapping them first.
@@ -227,7 +227,7 @@ module ActiveSanction
     end
 
     # A single value where a collection is expected is a collection of one,
-    # for the reason Query gives: `dates_of_birth: "1952-10-07"` is what a
+    # for the reason Query gives: `dates_of_birth: "1973"` is what a
     # caller with one date writes, and `Array(hash)` would read one identifier
     # as a list of its pairs.
     sig { params(member: Symbol, value: T.untyped).returns(T.untyped) }

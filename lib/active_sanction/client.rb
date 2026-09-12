@@ -18,7 +18,7 @@ module ActiveSanction
   #   )
   #
   #   client.sync!
-  #   client.screen(name: "Vladimir Putin", threshold: 75)
+  #   client.screen(name: "Bosco Ntaganda", threshold: 75)
   #
   # `ActiveSanction.screen` and everything beside it are sugar over a default
   # client this module builds on first use, so a script and the README
@@ -164,7 +164,7 @@ module ActiveSanction
 
     # Screens one name against this client's lists:
     #
-    #   client.screen(name: "Vladimir Putin", type: :individual, threshold: 75)
+    #   client.screen(name: "Bosco Ntaganda", type: :individual, threshold: 75)
     #
     # Sugar over #matcher, which is where everything this does is documented.
     # A query that names no threshold or limit takes this client's, not the

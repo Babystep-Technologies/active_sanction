@@ -5,7 +5,7 @@ require "json"
 RSpec.describe ActiveSanction::Subject do
   after { ActiveSanction.reset! }
 
-  def subject_for(id: "cust_1", name: "Vladimir Putin", **overrides)
+  def subject_for(id: "cust_1", name: "Bosco Ntaganda", **overrides)
     described_class.new(id: id, name: name, **overrides)
   end
 
@@ -31,26 +31,26 @@ RSpec.describe ActiveSanction::Subject do
 
   describe "the evidence" do
     it "takes every field a screening call takes" do
-      built = subject_for(type: :individual, dates_of_birth: ["1952-10-07"],
-                          nationalities: %w[RU], identifiers: [{ kind: :passport, value: "AB-1" }])
+      built = subject_for(type: :individual, dates_of_birth: ["1973"],
+                          nationalities: %w[CD], identifiers: [{ kind: :passport, value: "AB-1" }])
 
-      expect(built).to have_attributes(name: "Vladimir Putin", type: :individual,
-                                       dates_of_birth: [ActiveSanction::PartialDate.parse("1952-10-07")],
-                                       nationalities: %w[RU])
+      expect(built).to have_attributes(name: "Bosco Ntaganda", type: :individual,
+                                       dates_of_birth: [ActiveSanction::PartialDate.parse("1973")],
+                                       nationalities: %w[CD])
     end
 
     # A caller with one date writes the singular and should not have to
     # remember which spelling this library prefers.
     it "takes the singular spelling of every collection" do
-      built = subject_for(date_of_birth: "1952-10-07", country: "RU",
+      built = subject_for(date_of_birth: "1973", country: "CD",
                           identifier: { kind: :passport, value: "AB-1" })
 
-      expect(built).to have_attributes(dates_of_birth: [ActiveSanction::PartialDate.parse("1952-10-07")],
-                                       nationalities: %w[RU], identifiers: [an_instance_of(ActiveSanction::Identifier)])
+      expect(built).to have_attributes(dates_of_birth: [ActiveSanction::PartialDate.parse("1973")],
+                                       nationalities: %w[CD], identifiers: [an_instance_of(ActiveSanction::Identifier)])
     end
 
     it "folds the name once, at construction" do
-      expect(subject_for.form.value).to eq("vladimir putin")
+      expect(subject_for.form.value).to eq("bosco ntaganda")
     end
 
     it "refuses an attribute it does not have" do
@@ -98,7 +98,7 @@ RSpec.describe ActiveSanction::Subject do
     it "is the screening call this subject is, at the threshold given" do
       built = subject_for(date_of_birth: "1952").query(threshold: 80, sources: %i[ofac_sdn])
 
-      expect(built).to have_attributes(name: "Vladimir Putin", threshold: 80.0, sources: %i[ofac_sdn])
+      expect(built).to have_attributes(name: "Bosco Ntaganda", threshold: 80.0, sources: %i[ofac_sdn])
     end
 
     it "falls back to the subject's own threshold" do
@@ -108,13 +108,13 @@ RSpec.describe ActiveSanction::Subject do
 
   describe "serialization" do
     it "round-trips through JSON" do
-      built = subject_for(type: :individual, date_of_birth: "1952-10-07", country: "RU", threshold: 85)
+      built = subject_for(type: :individual, date_of_birth: "1973", country: "CD", threshold: 85)
 
       expect(described_class.from_h(JSON.parse(JSON.generate(built.to_h)))).to eq(built)
     end
 
     it "builds from a Hash with string keys, which is what a database row is" do
-      expect(described_class.build("id" => "cust_1", "name" => "Vladimir Putin")).to eq(subject_for)
+      expect(described_class.build("id" => "cust_1", "name" => "Bosco Ntaganda")).to eq(subject_for)
     end
 
     it "passes a Subject through" do
@@ -123,7 +123,7 @@ RSpec.describe ActiveSanction::Subject do
     end
 
     it "refuses a bare name, which cannot say which record an alert is about" do
-      expect { described_class.build("Vladimir Putin") }
+      expect { described_class.build("Bosco Ntaganda") }
         .to raise_error(ActiveSanction::InvalidArgument, /alerts against a caller's own id/)
     end
   end
@@ -142,7 +142,7 @@ RSpec.describe ActiveSanction::Subject do
     end
 
     it "inspects as its id and name" do
-      expect(subject_for.inspect).to eq('#<ActiveSanction::Subject cust_1 "Vladimir Putin">')
+      expect(subject_for.inspect).to eq('#<ActiveSanction::Subject cust_1 "Bosco Ntaganda">')
     end
   end
 end

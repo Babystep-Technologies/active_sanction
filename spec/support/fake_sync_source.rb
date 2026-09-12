@@ -40,7 +40,7 @@ class FakeSyncSource
 
   # One listed person, named after the source so that a spec can tell which
   # list a stored snapshot came from.
-  def self.entity(source, id = 1, name: "PUTIN, Vladimir Vladimirovich")
+  def self.entity(source, id = 1, name: "NTAGANDA, Bosco")
     ActiveSanction::Entity.new(
       id: "#{source}:#{id}", source: source, type: :individual,
       names: [ActiveSanction::Name.new(value: name)]

@@ -19,7 +19,7 @@ module ActiveSanction
     #   alert.previous_score  # => nil
     #
     #   puts alert
-    #   # => cust_1  newly listed  ofac_sdn:41234  PUTIN, Vladimir Vladimirovich  94.1
+    #   # => cust_1  newly listed  un_consolidated:6908021  BOSCO TAGANDA  94.1
     #
     # ### The two sides, and why either may be missing
     #
@@ -240,7 +240,7 @@ module ActiveSanction
 
       # One line, for the summary a human reads:
       #
-      #   cust_1  newly listed  ofac_sdn:41234  PUTIN, Vladimir  94.1 (was 71.0)
+      #   cust_1  newly listed  un_consolidated:6908021  BOSCO TAGANDA  94.1 (was 71.0)
       sig { returns(String) }
       def to_s
         "#{subject_id}  #{change.to_s.tr("_", " ")}  #{entity_id}  #{evidence.matched_name.value}  #{movement}"

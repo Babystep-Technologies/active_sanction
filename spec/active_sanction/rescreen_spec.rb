@@ -22,13 +22,13 @@ RSpec.describe ActiveSanction::Rescreen do
   # One record nobody in these books looks like, so that no snapshot is empty
   # and no diff reports a list that emptied itself.
   def unrelated = entity(36, "AEROCARIBBEAN AIRLINES", type: :organization)
-  def putin = entity(41_234, "PUTIN, Vladimir Vladimirovich")
+  def ntaganda = entity(41_234, "NTAGANDA, Bosco")
   def abbas = entity(2674, "ABBAS, Abu")
 
-  def book = [customer("cust_1", "Vladimir Putin"), customer("cust_2", "Jane Miller")]
+  def book = [customer("cust_1", "Bosco Ntaganda"), customer("cust_2", "Jane Miller")]
 
   # One record listed today that was not listed yesterday.
-  def listing = diff(snapshot([unrelated]), snapshot([unrelated, putin]))
+  def listing = diff(snapshot([unrelated]), snapshot([unrelated, ntaganda]))
 
   def alerts(subjects = book, changes = listing, threshold: 75)
     described_class.call(subjects, diff: changes, threshold: threshold)
@@ -119,7 +119,7 @@ RSpec.describe ActiveSanction::Rescreen do
 
   describe "an empty diff" do
     it "yields no alerts, and does not so much as read the book" do
-      unchanged = diff(snapshot([unrelated, putin]), snapshot([unrelated, putin]))
+      unchanged = diff(snapshot([unrelated, ntaganda]), snapshot([unrelated, ntaganda]))
       refuses = Class.new { def each(*) = raise("a rescreen against an empty diff scored something") }.new
 
       expect(alerts(refuses, unchanged)).to eq([])
@@ -128,7 +128,7 @@ RSpec.describe ActiveSanction::Rescreen do
     # A first sync is a baseline rather than 19,015 new listings, so it raises
     # nothing: the right response to one is a deliberate full screening run.
     it "yields nothing for a baseline" do
-      expect(alerts(book, ActiveSanction::Diff.new(to: snapshot([unrelated, putin])))).to eq([])
+      expect(alerts(book, ActiveSanction::Diff.new(to: snapshot([unrelated, ntaganda])))).to eq([])
     end
   end
 
@@ -144,13 +144,13 @@ RSpec.describe ActiveSanction::Rescreen do
 
     it "records the question that was asked, at the threshold it was asked under" do
       expect(alerts.first.result.query)
-        .to have_attributes(name: "Vladimir Putin", threshold: 75.0, sources: %i[ofac_sdn])
+        .to have_attributes(name: "Bosco Ntaganda", threshold: 75.0, sources: %i[ofac_sdn])
     end
 
     # A rescreening of a book is one event in an audit trail, not ten thousand
     # of them a microsecond apart.
     it "stamps one screened_at across a whole run" do
-      raised = alerts([customer("cust_1", "Vladimir Putin"), customer("cust_6", "Vladimir Putin")])
+      raised = alerts([customer("cust_1", "Bosco Ntaganda"), customer("cust_6", "Bosco Ntaganda")])
 
       expect(raised.map(&:screened_at).uniq.size).to eq(1)
     end
@@ -164,7 +164,7 @@ RSpec.describe ActiveSanction::Rescreen do
     # Risk-based screening: a correspondent bank at 70 beside a retail
     # customer at 85, in one book and one run.
     it "lets a subject name its own" do
-      expect(alerts([customer("vip", "Vladimir Putin", threshold: 99)], listing, threshold: 50)).to be_empty
+      expect(alerts([customer("vip", "Bosco Ntaganda", threshold: 99)], listing, threshold: 50)).to be_empty
     end
 
     it "defaults to the configured screening threshold" do
@@ -187,11 +187,11 @@ RSpec.describe ActiveSanction::Rescreen do
     end
 
     it "takes the Hashes a host already has, without mapping them first" do
-      expect(alerts([{ id: "cust_1", name: "Vladimir Putin" }]).map(&:subject_id)).to eq(%w[cust_1])
+      expect(alerts([{ id: "cust_1", name: "Bosco Ntaganda" }]).map(&:subject_id)).to eq(%w[cust_1])
     end
 
     it "refuses a book that is not enumerable" do
-      expect { alerts(customer("cust_1", "Vladimir Putin")) }
+      expect { alerts(customer("cust_1", "Bosco Ntaganda")) }
         .to raise_error(ActiveSanction::InvalidArgument, /has to be enumerable/)
     end
 
@@ -208,9 +208,9 @@ RSpec.describe ActiveSanction::Rescreen do
     # Two runs over the same diff and the same book have to produce the same
     # alerts in the same order, or an alert is not re-derivable.
     it "orders a subject's alerts by score, and then by record id" do
-      twin = entity(41_235, "PUTIN, Vladimir")
-      raised = alerts([customer("cust_1", "Vladimir Putin")],
-                      diff(snapshot([unrelated]), snapshot([unrelated, putin, twin])))
+      twin = entity(41_235, "NTAGENDA, Bosco")
+      raised = alerts([customer("cust_1", "Bosco Ntaganda")],
+                      diff(snapshot([unrelated]), snapshot([unrelated, ntaganda, twin])))
 
       expect(raised.map(&:score)).to eq(raised.map(&:score).sort.reverse)
     end

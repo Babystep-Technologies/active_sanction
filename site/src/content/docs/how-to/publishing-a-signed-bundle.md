@@ -89,7 +89,7 @@ store:
 ```ruby
 client = ActiveSanction::Client.new(storage: ActiveSanction::Storage::Memory.new)
 client.storage.write_snapshot(snapshot)
-client.screen(name: "Vladimir Putin").first.verified?   # => true
+client.screen(name: "Bosco Ntaganda").first.verified?   # => true
 ```
 
 ## Two properties worth relying on

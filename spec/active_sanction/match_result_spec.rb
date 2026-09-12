@@ -6,7 +6,7 @@ RSpec.describe ActiveSanction::MatchResult do
   def listed(id: "ofac_sdn:1", source: :ofac_sdn, **rest)
     ActiveSanction::Entity.new(
       id: id, source: source, type: :individual,
-      names: [ActiveSanction::Name.new(value: "PUTIN, Vladimir Vladimirovich")], **rest
+      names: [ActiveSanction::Name.new(value: "NTAGANDA, Bosco")], **rest
     )
   end
 
@@ -17,7 +17,7 @@ RSpec.describe ActiveSanction::MatchResult do
   def result(**overrides)
     described_class.new(
       entity: listed, matched_name: listed.names.first, explanation: [reason],
-      query: { name: "Vladimir Putin" }, weights: ActiveSanction::Scorer::Weights.default,
+      query: { name: "Bosco Ntaganda" }, weights: ActiveSanction::Scorer::Weights.default,
       snapshot_id: checksum, **overrides
     )
   end
@@ -51,7 +51,7 @@ RSpec.describe ActiveSanction::MatchResult do
 
   describe "what a report reads off it" do
     it "names the specific spelling that produced the score" do
-      expect(result.matched_name.value).to eq("PUTIN, Vladimir Vladimirovich")
+      expect(result.matched_name.value).to eq("NTAGANDA, Bosco")
     end
 
     # Read off the entity rather than stored beside it: a source that could
@@ -61,7 +61,7 @@ RSpec.describe ActiveSanction::MatchResult do
     end
 
     it "reports the threshold the run was willing to report at" do
-      expect(result(query: { name: "Putin", threshold: 85 }).threshold).to eq(85.0)
+      expect(result(query: { name: "Ntaganda", threshold: 85 }).threshold).to eq(85.0)
     end
 
     it "singles out the reasons that lowered the score" do
@@ -85,7 +85,7 @@ RSpec.describe ActiveSanction::MatchResult do
     end
 
     it "carries what was screened, which a record of what was found does not say" do
-      expect(result.query.name).to eq("Vladimir Putin")
+      expect(result.query.name).to eq("Bosco Ntaganda")
     end
 
     it "says which backend answered" do
@@ -118,7 +118,7 @@ RSpec.describe ActiveSanction::MatchResult do
 
     # The shape auditors read years later, out of whatever a host stored it in.
     it "round-trips through JSON" do
-      original = result(query: { name: "Putin", type: :individual, dob: "1952", sources: %i[ofac_sdn] },
+      original = result(query: { name: "Ntaganda", type: :individual, dob: "1952", sources: %i[ofac_sdn] },
                         weights: { dob_conflict: -20.0 }, backend: :hosted)
 
       expect(described_class.from_h(JSON.parse(JSON.generate(original.to_h)))).to eq(original)
@@ -158,12 +158,12 @@ RSpec.describe ActiveSanction::MatchResult do
   describe ".from_scorer" do
     def scored
       ActiveSanction::Scorer.call(
-        ActiveSanction::Scorer::Subject.new(name: "Vladimir Putin", type: :individual), listed
+        ActiveSanction::Scorer::Subject.new(name: "Bosco Ntaganda", type: :individual), listed
       )
     end
 
     it "carries the scorer's score across unchanged" do
-      stamped = described_class.from_scorer(scored, query: ActiveSanction::Query.build("Vladimir Putin"),
+      stamped = described_class.from_scorer(scored, query: ActiveSanction::Query.build("Bosco Ntaganda"),
                                                     snapshot_id: checksum,
                                                     weights: ActiveSanction::Scorer::Weights.default)
 
@@ -171,7 +171,7 @@ RSpec.describe ActiveSanction::MatchResult do
     end
 
     it "carries the scorer's explanation across unchanged" do
-      stamped = described_class.from_scorer(scored, query: ActiveSanction::Query.build("Vladimir Putin"),
+      stamped = described_class.from_scorer(scored, query: ActiveSanction::Query.build("Bosco Ntaganda"),
                                                     snapshot_id: checksum,
                                                     weights: ActiveSanction::Scorer::Weights.default)
 
@@ -195,7 +195,7 @@ RSpec.describe ActiveSanction::MatchResult do
     end
 
     it "says what it is" do
-      expect(result.inspect).to include("91.2", "PUTIN, Vladimir Vladimirovich", "ofac_sdn:1")
+      expect(result.inspect).to include("91.2", "NTAGANDA, Bosco", "ofac_sdn:1")
     end
   end
 
