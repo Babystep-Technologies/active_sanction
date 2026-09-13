@@ -219,6 +219,35 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
         run: gem push "active_sanction-$VERSION.gem"
 
+      # `gem push` exiting 0 says the upload was accepted, not that the
+      # version is installable -- and what a user does next is `bundle
+      # install`, which asks rubygems.org rather than asking this log. So the
+      # public record is what gets checked, and the check is what the
+      # `announce` job below is really waiting on: it already declines to
+      # announce a version that failed to publish, and ordering the jobs is
+      # not the same as confirming the publish.
+      #
+      # The retry is not defensive padding. Indexing is asynchronous and the
+      # version is queryable a few seconds after the push returns, so asking
+      # once would fail on a healthy release. Two minutes is far longer than
+      # that has ever taken and still bounded.
+      - name: rubygems.org serves the version that was pushed
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if curl -sf "https://rubygems.org/api/v1/versions/active_sanction.json" |
+                 jq -e --arg v "$VERSION" 'any(.[]; .number == $v)' >/dev/null; then
+              echo "rubygems.org serves $VERSION"
+              exit 0
+            fi
+            echo "not indexed yet (attempt $attempt), waiting"
+            sleep 10
+          done
+          echo "::error::rubygems.org is not serving $VERSION two minutes after the push"
+          exit 1
+
   # Last, and deliberately after the push. A GitHub release is an
   # announcement, and announcing a version that failed to publish points
   # people at an install that does not work.
