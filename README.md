@@ -4,6 +4,7 @@
 
 # ActiveSanction
 
+[![Gem](https://img.shields.io/gem/v/active_sanction?label=gem&color=CC342D)](https://rubygems.org/gems/active_sanction)
 [![CI](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/ci.yml/badge.svg)](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/ci.yml)
 
 **[Full documentation, guides and the source catalogue →](https://babystep.tech/active_sanction/)**

@@ -35,6 +35,17 @@ screening decision would come out as today.
   The gem pushed is the gem that was verified, carried between the two jobs as an artifact
   rather than rebuilt -- a second build is a second thing, however identical it looks.
 
+  **The publish is confirmed against rubygems.org** (#136), because `gem push` exiting 0 says
+  the upload was accepted rather than that a `bundle install` will find the version. The job
+  that writes the GitHub release waits on that confirmation, so a version rubygems.org did not
+  end up serving is never announced.
+
+- **A gem badge on the README** (#136), read live from rubygems.org rather than generated into
+  a file. What it states is what is installable, which is a different question from what was
+  last tagged -- and a version written into the repository would be stale the moment the next
+  one published. Same argument as #104, applied to the one fact about this gem that lives
+  somewhere else entirely.
+
 ### Fixed
 
 - **`rake canary:refresh` regenerates the catalogue page's data as well as the baselines.**

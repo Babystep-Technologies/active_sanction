@@ -246,8 +246,14 @@ with its date, merge that, and then tag the merge commit:
 It re-runs the three gates against the tagged tree, checks that the tag and
 `VERSION` agree, that the tag is on `main`, and that the changelog has a
 section for it — then builds the gem, publishes it to
-[rubygems.org](https://rubygems.org), and writes the GitHub release from that
-changelog section. A tag that fails any of those checks publishes nothing.
+[rubygems.org](https://rubygems.org), confirms rubygems.org is serving that
+version, and writes the GitHub release from that changelog section. A tag that
+fails any of those checks publishes nothing, and a push rubygems.org did not
+end up serving is never announced (#136).
+
+The [gem badge](https://rubygems.org/gems/active_sanction) at the top of the
+README reads from rubygems.org rather than from anything in this repository,
+so it states what is installable rather than what was last tagged.
 
 **Nobody needs a RubyGems API key, including the person tagging.** The
 workflow authenticates by [trusted
