@@ -1,0 +1,258 @@
+name: Release
+
+# Publishing `active_sanction` to rubygems.org, triggered by a tag and
+# authenticated with no key at all.
+#
+# The trigger is a `v*` tag rather than a push to `main`, because a release is
+# a decision somebody makes rather than a consequence of merging. The tag is
+# the decision, `CONTRIBUTING.md` describes making it, and everything below
+# happens afterwards.
+#
+# ## No API key, anywhere
+#
+# rubygems.org supports trusted publishing: a workflow mints a short-lived
+# OIDC token, rubygems.org checks it names this repository and this workflow
+# file, and exchanges it for a credential that lives for the length of one
+# job. There is no `RUBYGEMS_API_KEY` secret here for the same reason there is
+# no service-account key in `pages.yml` -- a long-lived key in a public
+# repository's settings is one leak away from someone else publishing a gem
+# under this name, and a gem is not something a user can be warned about after
+# the fact. They install what rubygems.org served them.
+#
+# This has to be configured once on rubygems.org, under the gem's Trusted
+# Publishers, naming the owner, the repository and this file. See the release
+# section of `CONTRIBUTING.md`.
+#
+# ## Why not `rake release`
+#
+# `bundle exec rake release` is what a maintainer runs by hand, and it tags,
+# pushes and publishes in one step. That is the wrong shape here: the tag
+# already exists by the time this runs -- it is what triggered the run -- and
+# a task that insists on creating it would fail on every release. So this
+# builds and pushes the gem, and leaves git alone.
+on:
+  push:
+    tags: ["v*"]
+
+  # For a tag that was pushed before this workflow existed, and for re-running
+  # a publish that failed after the tag was already public. Deleting and
+  # re-pushing a tag to retrigger the `push` event above would be the
+  # alternative, and moving a tag people may already have fetched is worse
+  # than a button.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "An existing tag to publish, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: read
+
+# A second run for the same tag would be pushing bytes rubygems.org has
+# already accepted, and `gem push` cannot overwrite a published version: the
+# duplicate fails noisily rather than doing damage. Serializing them anyway
+# keeps the failure out of the logs of the run that succeeded.
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  # Everything that can say "do not publish this" says it here, before any
+  # credential is minted. CI has already run on `main`, but a tag is a
+  # separate assertion -- it can point at any commit in the repository,
+  # including one that was never merged -- so this re-runs the gates against
+  # exactly the bytes the tag names.
+  verify:
+    name: Verify the tag
+    runs-on: ubuntu-latest
+
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+
+    steps:
+      # Through the environment rather than interpolated into the script.
+      # `inputs.tag` is attacker-controlled text in the general case, and
+      # `${{ ... }}` is substituted before bash ever sees the line -- so a tag
+      # containing shell metacharacters would be executed rather than
+      # compared. Every other step below reads these outputs the same way.
+      - id: resolve
+        env:
+          RAW_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          case "$RAW_TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::$RAW_TAG is not a vMAJOR.MINOR.PATCH tag"; exit 1 ;;
+          esac
+          echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${RAW_TAG#v}" >> "$GITHUB_OUTPUT"
+
+      # Full history, because the ancestry check below needs `main` and a
+      # shallow clone does not have it.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.tag }}
+          fetch-depth: 0
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      # The tag and the constant are two statements of the same fact, written
+      # in different files by different steps of a release, and a release
+      # where they disagree publishes a gem whose version is not the version
+      # anybody tagged. Cheapest possible check, and it has caught this
+      # everywhere it has ever been written.
+      - name: The tag and VERSION agree
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+          TAGGED_VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          declared=$(ruby -r ./lib/active_sanction/version -e 'print ActiveSanction::VERSION')
+          if [ "$TAGGED_VERSION" != "$declared" ]; then
+            echo "::error::tag $TAG says $TAGGED_VERSION, lib/active_sanction/version.rb says $declared"
+            exit 1
+          fi
+          echo "both say $declared"
+
+      # A tag on a branch that never merged would publish code no review saw
+      # and no `main` build ran. This is the one check that cannot be inferred
+      # from the tagged tree itself.
+      - name: The tag is on main
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::$TAG is not an ancestor of main"
+            exit 1
+          fi
+          echo "$(git rev-parse --short HEAD) is on main"
+
+      # Keep a Changelog, so the heading is `## [1.0.0] - 2026-09-13`. A
+      # release with no entry is a release nobody can read afterwards, and the
+      # section found here is what the GitHub release is written from below.
+      - name: The changelog has an entry for this version
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          if ! grep -qF "## [$VERSION]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$VERSION]' section"
+            exit 1
+          fi
+          echo "found the section"
+
+      # The same three gates `bundle exec rake` runs, and the same three a
+      # contributor runs before pushing. One Ruby rather than the matrix: the
+      # matrix's job is to find what breaks across interpreters and it has
+      # already done that on `main`, while this is asking a narrower question
+      # -- is this specific tree publishable.
+      - name: Run specs
+        run: bundle exec rspec
+
+      - name: Run RuboCop
+        run: bundle exec rubocop
+
+      - name: Typecheck with Sorbet
+        run: bundle exec srb tc
+
+      # Built here rather than in the publishing job, so the bytes that were
+      # verified are the bytes that get pushed. Same reasoning as `pages.yml`
+      # uploading its build for both deploys: a second build is a second
+      # thing, however identical it looks.
+      - name: Build the gem
+        run: gem build active_sanction.gemspec
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gem
+          path: "*.gem"
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: Publish to rubygems.org
+    needs: verify
+    runs-on: ubuntu-latest
+
+    # Named so the publish shows up on the repository's environments page with
+    # its history, and so protection rules can be added later -- a required
+    # reviewer on this environment turns publishing into something a second
+    # person approves, without touching this file.
+    environment:
+      name: rubygems
+      url: https://rubygems.org/gems/active_sanction/versions/${{ needs.verify.outputs.version }}
+
+    # `id-token: write` is the whole mechanism: it mints the OIDC token
+    # rubygems.org federates. Nothing else is needed, and `contents` is not
+    # among them -- this job never touches the repository.
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gem
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      # Exchanges the OIDC token for a rubygems.org credential scoped to this
+      # gem, exports it for the step below, and revokes it when the job ends.
+      - uses: rubygems/configure-rubygems-credentials@v1
+
+      - name: Push the gem
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: gem push "active_sanction-$VERSION.gem"
+
+  # Last, and deliberately after the push. A GitHub release is an
+  # announcement, and announcing a version that failed to publish points
+  # people at an install that does not work.
+  announce:
+    name: Write the GitHub release
+    needs: [verify, publish]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
+
+      # The changelog is already the release note, written when the change was
+      # made rather than reconstructed from commit subjects at release time.
+      # This lifts the one section between this version's heading and the next
+      # `## `, so the two can never drift.
+      - name: Take the release note from the changelog
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          awk -v heading="## [$VERSION]" \
+            'index($0, heading) == 1 {found = 1; next} found && /^## / {exit} found' \
+            CHANGELOG.md > release-note.md
+          if [ ! -s release-note.md ]; then
+            echo "::error::extracted an empty release note"
+            exit 1
+          fi
+          wc -l release-note.md
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file release-note.md \
+            --verify-tag

@@ -232,11 +232,37 @@ comment restating the name would be noise.
 
 ## Releasing
 
-`bundle exec rake install` installs the gem locally. A release is: bump
-`VERSION` in [`lib/active_sanction/version.rb`](lib/active_sanction/version.rb),
-move the `Unreleased` section of [`CHANGELOG.md`](CHANGELOG.md) under the new
-version with its date, then `bundle exec rake release`, which tags, pushes
-and publishes to [rubygems.org](https://rubygems.org).
+`bundle exec rake install` installs the gem locally.
+
+A release is a tag. Bump `VERSION` in
+[`lib/active_sanction/version.rb`](lib/active_sanction/version.rb), move the
+`Unreleased` section of [`CHANGELOG.md`](CHANGELOG.md) under the new version
+with its date, merge that, and then tag the merge commit:
+
+    $ git tag -s v1.2.3 -m "Release 1.2.3"
+    $ git push origin v1.2.3
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) does the rest.
+It re-runs the three gates against the tagged tree, checks that the tag and
+`VERSION` agree, that the tag is on `main`, and that the changelog has a
+section for it — then builds the gem, publishes it to
+[rubygems.org](https://rubygems.org), and writes the GitHub release from that
+changelog section. A tag that fails any of those checks publishes nothing.
+
+**Nobody needs a RubyGems API key, including the person tagging.** The
+workflow authenticates by [trusted
+publishing](https://guides.rubygems.org/trusted-publishing): it mints a
+short-lived OIDC token, rubygems.org verifies the token names this repository
+and this workflow file, and hands back a credential that expires with the job.
+There is no publishing secret in this repository's settings, for the same
+reason there is no service-account key for the documentation deploy. It is
+configured once, on rubygems.org, under the gem's **Trusted Publishers**:
+owner `Babystep-Technologies`, repository `active_sanction`, workflow
+`release.yml`, environment `rubygems`.
+
+`bundle exec rake release` — the manual path that tags, pushes and publishes
+in one step — still exists and still works for anyone with push rights to the
+gem. It is not how this gem is released, and using it skips every check above.
 
 `MATCHER_VERSION` in the same file is bumped on a different occasion and for
 a different reason — whenever a change to the normalizer, the index, the

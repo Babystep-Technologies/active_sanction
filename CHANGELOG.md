@@ -13,6 +13,28 @@ algorithms or the scorer could move a score. **A change that moves `MATCHER_VERS
 called out here as such**, because it is the one kind of change that alters what a past
 screening decision would come out as today.
 
+## [Unreleased]
+
+### Added
+
+- **Releases publish themselves from a tag**, through
+  [`.github/workflows/release.yml`](.github/workflows/release.yml). Pushing `v1.2.3` re-runs
+  the three gates against the tagged tree, checks that the tag and `VERSION` agree, that the
+  tag is an ancestor of `main` and that the changelog has a section for it, then builds the
+  gem, publishes it and writes the GitHub release from that section. A tag failing any of
+  those publishes nothing.
+
+  **No API key exists to leak.** It authenticates by
+  [trusted publishing](https://guides.rubygems.org/trusted-publishing): a short-lived OIDC
+  token, verified by rubygems.org as naming this repository and this workflow file, exchanged
+  for a credential that expires with the job. The alternative is a long-lived key in a public
+  repository's settings, one leak away from someone else publishing under this gem's name --
+  and unlike a bad deploy, a bad gem is already installed by the time anyone could be warned.
+  Same reasoning that keeps a service-account key out of the documentation deploy.
+
+  The gem pushed is the gem that was verified, carried between the two jobs as an artifact
+  rather than rebuilt -- a second build is a second thing, however identical it looks.
+
 ## [1.0.0] - 2026-09-13
 
 The first release. Everything below is in it.
@@ -535,4 +557,5 @@ summarized here because they are what a reader of a first release most needs:
 - Recall at the default threshold is 0.939 overall on the labeled set, and every record this
   version misses is named in the committed accuracy report.
 
+[Unreleased]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.0...main
 [1.0.0]: https://github.com/Babystep-Technologies/active_sanction/releases/tag/v1.0.0
