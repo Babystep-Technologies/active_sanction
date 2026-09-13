@@ -15,9 +15,10 @@ hero:
       <img src="/active_sanction/logo.svg" alt="" width="280" height="280"
       loading="eager" decoding="async">
   tagline: >-
-    Screen a name against government sanctions lists, in Ruby, in your own
-    process. Seven lists, one record model, and an account of every point a
-    score was awarded.
+    A Ruby library that manages government sanctions lists from jurisdictions
+    around the world. Every list parsed into one record model, every name
+    screened in your own process, with an account of every point a score was
+    awarded.
   actions:
     - text: Screen your first name
       link: /active_sanction/tutorial/
@@ -30,18 +31,23 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-Sync, screen, and read the score:
+Choose your lists, screen a name, and read the score:
 
-{/* sample: illustrative -- reaches seven government endpoints and needs a configured store */}
+{/* sample: illustrative -- reaches two government endpoints and needs a configured store */}
 
 ```ruby
-ActiveSanction.sync!
+# Every list, or only the ones your obligations actually cover.
+ActiveSanction.sync!(:ofac_sdn, :un_consolidated)
 
 hit = ActiveSanction.screen(
-  name: "Bosco Ntaganda", type: :individual, date_of_birth: "1973"
+  name:    "Bosco Ntaganda",
+  type:    :individual,
+  sources: %i[ofac_sdn un_consolidated]
 ).first
 
-hit.score                # => 100.0
+hit.score        # => 100.0
+hit.source       # => :un_consolidated -- which list answered
+hit.snapshot_id  # => "sha256:4e39b663..." -- the exact version of it
 ```
 
 <div class="screening-aid" id="screening-aid">
