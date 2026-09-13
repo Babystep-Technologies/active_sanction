@@ -16,9 +16,10 @@ Nothing here explains why, and nothing instructs — see
 [Explanation](/active_sanction/explanation/) for why, and
 [Guides](/active_sanction/how-to/) for how.
 
-- [Sources](/active_sanction/reference/sources/) — the seven lists, one
-  uniform block each: jurisdiction, authority, endpoint, format, record count,
-  known data limitations, licence and attribution.
+- [Supported sanctions lists](/active_sanction/reference/sources/) — every
+  list this gem reads, one uniform block each: jurisdiction, authority,
+  endpoint, format, record count, known data limitations, licence and
+  attribution.
 - [Configuration](/active_sanction/reference/configuration/) — every setting
   `Configuration` accepts, its type, its default, and one line on effect.
 - [Error hierarchy](/active_sanction/reference/errors/) — every error class,
@@ -57,6 +58,6 @@ signature; `/api/` is where the signature itself lives.
 Every default on [Configuration](/active_sanction/reference/configuration/),
 every class on the [error hierarchy](/active_sanction/reference/errors/),
 every figure on [Accuracy](/active_sanction/reference/accuracy/), and every
-field on [Sources](/active_sanction/reference/sources/) is generated from the
-code or from a committed benchmark report, not retyped onto a page — see each
-page's own note on where its numbers come from.
+field on [Supported sanctions lists](/active_sanction/reference/sources/) is
+generated from the code or from a committed benchmark report, not retyped
+onto a page — see each page's own note on where its numbers come from.
