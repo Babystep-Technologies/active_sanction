@@ -71,6 +71,7 @@ RSpec/DescribeClass:
     - "spec/site_tutorial_spec.rb"
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
+    - "spec/instrumentation_pipeline_spec.rb"
 
 # The canonical model is value objects: one keyword argument and one hash key
 # per field. Splitting `initialize` or `to_h` to satisfy a count would make
@@ -152,9 +153,11 @@ Metrics/MethodLength:
 # shares with it. 310 became 350 for the client (#55), and that one is not
 # another setting: it is `freeze`, `with`, `apply`, `.settings` and
 # `initialize_copy` -- the five methods that turn a global edited in place into
-# a value object a client can hold and hand around.
+# a value object a client can hold and hand around. 350 became 360 for
+# instrumentation (#59), which added `instrumenter` -- a reader, a writer and
+# its validation, the same three lines every other setting costs.
 Metrics/ClassLength:
-  Max: 350
+  Max: 360
   Exclude:
     # See the note on Metrics/CyclomaticComplexity below.
     - "lib/active_sanction/phonetics/double_metaphone.rb"

@@ -5,6 +5,7 @@ require "sorbet-runtime"
 
 require "uri"
 require "active_sanction/error"
+require "active_sanction/instrumentation"
 require "active_sanction/sources"
 require "active_sanction/storage"
 require "active_sanction/sync/result"
@@ -149,6 +150,17 @@ module ActiveSanction
     sig { returns(T.untyped) }
     attr_reader :logger
 
+    # Where the `:sync` and `:store` events go, or nil for nothing listening.
+    #
+    # The `:fetch` and `:parse` events of the sources this run covers do not
+    # come from here: an adapter is constructed by the run and reads the
+    # configuration, exactly as it does for its logger and its User-Agent. So
+    # a host that instruments through `ActiveSanction.configure` sees all six
+    # events, and one that hands a run its own instrumenter sees the two this
+    # class emits. See Instrumentation.
+    sig { returns(T.untyped) }
+    attr_reader :instrumenter
+
     sig { params(options: T.untyped, block: T.untyped).returns(Report) }
     def self.call(**options, &block) = T.unsafe(self).new(**options).call(&block)
 
@@ -157,9 +169,10 @@ module ActiveSanction
     # raises here, before the first list is downloaded, rather than after.
     sig do
       params(sources: T.untyped, store: T.untyped, force: T::Boolean, concurrency: T.untyped,
-             logger: T.untyped).void
+             logger: T.untyped, instrumenter: T.untyped).void
     end
-    def initialize(sources: nil, store: nil, force: false, concurrency: nil, logger: ActiveSanction.config.logger)
+    def initialize(sources: nil, store: nil, force: false, concurrency: nil, logger: ActiveSanction.config.logger,
+                   instrumenter: ActiveSanction.config.instrumenter)
       @sources = T.let(resolve(sources), T::Array[T.untyped])
       @keys = T.let(@sources.map { |source| Sources::Definition.key!(source.key) }, T::Array[Symbol])
       @store = T.let(store || ActiveSanction.storage, T.untyped)
@@ -168,6 +181,7 @@ module ActiveSanction
         Configuration.sync_concurrency!(concurrency || ActiveSanction.config.sync_concurrency), Integer
       )
       @logger = T.let(logger, T.untyped)
+      @instrumenter = T.let(instrumenter, T.untyped)
       @lock = T.let(Mutex.new, Mutex)
       # The settings this run was started under, so a worker thread reads them
       # rather than the default client's. A configuration is fiber-local and a
@@ -195,9 +209,17 @@ module ActiveSanction
       started_at = Time.now.utc
       began = monotonic
       log_start
-      work = keys.each_with_index.map { |key, at| [at, key, sources.fetch(at)] }
-      results = run(work, &block).sort_by(&:first).map(&:last)
-      report = Report.new(results: results, started_at: started_at, duration: elapsed(began))
+      # The run's own duration is the Report's, taken from the same clock
+      # reading, so an event and the report a caller is holding never disagree
+      # about how long a run took.
+      report = Instrumentation.instrument(instrumenter, :sync,
+                                          { sources: keys, forced: force, concurrency: concurrency }) do |event|
+        work = keys.each_with_index.map { |key, at| [at, key, sources.fetch(at)] }
+        results = run(work, &block).sort_by(&:first).map(&:last)
+        finished = Report.new(results: results, started_at: started_at, duration: elapsed(began))
+        summarize(event, finished)
+        finished
+      end
       log_finish(report)
       report
     end
@@ -285,11 +307,37 @@ module ActiveSanction
         snapshot = adapter.sync(force: force || previous.nil?)
         return complete(key, :unchanged, previous, started) if unchanged?(previous, snapshot)
 
-        store.write_snapshot(snapshot)
+        write(key, snapshot)
         complete(key, :updated, Storage::Meta.from_snapshot(snapshot), started)
       rescue StandardError => e
         complete(key, :failed, previous, started, stamp(key, e))
       end
+    end
+
+    # Writes one list, and says what it cost. Separate from the rest of
+    # #sync_source so the `:store` event times the write and nothing else --
+    # a store that takes eleven seconds to persist 19,321 entities is a
+    # different operational problem from a publisher that takes eleven seconds
+    # to serve them, and a timing that covered both could not tell a host
+    # which one it had.
+    sig { params(key: Symbol, snapshot: T.untyped).void }
+    def write(key, snapshot)
+      fields = { source: key, snapshot_id: snapshot.checksum, entities: snapshot.record_count,
+                 store: store.class.name }
+      Instrumentation.instrument(instrumenter, :store, fields) { store.write_snapshot(snapshot) }
+    end
+
+    # What a run did, as counts rather than as the Report itself: a subscriber
+    # forwarding an event to a metrics backend wants numbers, and one that
+    # wants the whole report already has it as the return value of the call
+    # that emitted this.
+    sig { params(event: T.untyped, report: Report).void }
+    def summarize(event, report)
+      event[:outcomes] = report.results.to_h { |result| [result.source, result.status] }
+      event[:updated] = report.updated.size
+      event[:unchanged] = report.unchanged.size
+      event[:failed] = report.failed.size
+      event[:records] = report.record_count
     end
 
     # A failure captured for a source names that source, even when it was
