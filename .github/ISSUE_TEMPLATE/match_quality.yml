@@ -89,6 +89,6 @@ body:
       description: >-
         `ActiveSanction::VERSION` and `ActiveSanction::MATCHER_VERSION`. The
         second is the one that decides whether a score is reproducible.
-      placeholder: "0.1.0, matcher 1"
+      placeholder: "1.0.0, matcher 1"
     validations:
       required: true

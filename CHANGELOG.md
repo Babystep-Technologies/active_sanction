@@ -13,9 +13,16 @@ algorithms or the scorer could move a score. **A change that moves `MATCHER_VERS
 called out here as such**, because it is the one kind of change that alters what a past
 screening decision would come out as today.
 
-## [Unreleased]
+## [1.0.0] - 2026-09-13
 
-Everything below is the first release, and becomes `0.1.0` when it is tagged.
+The first release. Everything below is in it.
+
+Why 1.0.0 and not 0.1.0: the public surface this ships is the one that was inventoried,
+enumerated in [`docs/api_stability.md`](docs/api_stability.md) and held in place by
+`spec/api_surface_spec.rb`, which fails the build in both directions. Shipping that under a
+leading zero would say the opposite of what the inventory says. From here the deprecation
+path in that document is in force — nothing enumerated there is removed without a warning
+first, and a breaking change waits for 2.0.0.
 
 ### Added
 
@@ -508,9 +515,9 @@ Documented in full in the README under
 [Known data limitations, per source](README.md#known-data-limitations-per-source), and
 summarized here because they are what a reader of a first release most needs:
 
-- Five lists: two US, one UN, one Canada, one EU. The UK
-  ([#40](https://github.com/Babystep-Technologies/active_sanction/issues/40)) and Australia
-  ([#41](https://github.com/Babystep-Technologies/active_sanction/issues/41)) are not read.
+- Seven lists, across six jurisdictions: `ofac_sdn`, `ofac_consolidated`, `un_consolidated`,
+  `canada_sema`, `eu_fsf`, `uk_sanctions_list` and `australia_dfat`. Nowhere else is read, and
+  a name absent from all seven has been screened against those seven and nothing more.
 - Non-Latin script is not transliterated. A Cyrillic name matches a Cyrillic query and nothing
   else.
 - OFAC's secondary identifiers come from heuristic parsing of free text, at 97.3% segment
@@ -521,10 +528,11 @@ summarized here because they are what a reader of a first release most needs:
 - The EU publishes no primary name and no alias-quality column, so which of a record's names
   is called primary is this library's rule rather than the Commission's, and most EU aliases
   arrive ungraded. Its endpoint ignores conditional GET, so every sync of it transfers 25.7 MB.
-- The labeled accuracy set does not yet carry EU cases, so the committed recall and precision
-  figures describe the other four lists. The EU adapter's own spec covers it; the accuracy
-  report does not.
+- The labeled accuracy set covers four of the seven lists — OFAC SDN, OFAC Consolidated, UN
+  and Canada — so the committed recall and precision figures describe those. The EU, UK and
+  Australian adapters each have their own spec, and the conformance group holds all seven to
+  the same floor, but the accuracy report does not yet speak for the last three.
 - Recall at the default threshold is 0.939 overall on the labeled set, and every record this
   version misses is named in the committed accuracy report.
 
-[Unreleased]: https://github.com/Babystep-Technologies/active_sanction/commits/main
+[1.0.0]: https://github.com/Babystep-Technologies/active_sanction/releases/tag/v1.0.0

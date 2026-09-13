@@ -451,7 +451,7 @@ That distinction is the whole reason the styles are read. `18798` is the 19th of
 **DFAT's edge rejects this gem's User-Agent.** Verified against the live endpoint: `active_sanction/x.y.z (+https://…)` gets no response at all — not a 403, a dropped connection — while `curl/8.7.1`, `Wget/1.21` and `python-requests/2.31.0` are served. The filter is on the leading product token, and an unrecognised one is dropped, so identifying ourselves honestly is what gets us blocked. This source sends the configured agent inside the form written for exactly this case:
 
 ```
-Mozilla/5.0 (compatible; active_sanction/0.1.0 (+https://github.com/Babystep-Technologies/active_sanction))
+Mozilla/5.0 (compatible; active_sanction/1.0.0 (+https://github.com/Babystep-Technologies/active_sanction))
 ```
 
 which is how a well-behaved crawler has identified itself since Googlebot. The agent, its version and whatever contact URL you configured are all still in the string; DFAT can still see who we are and block us on purpose. It is the same identification in a shape the edge parses. It is the only place any source departs from `Sources::Base`, and `AustraliaDfat#fetch_file` is the whole of it.
@@ -581,11 +581,12 @@ renamed or removed in a patch release. [`docs/api_stability.md`](docs/api_stabil
 is the list and the policy, and [`spec/api_surface_spec.rb`](spec/api_surface_spec.rb)
 fails the build when the code and that list stop agreeing in either direction.
 
-**Before 1.0, a minor version may break the public API** — `0.4.0` may remove what
-`0.3.0` promised, which is what the leading zero means. A patch release never does.
-At 1.0 the deprecation path begins: one full minor release of overlap, a warning
-through Ruby's own `Warning[:deprecated]` switch, and a changelog entry in both the
-release that deprecates and the release that removes.
+**The first release is 1.0.0, and there was no 0.x.** A leading zero says a minor
+version may remove what the last one promised, and that is not what an enumerated,
+test-enforced surface is doing. So the deprecation path is in force from the first
+release: one full minor release of overlap, a warning through Ruby's own
+`Warning[:deprecated]` switch, and a changelog entry in both the release that
+deprecates and the release that removes. A breaking change waits for 2.0.0.
 
 **`Sources::Base`, `Storage::Base` and `ValidatorStore` carry the strongest
 guarantee**, because breaking one of them forks every adapter written outside this
