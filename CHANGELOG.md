@@ -350,6 +350,11 @@ Everything below is the first release, and becomes `0.1.0` when it is tagged.
   [#80](https://github.com/Babystep-Technologies/active_sanction/issues/80)).
 - A hermetic suite — an un-stubbed HTTP call fails rather than quietly reaching a government
   server ([#3](https://github.com/Babystep-Technologies/active_sanction/issues/3)).
+- The same suite isolates global configuration: `ActiveSanction.configure` replaces the
+  process-wide default client and nothing put it back, so an example that configured anything
+  decided what every example RSpec ran after it saw, and the build passed or failed on its
+  seed. The configuration is reset after every example
+  ([#123](https://github.com/Babystep-Technologies/active_sanction/issues/123)).
 
 #### The documentation site
 

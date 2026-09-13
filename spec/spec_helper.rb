@@ -59,4 +59,19 @@ RSpec.configure do |config|
       WebMock.disable_net_connect!(allow_localhost: true)
     end
   end
+
+  # `ActiveSanction.configure` is process-global: it replaces the default
+  # client, and nothing puts it back. An example that configures anything --
+  # a store, a threshold, a dictionary -- therefore decides what every example
+  # RSpec happens to run after it sees, and the suite passes or fails on the
+  # seed. #123 was one seed's version of that: a runnable documentation sample
+  # sets `screening_threshold` to 80, and the spec asserting the default is 75
+  # failed whenever it drew a later slot.
+  #
+  # Resetting here rather than in each spec that configures something is the
+  # difference between a rule and a habit. The leak is not caused by the spec
+  # that configures -- that is the library being used as documented -- it is
+  # caused by the next example inheriting it, and only the suite can see that.
+  # This is the hook `ActiveSanction.reset!` is documented for.
+  config.after { ActiveSanction.reset! }
 end

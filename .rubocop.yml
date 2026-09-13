@@ -42,8 +42,9 @@ RSpec/ExampleLength:
 
 # These files cover the test harness itself rather than a class:
 # network_isolation_spec that the suite cannot reach the internet,
-# sorbet_runtime_spec what a signature does and does not do in a host's
-# process, supported_rubies_spec that the Rubies this gem claims to run on are
+# configuration_isolation_spec that one example's global configuration cannot
+# reach the next one, sorbet_runtime_spec what a signature does and does not do
+# in a host's process, supported_rubies_spec that the Rubies this gem claims to run on are
 # the Rubies a build actually ran, licensing_spec that this gem says MIT in
 # every place a scanner or a lawyer looks, dco_spec that the sign-off
 # CONTRIBUTING.md asks for is a check CI actually runs, api_surface_spec that
@@ -54,6 +55,7 @@ RSpec/ExampleLength:
 RSpec/DescribeClass:
   Exclude:
     - "spec/network_isolation_spec.rb"
+    - "spec/configuration_isolation_spec.rb"
     - "spec/sorbet_runtime_spec.rb"
     - "spec/supported_rubies_spec.rb"
     - "spec/licensing_spec.rb"
