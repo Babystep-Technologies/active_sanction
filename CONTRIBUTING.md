@@ -251,6 +251,14 @@ version, and writes the GitHub release from that changelog section. A tag that
 fails any of those checks publishes nothing, and a push rubygems.org did not
 end up serving is never announced (#136).
 
+**The workflow's "Run workflow" button is for re-running a publish, not for
+making a release.** It takes a tag that already exists — a tag pushed before
+the workflow did, or one whose publish failed after the tag was already
+public — and does nothing a `git push origin v1.2.3` would not have done on
+its own. It is not a way to release a version that has not been tagged: the
+first thing it checks is that the tag exists, and it stops there if it does
+not. Cutting a release is the three steps above, in that order.
+
 The [gem badge](https://rubygems.org/gems/active_sanction) at the top of the
 README reads from rubygems.org rather than from anything in this repository,
 so it states what is installable rather than what was last tagged.

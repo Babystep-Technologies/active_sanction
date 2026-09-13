@@ -88,6 +88,33 @@ jobs:
           echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
           echo "version=${RAW_TAG#v}" >> "$GITHUB_OUTPUT"
 
+      # The one gate that has to run before the checkout, because the checkout
+      # is what it is protecting. A `push` trigger cannot reach this with a
+      # tag that does not exist -- the tag is what fired it -- but the
+      # `workflow_dispatch` button takes a tag as free text, and the likeliest
+      # thing to type into a box labelled "an existing tag" is a version
+      # somebody means to release rather than one they have already tagged.
+      #
+      # Without this, that lands on `actions/checkout` as "A branch or tag
+      # with the name 'v1.0.1' could not be found", under a step called "Run
+      # actions/checkout@v4" -- true, and it reads like the workflow is broken
+      # rather than like the release is not ready. Every other refusal in this
+      # file says what was wrong and what to do, and this is the one somebody
+      # will actually hit.
+      - name: The tag exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::there is no $TAG in this repository. Tag the release first --" \
+                 "see the release section of CONTRIBUTING.md -- and pushing the tag triggers" \
+                 "this workflow on its own, without this button."
+            exit 1
+          fi
+          echo "$TAG exists"
+
       # Full history, because the ancestry check below needs `main` and a
       # shallow clone does not have it.
       - uses: actions/checkout@v4
