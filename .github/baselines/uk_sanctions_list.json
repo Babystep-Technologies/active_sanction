@@ -1,6 +1,6 @@
 {
   "source": "uk_sanctions_list",
-  "captured_at": "2026-09-08T15:31:26Z",
+  "captured_at": "2026-09-13T21:45:49Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
@@ -8,7 +8,7 @@
   "profile": {
     "source": "uk_sanctions_list",
     "record_count": 6340,
-    "checksum": "sha256:a5038595388da217840e0a97b49ca6d42192062d76b883efdb6b36eb6d5638de",
+    "checksum": "sha256:6131a6468c431e80ec5023095df1df987f8bc5893f229475854df2218a707d8a",
     "cohorts": {
       "individual": 4032,
       "organization": 1644,
