@@ -9,10 +9,10 @@ module ActiveSanction
   #   ActiveSanction::Deprecation.warn(
   #     "ActiveSanction.screen(name:)",
   #     replacement: "ActiveSanction.screen(Query.new(...))",
-  #     since: "0.4.0"
+  #     since: "1.4.0"
   #   )
   #   # => active_sanction: ActiveSanction.screen(name:) is deprecated since
-  #   #    0.4.0 and will be removed in 0.6.0. Use
+  #   #    1.4.0 and will be removed in 1.6.0. Use
   #   #    ActiveSanction.screen(Query.new(...)) instead.
   #   #    Called from app/jobs/screen_job.rb:31
   #
@@ -46,7 +46,7 @@ module ActiveSanction
     extend T::Sig
 
     # Deprecations overlap for one full minor release. Something deprecated in
-    # 0.4.0 goes on working through all of 0.5.x and may be removed in 0.6.0,
+    # 1.4.0 goes on working through all of 1.5.x and may be removed in 1.6.0,
     # so an application upgrading one minor at a time always meets the warning
     # at least one release before the breakage.
     #

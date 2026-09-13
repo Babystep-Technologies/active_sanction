@@ -43,7 +43,7 @@ module ActiveSanction
     #
     # ### DFAT's edge rejects this gem's User-Agent
     #
-    # Verified against the live endpoint: `active_sanction/0.1.0 (+https://...)`
+    # Verified against the live endpoint: `active_sanction/x.y.z (+https://...)`
     # gets no response at all -- not a 403, a dropped connection -- while
     # `curl/8.7.1`, `Wget/1.21` and `python-requests/2.31.0` are all served. The
     # filter is on the leading product token, and an unrecognised one is

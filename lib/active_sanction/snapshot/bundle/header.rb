@@ -21,7 +21,7 @@ module ActiveSanction
       #   header.source             # => :ofac_sdn
       #   header.record_count       # => 19015
       #   header.snapshot_checksum  # => "sha256:9f86d081884c7d65..."
-      #   header.generator          # => "active_sanction/0.1.0"
+      #   header.generator          # => "active_sanction/1.0.0"
       #   header.fetched_at         # => 2026-08-28 09:30:00 UTC
       #
       # This is Storage::Meta's job for a file somebody sent you, and the two

@@ -116,7 +116,7 @@ One JSON object, serialized compactly, with its keys **in this order**:
 |---|-----|------|-------|
 | 1 | `format_version` | integer | Equals the version in the magic line. |
 | 2 | `gem_version` | string | The `active_sanction` that serialized the records. Diagnostic; a non-Ruby producer writes the version of whatever wrote it. |
-| 3 | `generator` | string | Who published this bundle, e.g. `"active_sanction/0.1.0"`, `"acme-mirror/2.0"`. |
+| 3 | `generator` | string | Who published this bundle, e.g. `"active_sanction/1.0.0"`, `"acme-mirror/2.0"`. |
 | 4 | `source` | string | The list's key: lowercase, `[a-z][a-z0-9_]*`, e.g. `"ofac_sdn"`. |
 | 5 | `schema_version` | integer | `Snapshot::SCHEMA_VERSION` the records are written under. `2` at the time of writing. |
 | 6 | `snapshot_checksum` | digest | Over the records' content. §7.3. |
@@ -369,7 +369,7 @@ ACTIVESANCTION-BUNDLE/1
 The header line, wrapped here and written as one line in the file:
 
 ```json
-{"format_version":1,"gem_version":"0.1.0","generator":"active_sanction/0.1.0",
+{"format_version":1,"gem_version":"1.0.0","generator":"active_sanction/1.0.0",
  "source":"ofac_sdn","schema_version":2,
  "snapshot_checksum":"sha256:ed0eebb275106f4e7075683af4ca7ae17c7aa100cd617f8bc41eebe9d9cf797d",
  "record_count":1,"fetched_at":"2026-08-28T09:30:00Z","source_version":"2026-08-28",

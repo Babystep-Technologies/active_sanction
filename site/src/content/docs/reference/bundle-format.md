@@ -43,7 +43,7 @@ recognize, and refuses a header carrying a key it does not know.
 |---|-----|------|-------|
 | 1 | `format_version` | integer | Equals the version in the magic line |
 | 2 | `gem_version` | string | The `active_sanction` that serialized the records |
-| 3 | `generator` | string | Who published this bundle — `"active_sanction/0.1.0"`, or a mirror's own name |
+| 3 | `generator` | string | Who published this bundle — `"active_sanction/1.0.0"`, or a mirror's own name |
 | 4 | `source` | string | The list's key, e.g. `"ofac_sdn"` |
 | 5 | `schema_version` | integer | `Snapshot::SCHEMA_VERSION` the records are written under |
 | 6 | `snapshot_checksum` | digest | Over the records' content |

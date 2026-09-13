@@ -19,15 +19,18 @@ longer exists fails it too.
 
 ## Versioning
 
-This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
-with the pre-1.0 rule stated plainly rather than left to be discovered.
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Before 1.0, a minor version may break the public API.** `0.4.0` may remove
-what `0.3.0` promised. That is what the leading zero means in SemVer and it is
-what it means here. A patch release — `0.3.1` — never breaks anything.
+**The first release is 1.0.0, and there was no 0.x.** A leading zero says a
+minor version may remove what the last one promised, and that is not what this
+library is doing: the surface below was inventoried before it shipped and
+`spec/api_surface_spec.rb` fails the build in both directions. Publishing an
+enumerated, test-enforced surface under a number that means *this may move* is
+a contradiction, so the number matches the inventory instead.
 
-**At 1.0, the deprecation path below begins**, and a breaking change waits for
-the next major version.
+**So the deprecation path below is in force from 1.0.0.** Nothing enumerated
+here is removed without a warning first, and a breaking change waits for 2.0.0.
+A patch release never breaks anything.
 
 Two version numbers move independently, and only one of them is what this
 document is about:
@@ -51,16 +54,16 @@ Nothing on the enumerated list is removed without a warning first.
 2. It goes on working for **one full minor release** after that one.
 3. It may be removed in the minor after that.
 
-So something deprecated in `0.4.0` works through all of `0.5.x` and may be
-removed in `0.6.0`. An application that upgrades one minor at a time always
+So something deprecated in `1.4.0` works through all of `1.5.x` and may be
+removed in `1.6.0`. An application that upgrades one minor at a time always
 meets the warning at least one release before the breakage.
 
 `ActiveSanction::Deprecation.removal_for` computes that date rather than
 leaving it to be remembered, and the warning says it out loud:
 
 ```
-active_sanction: ActiveSanction.old_thing is deprecated since 0.4.0 and will
-be removed in 0.6.0. Use ActiveSanction.new_thing instead.
+active_sanction: ActiveSanction.old_thing is deprecated since 1.4.0 and will
+be removed in 1.6.0. Use ActiveSanction.new_thing instead.
 Called from app/jobs/screen_job.rb:31
 ```
 
