@@ -206,9 +206,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Both paths: `canary:refresh` rewrites the baselines and regenerates
+          # site/src/data/sources.json from them (#104), and a pull request
+          # carrying one without the other fails spec/site_sources_data_spec.rb.
+          #
           # `git status` rather than `git diff`, because the first run of a
           # newly added adapter creates its baseline rather than changing one.
-          if [ -z "$(git status --porcelain -- .github/baselines)" ]; then
+          paths=(.github/baselines site/src/data/sources.json)
+          if [ -z "$(git status --porcelain -- "${paths[@]}")" ]; then
             echo "the committed baselines already say what the lists say"
             exit 0
           fi
@@ -216,8 +221,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B canary/baselines
-          git add .github/baselines
-          git commit --message "Refresh the canary baselines" \
+          git add "${paths[@]}"
+          # Signed off, because .github/workflows/dco.yml holds every commit on
+          # a pull request to it and exempts only merge commits. The trailer
+          # names the identity configured just above, which is the account that
+          # authors the commit.
+          git commit --signoff --message "Refresh the canary baselines" \
             --message "Written by the canary from the lists as published. A number that moved here is a
           number a government moved: what the baselines are for is that the movement is reviewable."
 

@@ -35,6 +35,21 @@ screening decision would come out as today.
   The gem pushed is the gem that was verified, carried between the two jobs as an artifact
   rather than rebuilt -- a second build is a second thing, however identical it looks.
 
+### Fixed
+
+- **`rake canary:refresh` regenerates the catalogue page's data as well as the baselines.**
+  `site/src/data/sources.json` is derived from `.github/baselines` (#104), so accepting new
+  numbers without rebuilding it left the two disagreeing and
+  [`spec/site_sources_data_spec.rb`](spec/site_sources_data_spec.rb) red. The rolling
+  baseline pull request the canary opens had failed on this every run since it started
+  opening one, on all six Rubies. Chained onto the task rather than added as a step to each
+  caller: a derived file that callers have to remember to rebuild is stale by the third
+  caller.
+
+- **The canary signs its baseline commit off.** Nothing exempts a bot from
+  [`.github/workflows/dco.yml`](.github/workflows/dco.yml), which skips merge commits and
+  nothing else, so the rolling pull request failed the DCO check as well.
+
 ## [1.0.0] - 2026-09-13
 
 The first release. Everything below is in it.
