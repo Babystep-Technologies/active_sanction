@@ -206,7 +206,13 @@ jobs:
 
       # Exchanges the OIDC token for a rubygems.org credential scoped to this
       # gem, exports it for the step below, and revokes it when the job ends.
-      - uses: rubygems/configure-rubygems-credentials@v1
+      #
+      # Pinned to an exact version, unlike the `@v4`s elsewhere in this
+      # repository. That is not a preference: this action publishes only exact
+      # tags -- `v1.0.0`, `v2.0.0`, `v2.1.0` -- and no floating `v1` or `v2`
+      # for them to move under. `@v2` does not resolve, and neither did the
+      # `@v1` this file was first written with.
+      - uses: rubygems/configure-rubygems-credentials@v2.1.0
 
       - name: Push the gem
         env:
