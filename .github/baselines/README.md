@@ -53,6 +53,11 @@ $ bundle exec rake canary:refresh                          # accept it
 $ CANARY_SOURCES=ofac_sdn bundle exec rake canary:refresh  # accept one list
 ```
 
+`refresh` also regenerates
+[`site/src/data/sources.json`](../../site/src/data/sources.json), the catalogue page's
+record counts, which are read out of these files rather than typed (#104). Accepting
+numbers here and leaving that behind is what `spec/site_sources_data_spec.rb` fails on.
+
 `refresh` rewrites the profiles and leaves the tolerances alone — they are the
 part somebody tuned, and a refresh that reset them every weekday would quietly
 undo that. It touches only sources that actually parsed: a publisher that was

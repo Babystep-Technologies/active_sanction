@@ -47,10 +47,19 @@ namespace :canary do
   # produces is the review: a number moving in .github/baselines is a change in
   # what a government publishes, which is the one thing about these files that
   # is otherwise invisible.
+  # site/src/data/sources.json is generated out of these baselines (#104), so
+  # every accepted number has to be regenerated into it or the catalogue page
+  # describes the previous ones and spec/site_sources_data_spec.rb goes red.
+  # Chained here rather than named as a second step in the places that accept
+  # baselines -- the workflow, .github/baselines/README.md, the repair skill --
+  # because a derived file that callers have to remember to rebuild is a file
+  # that is stale by the third caller.
   desc "Rewrite .github/baselines from a canary run (#69)"
   task :refresh do
     require_relative "canary/canary"
-    exit Canary::CLI.refresh
+    code = Canary::CLI.refresh
+    Rake::Task["site:sources"].invoke if code.zero?
+    exit code
   end
 end
 
