@@ -234,10 +234,27 @@ comment restating the name would be noise.
 
 `bundle exec rake install` installs the gem locally.
 
-A release is a tag. Bump `VERSION` in
-[`lib/active_sanction/version.rb`](lib/active_sanction/version.rb), move the
-`Unreleased` section of [`CHANGELOG.md`](CHANGELOG.md) under the new version
-with its date, and merge that.
+A release is a tag, and two facts have to be true on `main` before one can
+exist: `VERSION` says the version, and `CHANGELOG.md` has a section for it.
+`release.yml` checks both and writes neither.
+
+**Putting them there is a button too.** Open
+[`Prepare release`](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/prepare-release.yml),
+press **Run workflow**, enter `1.2.3`. It bumps `VERSION`, moves the accrued
+`Unreleased` section under a dated `## [1.2.3]` heading, leaves a fresh empty
+`Unreleased` behind, fixes the link definitions at the foot of the changelog,
+regenerates the one site data file that carries the version, and opens a pull
+request. CI runs on it like any other.
+
+The edits are [`bin/prepare_release`](bin/prepare_release), so
+`bin/prepare_release 1.2.3` does exactly the same thing on your machine if you
+would rather commit it yourself. It refuses a version that does not come after
+the current one, and refuses to prepare a release out of an empty `Unreleased`
+— which `release.yml` also refuses, but only in the job that writes the GitHub
+release, long after the gem is published.
+
+**Read the moved changelog section before merging.** It becomes the release
+note verbatim.
 
 Then the tag, which you can let the workflow write or write yourself.
 

@@ -1,0 +1,158 @@
+name: Prepare release
+
+# The step before `release.yml`, and the reason there is one at all.
+#
+# `release.yml` *verifies* a release: that the tag and `VERSION` agree, that
+# the commit is on `main`, that the changelog has a section for it. It never
+# writes any of that. So two facts have to be true on `main` before a tag can
+# exist, and until now putting them there was a hand-edit somebody remembered
+# to make -- bump `VERSION`, move the accrued `Unreleased` section under a
+# dated heading, fix the link definitions at the foot of the changelog,
+# regenerate the one site data file that carries the version, open a pull
+# request.
+#
+# ## Why a workflow rather than an instruction in CONTRIBUTING
+#
+# Because the hand-edit has already gone wrong once, in the way hand-edits do:
+# silently. #138 and #141 were open at the same time, one adding entries under
+# `## [Unreleased]` and the other renaming that heading to `## [1.0.1]`. Git
+# merged both without a conflict and filed instrumentation under a patch
+# release that did not contain it. Nothing was red. The published gem was
+# correct and `main`'s changelog was not, permanently, until somebody read it.
+#
+# The edits themselves are in `bin/prepare_release`, with `spec/prepare_release_spec.rb`
+# over them, rather than in shell here -- so what this workflow does is
+# reviewable as Ruby and runnable on a laptop, and this file is the part that
+# only a runner can do: commit as a bot, push a branch, open the pull request.
+#
+# ## It proposes, it does not decide
+#
+# The output is a pull request, which is the point rather than a limitation.
+# The version number is a judgment about what changed and this workflow does
+# not make it; CI runs on the branch, so the release is gated before anybody
+# is asked to look; and merging stays a person's decision, as does the
+# dispatch of `release.yml` afterwards.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The version to prepare, e.g. 1.2.0"
+        required: true
+
+permissions:
+  contents: read
+
+# Two runs preparing the same version would push the same branch twice and
+# race to open one pull request. Serialized per version, and never cancelled
+# mid-push.
+concurrency:
+  group: prepare-release-${{ github.event.inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare the release
+    runs-on: ubuntu-latest
+
+    # The branch and the pull request. Nothing here publishes anything, and
+    # nothing here can write to `main`: the branch it pushes is its own, and
+    # what happens to it is a review.
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # `main` rather than whatever ref the dispatch ran from. A release is
+      # cut from the default branch -- `release.yml` refuses a tag that is not
+      # an ancestor of it -- so preparing one anywhere else would produce a
+      # pull request that could never be released.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      # Through the environment, never interpolated into the script: a
+      # dispatch input is attacker-controlled text in the general case, and
+      # `${{ ... }}` is substituted before bash sees the line.
+      #
+      # Everything this step refuses, `bin/prepare_release` refuses -- a
+      # malformed version, one that does not come after the current one, an
+      # `Unreleased` section with nothing in it. That last one matters most
+      # here: `release.yml` also refuses an empty release note, but it does so
+      # in the job that writes the GitHub release, which runs *after* the gem
+      # is published and is far too late to help.
+      - id: prepare
+        name: Bump the version and move the changelog section
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          summary=$(bin/prepare_release "$VERSION")
+          echo "$summary"
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION#v}" >> "$GITHUB_OUTPUT"
+
+      # `DEFAULT_USER_AGENT` interpolates `VERSION`, and the configuration
+      # reference page renders that default out of committed data -- so the
+      # data goes stale on every bump and spec/site_configuration_data_spec.rb
+      # fails until it is regenerated. It is derived from the version this run
+      # just wrote, so it is regenerated here rather than left for the review
+      # to catch.
+      - name: Regenerate the site data that carries the version
+        run: bundle exec rake site:configuration
+
+      # No gates here. CI runs on the branch this pushes, against the same
+      # matrix every other pull request faces, so running them twice would buy
+      # a slower answer to a question already being asked.
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.prepare.outputs.version }}
+          SUMMARY: ${{ steps.prepare.outputs.summary }}
+        run: |
+          set -euo pipefail
+          branch="release/v$VERSION"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add CHANGELOG.md lib/active_sanction/version.rb site/src/data/configuration.json
+          # Signed off, because .github/workflows/dco.yml holds every commit on
+          # a pull request to it and exempts only merge commits. The trailer
+          # names the identity configured just above.
+          git commit --signoff --message "Release $VERSION" --message "$SUMMARY
+
+          Prepared by .github/workflows/prepare-release.yml, which runs bin/prepare_release. Nothing here
+          is tagged or published: merging this makes the tag and VERSION able to agree, which is what
+          release.yml checks before it will publish anything."
+
+          # Force, because the branch is machine-owned and rebuilt from `main`
+          # on every run. A second dispatch for the same version replaces what
+          # the first one proposed rather than stacking on top of it.
+          git push --force origin "$branch"
+
+          open_pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$open_pr" ]; then
+            echo "updated the existing pull request #$open_pr"
+            exit 0
+          fi
+
+          gh pr create --base main --head "$branch" \
+            --title "Release $VERSION" \
+            --body "$SUMMARY
+
+          Prepared by [\`prepare-release.yml\`](.github/workflows/prepare-release.yml), which runs
+          [\`bin/prepare_release\`](bin/prepare_release).
+
+          **Read the moved changelog section before merging.** It becomes the GitHub release note
+          verbatim — \`release.yml\` cuts it out of this file between the \`## [$VERSION]\` heading and
+          the next one — so it is the last chance to see what this release will tell people it is.
+
+          Nothing is tagged or published yet. Merging makes the tag and \`VERSION\` able to agree, which
+          is what \`release.yml\` checks first. To publish afterwards: run **Release** with \`v$VERSION\`
+          and *Create the tag on main* ticked."

@@ -1,0 +1,177 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Everything a release needs on `main` before it can be tagged (#146).
+#
+#     $ bin/prepare_release 1.2.0
+#
+# `release.yml` *verifies* the version and never writes it: it checks that the
+# tag and `VERSION` agree and that the changelog has a section for it, then
+# gates, tags and publishes. Those two facts have to be true on `main` before
+# the tag exists, and putting them there is this.
+#
+# `.github/workflows/prepare-release.yml` runs it and opens the pull request.
+# Running it by hand does the same edits, which is what makes the workflow
+# reviewable: the surgery is here, in Ruby, with a spec over it, rather than
+# in twenty lines of `sed` inside a YAML string.
+#
+# ### Why the changelog half is a script rather than an instruction
+#
+# Moving the `Unreleased` section under a version heading is three edits that
+# all have to agree -- the heading, a fresh empty `Unreleased` above it, and
+# the link definitions at the foot of the file -- and getting them right by
+# hand is exactly what failed between #138 and #141. Two pull requests were
+# open, one renamed `## [Unreleased]` to `## [1.0.1]` and the other added
+# entries under `## [Unreleased]`; git merged both cleanly and filed a feature
+# under a patch release that did not contain it. Nothing was conflicted and
+# nothing was red. A script that always writes the same shape cannot make that
+# mistake, and the window where it can happen at all shrinks to the minutes
+# between this running and the pull request merging.
+#
+# ### What it deliberately does not do
+#
+# It does not tag, does not push, and does not decide the version number. The
+# number is a judgment about what changed -- additive or not, breaking or not
+# -- and reading `### Added` out of a changelog is a guess at that judgment
+# rather than a substitute for it.
+
+require "date"
+
+# @api private
+module PrepareRelease
+  Error = Class.new(StandardError)
+
+  # `MAJOR.MINOR.PATCH`, and nothing else. A pre-release or build suffix is
+  # not refused because it would be wrong to publish; it is refused because
+  # nothing else in this repository is written to expect one -- `release.yml`
+  # matches `v[0-9]*.[0-9]*.[0-9]*`, and the changelog's link definitions
+  # assume a tag per version.
+  VERSION_PATTERN = /\A\d+\.\d+\.\d+\z/
+
+  # What a fresh `Unreleased` section says, and what an empty one is
+  # recognised by. A release prepared out of nothing would produce a release
+  # note of nothing, which `release.yml`'s announce job already refuses -- but
+  # it refuses it after the gem is published, which is far too late to be
+  # useful.
+  PLACEHOLDER = "Nothing yet."
+
+  module_function
+
+  # Rewrites `lib/active_sanction/version.rb` and `CHANGELOG.md` in place, and
+  # returns a one-line summary of what moved.
+  #
+  # @param version [String] the version being prepared, e.g. "1.2.0"
+  # @param root [String] the repository root
+  # @param today [Date] the release date written into the heading
+  # @return [String]
+  def call(version, root: Dir.pwd, today: Date.today)
+    version = version.to_s.strip.delete_prefix("v")
+    raise Error, "#{version.inspect} is not a MAJOR.MINOR.PATCH version" unless version.match?(VERSION_PATTERN)
+
+    previous = current_version(root)
+    unless newer?(version, previous)
+      raise Error, "#{version} does not come after #{previous}, which is the version on this branch"
+    end
+
+    entries = write_changelog(root, version, previous, today)
+    write_version(root, version)
+    "#{previous} -> #{version}, moving #{entries} changelog #{entries == 1 ? "entry" : "entries"} " \
+      "under ## [#{version}] - #{today.iso8601}"
+  end
+
+  def version_path(root) = File.join(root, "lib", "active_sanction", "version.rb")
+
+  def changelog_path(root) = File.join(root, "CHANGELOG.md")
+
+  def current_version(root)
+    source = File.read(version_path(root))
+    found = source[/^\s*VERSION\s*=\s*"([^"]+)"/, 1]
+    raise Error, "no VERSION found in #{version_path(root)}" unless found
+
+    found
+  end
+
+  # Compared component by component rather than as strings, so that 1.10.0
+  # comes after 1.9.0.
+  def newer?(version, previous)
+    (version.split(".").map(&:to_i) <=> previous.split(".").map(&:to_i)).positive?
+  end
+
+  def write_version(root, version)
+    path = version_path(root)
+    source = File.read(path)
+    # The replacement is a validated MAJOR.MINOR.PATCH, so it carries no
+    # backreference for `sub` to expand.
+    updated = source.sub(/^(\s*VERSION\s*=\s*")[^"]+(")/, "\\1#{version}\\2")
+    raise Error, "VERSION in #{path} did not change" if updated == source
+
+    File.write(path, updated)
+  end
+
+  # The three edits, which is the whole reason this file exists: the accrued
+  # `Unreleased` section becomes the new version's, a fresh empty one takes
+  # its place, and the link definitions at the foot learn the new tag.
+  def write_changelog(root, version, previous, today)
+    path = changelog_path(root)
+    lines = File.read(path).split("\n", -1)
+
+    opens = lines.index { |line| line.start_with?("## [Unreleased]") }
+    raise Error, "CHANGELOG.md has no '## [Unreleased]' heading" unless opens
+
+    closes = lines[(opens + 1)..].index { |line| line.start_with?("## [") }
+    raise Error, "CHANGELOG.md has no released section under '## [Unreleased]'" unless closes
+
+    closes += opens + 1
+    accrued = trim(lines[(opens + 1)...closes])
+    refuse_empty(accrued, version)
+
+    rewritten = lines[0..opens] + ["", PLACEHOLDER, "", "## [#{version}] - #{today.iso8601}", ""] +
+                accrued + [""] + lines[closes..]
+    File.write(path, link_definitions(rewritten, version, previous).join("\n"))
+    accrued.count { |line| line.start_with?("- ") }
+  end
+
+  def trim(block)
+    kept = block.dup
+    kept.shift while kept.first&.strip&.empty?
+    kept.pop while kept.last&.strip&.empty?
+    kept
+  end
+
+  def refuse_empty(accrued, version)
+    return unless accrued.empty? || accrued.all? { |line| line.strip == PLACEHOLDER }
+
+    raise Error,
+          "the Unreleased section of CHANGELOG.md is empty, so #{version} would be published with a " \
+          "release note of nothing. Write what changed first -- release.yml reads that section."
+  end
+
+  # `[Unreleased]` moves to compare against the new tag, and the new version
+  # gets a definition of its own comparing it against the one before it:
+  #
+  #     [Unreleased]: .../compare/v1.2.0...main
+  #     [1.2.0]:      .../compare/v1.1.0...v1.2.0
+  #
+  # The host and repository are read out of the line already there rather than
+  # written in, so a fork renaming itself does not have to edit this file.
+  def link_definitions(lines, version, previous)
+    at = lines.index { |line| line.start_with?("[Unreleased]:") }
+    raise Error, "CHANGELOG.md has no '[Unreleased]:' link definition" unless at
+
+    base = lines.fetch(at)[%r{(https?://\S+/compare/)}, 1]
+    raise Error, "cannot read a compare URL out of #{lines.fetch(at).inspect}" unless base
+
+    lines[at] = "[Unreleased]: #{base}v#{version}...main"
+    lines.insert(at + 1, "[#{version}]: #{base}v#{previous}...v#{version}")
+  end
+end
+
+if $PROGRAM_NAME == __FILE__
+  abort("usage: bin/prepare_release MAJOR.MINOR.PATCH") unless ARGV.size == 1
+
+  begin
+    puts PrepareRelease.call(ARGV.fetch(0), root: File.expand_path("..", __dir__))
+  rescue PrepareRelease::Error => e
+    abort("prepare_release: #{e.message}")
+  end
+end
