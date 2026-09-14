@@ -8,6 +8,22 @@ name: Release
 # the decision, `CONTRIBUTING.md` describes making it, and everything below
 # happens afterwards.
 #
+# ## Two ways to say it, and only one meaning
+#
+# Pushing `v1.2.3` triggers this. So does the "Run workflow" button, which
+# takes a tag and a checkbox: leave the box unticked to publish a tag that
+# already exists, tick it to have this workflow create the tag itself.
+#
+# Both paths converge on the same job doing the same gates against the same
+# bytes, and the second is not a shortcut around the first -- it is the same
+# release with the tagging moved to *after* the gates instead of before them,
+# which is strictly the safer order. A hand-pushed tag is public the moment it
+# is pushed, so a tree that then fails to publish leaves a tag pointing at it,
+# and moving a tag people may already have fetched is the one repair this file
+# refuses to make. A tag this workflow creates is written only once every gate
+# has passed and the gem has been built, so a failed release leaves nothing
+# behind to move.
+#
 # ## No API key, anywhere
 #
 # rubygems.org supports trusted publishing: a workflow mints a short-lived
@@ -26,24 +42,36 @@ name: Release
 # ## Why not `rake release`
 #
 # `bundle exec rake release` is what a maintainer runs by hand, and it tags,
-# pushes and publishes in one step. That is the wrong shape here: the tag
-# already exists by the time this runs -- it is what triggered the run -- and
-# a task that insists on creating it would fail on every release. So this
-# builds and pushes the gem, and leaves git alone.
+# pushes and publishes in one step, in that order. The order is the whole
+# objection: it makes the tag public before anything has checked that the tree
+# under it can be published, and it does the tagging from a laptop with push
+# rights rather than from the run that verified the bytes. This file does the
+# same three things and inverts the order -- verify, tag, publish -- so the
+# tag is a record of a release that passed rather than an announcement of one
+# about to be attempted.
 on:
   push:
     tags: ["v*"]
 
-  # For a tag that was pushed before this workflow existed, and for re-running
-  # a publish that failed after the tag was already public. Deleting and
-  # re-pushing a tag to retrigger the `push` event above would be the
-  # alternative, and moving a tag people may already have fetched is worse
-  # than a button.
+  # Three jobs, and they are the same job: cutting a release without touching
+  # git locally, re-running a publish that failed after the tag was already
+  # public, and publishing a tag that was pushed before this workflow existed.
+  #
+  # `create_tag` is the difference between the first and the other two, and it
+  # is a checkbox rather than an inference from whether the tag happens to
+  # exist. Creating a tag is the one thing here that writes to the repository
+  # and the one thing that cannot be undone quietly, so it is asked for rather
+  # than arrived at -- and a re-run of a failed publish, which is the case
+  # where the tag is already public, must not silently become a retag.
   workflow_dispatch:
     inputs:
       tag:
-        description: "An existing tag to publish, e.g. v1.0.0"
+        description: "The tag to publish, e.g. v1.0.0"
         required: true
+      create_tag:
+        description: "Create the tag on main, if it does not exist yet"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -58,17 +86,20 @@ concurrency:
 
 jobs:
   # Everything that can say "do not publish this" says it here, before any
-  # credential is minted. CI has already run on `main`, but a tag is a
-  # separate assertion -- it can point at any commit in the repository,
-  # including one that was never merged -- so this re-runs the gates against
-  # exactly the bytes the tag names.
+  # credential is minted and before any tag is written. CI has already run on
+  # `main`, but a release is a separate assertion -- a tag can point at any
+  # commit in the repository, including one that was never merged -- so this
+  # re-runs the gates against exactly the bytes about to be released, whether
+  # a tag already names them or this run is about to.
   verify:
-    name: Verify the tag
+    name: Verify the release
     runs-on: ubuntu-latest
 
     outputs:
       tag: ${{ steps.resolve.outputs.tag }}
       version: ${{ steps.resolve.outputs.version }}
+      creating: ${{ steps.plan.outputs.creating }}
+      sha: ${{ steps.verified.outputs.sha }}
 
     steps:
       # Through the environment rather than interpolated into the script.
@@ -88,12 +119,66 @@ jobs:
           echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
           echo "version=${RAW_TAG#v}" >> "$GITHUB_OUTPUT"
 
-      # Full history, because the ancestry check below needs `main` and a
-      # shallow clone does not have it.
+      # What this run is going to do, decided before the checkout because the
+      # checkout is the first thing that needs to know. A `push` trigger
+      # always lands in the first case: the tag exists, because it is what
+      # fired the run.
+      #
+      #   tag exists                     -> publish it, from the tag
+      #   missing, create_tag ticked     -> gate main, then tag it, then publish
+      #   missing, create_tag unticked   -> stop, and say which of the two was meant
+      #
+      # The third case is the one somebody will actually hit, and without this
+      # step it lands on `actions/checkout` as "A branch or tag with the name
+      # 'v1.0.1' could not be found", under a step called "Run
+      # actions/checkout@v4" -- true, and it reads like the workflow is broken
+      # rather than like the release is not ready.
+      #
+      # A ticked box against a tag that already exists is not an error. It is
+      # a re-run of a release whose publish failed after the tag went public,
+      # which is exactly what the button is for, so it publishes the existing
+      # tag and says that is what it did. Nothing here ever moves a tag.
+      - id: plan
+        name: The tag exists, or is going to
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+          CREATE: ${{ github.event.inputs.create_tag }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "$TAG exists; publishing it"
+            [ "$CREATE" = "true" ] && echo "(it is already tagged, so nothing is created)"
+            echo "ref=$TAG" >> "$GITHUB_OUTPUT"
+            echo "creating=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$CREATE" != "true" ]; then
+            echo "::error::there is no $TAG in this repository. Either push the tag --" \
+                 "see the release section of CONTRIBUTING.md, and pushing it triggers this" \
+                 "workflow on its own -- or re-run this workflow with \"Create the tag on" \
+                 "main\" ticked, and it will tag main for you once every gate has passed."
+            exit 1
+          fi
+          echo "$TAG does not exist yet; gating main and tagging it if it passes"
+          echo "ref=main" >> "$GITHUB_OUTPUT"
+          echo "creating=true" >> "$GITHUB_OUTPUT"
+
+      # The tag when there is one, `main` when this run is about to create it.
+      # Full history either way, because the ancestry check below needs `main`
+      # and a shallow clone does not have it.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.resolve.outputs.tag }}
+          ref: ${{ steps.plan.outputs.ref }}
           fetch-depth: 0
+
+      # The one commit this run is about, pinned the moment it is checked out.
+      # Everything after this gates *this* sha, and the tag job below writes
+      # the tag at *this* sha -- not at whatever `main` points to by the time
+      # it runs. A release that quietly picked up a commit merged while the
+      # suite was running would be a release nothing verified.
+      - id: verified
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -175,9 +260,71 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  # Only for a dispatch that asked for it. Skipped on every `push` release,
+  # where the tag is what started the run.
+  #
+  # ## Why this is its own job
+  #
+  # It is four lines of `gh api`, and it could sit at the end of `verify`.
+  # What it could not do there is keep `verify` read-only. That job runs the
+  # whole test suite -- this repository's code, its development dependencies,
+  # and whatever a future contributor adds to either -- and it runs it with
+  # the job's token in the environment. Giving that job `contents: write` so
+  # that four lines at the end of it can push a tag hands write access to
+  # every line that ran before them. A separate job with nothing in it but the
+  # tagging is the smallest thing that can hold the permission.
+  #
+  # That is the same reasoning the `publish` job below is already built on:
+  # `id-token: write` lives there and nowhere else, so nothing that mints a
+  # rubygems credential is in the same job as the suite either.
+  tag:
+    name: Tag the release
+    needs: verify
+    if: needs.verify.outputs.creating == 'true'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      # An annotated tag object and then the ref, which is what `git tag -a`
+      # writes and what `gh release create --verify-tag` expects below. Not
+      # signed: a workflow has no key of the person releasing, and pretending
+      # otherwise by signing with a machine key would say less than saying
+      # nothing. A maintainer who wants their signature on the tag pushes it
+      # themselves and leaves this box unticked -- see CONTRIBUTING.md.
+      #
+      # ## This does not start a second release
+      #
+      # Load-bearing, and invisible: a ref pushed with the repository's own
+      # `GITHUB_TOKEN` does not fire workflow triggers, so the `push` event at
+      # the top of this file does not see this tag. Swap this token for a PAT
+      # or a GitHub App and every dispatched release starts a second one that
+      # races the first to `gem push`.
+      - name: Create the tag at the verified commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          SHA: ${{ needs.verify.outputs.sha }}
+        run: |
+          set -euo pipefail
+          object=$(gh api --method POST "repos/$GITHUB_REPOSITORY/git/tags" \
+            -f tag="$TAG" -f message="Release $VERSION" -f object="$SHA" -f type=commit \
+            --jq .sha)
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$TAG" -f sha="$object" >/dev/null
+          echo "tagged $SHA as $TAG"
+
   publish:
     name: Publish to rubygems.org
-    needs: verify
+    needs: [verify, tag]
+    # `tag` is skipped on a `push` release, and a skipped dependency skips
+    # everything downstream of it unless something says otherwise. This is
+    # that: run when nothing failed and nothing was cancelled, which is the
+    # ordinary reading of `needs` and not a weakening of it -- a `tag` job
+    # that actually failed still stops the publish.
+    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.tag.result != 'failure' }}
     runs-on: ubuntu-latest
 
     # Named so the publish shows up on the repository's environments page with

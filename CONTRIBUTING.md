@@ -237,19 +237,51 @@ comment restating the name would be noise.
 A release is a tag. Bump `VERSION` in
 [`lib/active_sanction/version.rb`](lib/active_sanction/version.rb), move the
 `Unreleased` section of [`CHANGELOG.md`](CHANGELOG.md) under the new version
-with its date, merge that, and then tag the merge commit:
+with its date, and merge that.
+
+Then the tag, which you can let the workflow write or write yourself.
+
+**From the Actions tab**, which is the shorter path and the safer order. Open
+[`Release`](https://github.com/Babystep-Technologies/active_sanction/actions/workflows/release.yml),
+press **Run workflow**, enter `v1.2.3`, and tick **Create the tag on main**.
+Every gate runs against `main` first, and the tag is written only once they
+have all passed — so a release that turns out not to be publishable leaves no
+tag behind.
+
+**Or from a terminal**, which is the path to take when you want your own
+signature on the tag:
 
     $ git tag -s v1.2.3 -m "Release 1.2.3"
     $ git push origin v1.2.3
 
-[`.github/workflows/release.yml`](.github/workflows/release.yml) does the rest.
-It re-runs the three gates against the tagged tree, checks that the tag and
-`VERSION` agree, that the tag is on `main`, and that the changelog has a
-section for it — then builds the gem, publishes it to
+The cost of that order is that the tag is public before anything has checked
+the tree under it. If a gate then fails, the tag stays where it is: this
+workflow will not move a tag somebody may already have fetched, so the repair
+is a new version rather than a retagged one.
+
+Either way, [`.github/workflows/release.yml`](.github/workflows/release.yml)
+does the rest. It re-runs the three gates against the tree being released,
+checks that the tag and `VERSION` agree, that the commit is on `main`, and
+that the changelog has a section for it — then builds the gem, publishes it to
 [rubygems.org](https://rubygems.org), confirms rubygems.org is serving that
-version, and writes the GitHub release from that changelog section. A tag that
-fails any of those checks publishes nothing, and a push rubygems.org did not
-end up serving is never announced (#136).
+version, and writes the GitHub release from that changelog section. A release
+that fails any of those checks publishes nothing, and a push rubygems.org did
+not end up serving is never announced (#136).
+
+**Leave the box unticked to re-run a publish.** A dispatch with `Create the
+tag` unticked publishes a tag that already exists — one pushed before this
+workflow did, or one whose publish failed after the tag was public — and
+nothing in this workflow ever moves or deletes a tag. Ticking the box against
+a tag that already exists is not an error either; it publishes that tag and
+says it created nothing.
+
+**A tag the workflow writes is annotated but not signed.** It has no key of
+yours, and signing with a machine key would say less than saying nothing. The
+tag names the commit every gate ran against, and the provenance that matters
+for what users install is on the other side: the gem is published by [trusted
+publishing](https://guides.rubygems.org/trusted-publishing) from this
+repository and this workflow file. Sign the tag yourself, with the terminal
+path above, when you want the tag to carry it too.
 
 The [gem badge](https://rubygems.org/gems/active_sanction) at the top of the
 README reads from rubygems.org rather than from anything in this repository,
