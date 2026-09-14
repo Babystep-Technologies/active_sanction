@@ -96,10 +96,11 @@ watchlist, a store backed by somebody's own database — and those authors are
 not reading this repository's release notes. So the required methods of each,
 their arguments and what they must return do not change within a major version,
 and the shared conformance groups
-([`spec/active_sanction/sources/conformance_spec.rb`](../spec/active_sanction/sources/conformance_spec.rb),
-[`spec/active_sanction/storage/conformance_spec.rb`](../spec/active_sanction/storage/conformance_spec.rb))
+([`lib/active_sanction/testing/sanction_source.rb`](../lib/active_sanction/testing/sanction_source.rb),
+[`lib/active_sanction/testing/storage_adapter.rb`](../lib/active_sanction/testing/storage_adapter.rb))
 are the executable statement of what they require. An adapter that passes them
-today passes them for the life of the major version.
+today passes them for the life of the major version — and **they ship**, so an
+adapter outside this repository can run them: `require "active_sanction/testing"`.
 
 New *optional* hooks may be added — a method with a default implementation on
 the base class is not a break, because an adapter that does not define it goes
@@ -193,8 +194,10 @@ oversight:
   themselves are public — they are how an adapter is written — but the classes
   that do the reading underneath them are not.
 - **Anything under `spec/`, `benchmark/`, `canary/` or `bin/`.** None of it
-  ships in the gem. The one exception in spirit is the two conformance groups,
-  which do not ship either but which an adapter author is expected to run.
+  ships in the gem. The two conformance groups used to be the exception in
+  spirit — expected to be run by adapter authors who had no way to get them —
+  and they are now under `lib/active_sanction/testing/` and public, which is
+  what the section above is about.
 
 ## The enumerated public surface
 
@@ -207,6 +210,7 @@ ActiveSanction
 ActiveSanction::VERSION
 ActiveSanction::MATCHER_VERSION
 ActiveSanction::Client
+ActiveSanction::Client::CAPABILITIES
 ActiveSanction::Configuration
 ActiveSanction::Deprecation
 ActiveSanction::Configuration::DEFAULT_CACHE_DIRNAME
@@ -299,6 +303,29 @@ ActiveSanction::Parsers::Join
 ActiveSanction::Parsers::Warning
 ActiveSanction::Parsers::ColumnShape
 ```
+
+### Testing your own adapter
+
+```
+ActiveSanction::Testing
+ActiveSanction::Testing::DEFAULT_FIXTURE_ROOT
+ActiveSanction::Testing::StorageAdapterDefaults
+```
+
+Loaded by `require "active_sanction/testing"`, never by `require
+"active_sanction"`. The two shared example group **names** — `"a sanction
+source"` and `"a storage adapter"` — are public on the same terms as the
+constants: a group is not renamed or removed within a major version, and the
+options it accepts do not change meaning under an adapter that passes it
+today.
+
+New examples may be **added** to a group, and that is not a breaking change
+even though it can turn a passing adapter red. It is the same promise the
+extension points make read from the other side: what the group checks is what
+`Sources::Base` and `Storage::Base` required all along, and an adapter that
+fails a newly added example was always violating the contract — the group
+merely started saying so. Additions land in a minor, with a `CHANGELOG.md`
+entry naming them.
 
 ### Storage, and what a fetch remembers
 

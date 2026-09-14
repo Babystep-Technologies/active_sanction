@@ -27,6 +27,11 @@ Metrics/BlockLength:
   Exclude:
     - "spec/**/*_spec.rb"
     - "active_sanction.gemspec"
+    # The two shipped conformance groups (#144). They are RSpec example groups
+    # that happen to live under `lib/` because they are public API, and one
+    # `RSpec.shared_examples` block is the whole file by construction -- the
+    # same shape every `*_spec.rb` above is excluded for, and the same reason.
+    - "lib/active_sanction/testing/**/*.rb"
     # Every task here carries the same explanatory comment style as the rest
     # of this codebase -- why it exists and what it is not part of -- rather
     # than a bare one-liner, so the namespace blocks run long by the same
@@ -72,6 +77,7 @@ RSpec/DescribeClass:
     - "spec/active_sanction/sources/conformance_spec.rb"
     - "spec/active_sanction/storage/conformance_spec.rb"
     - "spec/instrumentation_pipeline_spec.rb"
+    - "spec/testing_ships_spec.rb"
 
 # The canonical model is value objects: one keyword argument and one hash key
 # per field. Splitting `initialize` or `to_h` to satisfy a count would make

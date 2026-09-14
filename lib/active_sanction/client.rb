@@ -79,6 +79,15 @@ module ActiveSanction
   class Client
     extend T::Sig
 
+    # What a client may be asked to do. Every one of them is a public method
+    # on this class, and this class supports all of them; see #supports?, and
+    # the note there on why an unknown name is false rather than an error.
+    #
+    # A name is not removed from this list within a major version, and a new
+    # one may be added -- which is the same promise the enumerated public
+    # surface makes, for the same reason.
+    CAPABILITIES = T.let(%i[screen screen_all sync diff rescreen doctor export import].freeze, T::Array[Symbol])
+
     # The settings this client answers from, frozen. Reading one is how a host
     # asks what a client is: `client.configuration.user_agent`.
     sig { returns(Configuration) }
@@ -329,6 +338,34 @@ module ActiveSanction
     # to decide whether a screening call is about to cost an index build.
     sig { returns(T::Boolean) }
     def loaded? = !@lock.synchronize { @matcher }.nil?
+
+    # Whether this client does a thing, asked rather than assumed:
+    #
+    #   client.supports?(:sync)    # => true
+    #   client.supports?(:diff)    # => true
+    #
+    # This client supports all of CAPABILITIES -- it fetches, parses, stores
+    # and screens on the machine it runs on, and there is nothing in the list
+    # it cannot do. The method exists for the ones that are not this class.
+    # #56 was closed because `Client` already is the interface an out-of-tree
+    # implementation duck-types, and the one thing a duck-typed interface
+    # cannot express is *absence*: an implementation that answers screening
+    # questions against data somebody else keeps fresh has no `sync!` to
+    # offer, and a caller that cannot ask ends up finding out by rescuing
+    # NoMethodError.
+    #
+    # ### An unknown capability is false rather than an error
+    #
+    # Deliberately unlike Configuration, where an unrecognised setting raises
+    # because a silently dropped one is a client running on a default somebody
+    # thinks they changed. The direction here is the opposite: this is a
+    # forward-compatibility question, and the caller asking it is usually
+    # written against a newer version than the one answering. A host asking
+    # `supports?(:something_1_4_added)` of a 1.2 client wants `false` and a
+    # fallback path, not an exception -- raising would make the method useless
+    # for the one job it has.
+    sig { params(capability: T.untyped).returns(T::Boolean) }
+    def supports?(capability) = CAPABILITIES.include?(capability.to_sym)
 
     sig { returns(String) }
     def inspect

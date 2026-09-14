@@ -19,9 +19,16 @@ require "webmock/rspec"
 # network must opt in with the `:live` tag.
 WebMock.disable_net_connect!(allow_localhost: true)
 
-# Shared example groups -- chiefly the adapter conformance contract that every
-# source has to pass. Loaded here rather than from each spec file so that a new
-# adapter's spec has only to name the contract, not to find it.
+# The two conformance groups, loaded through the entry point a third party
+# uses rather than by path (#144). That is deliberate: this suite is the only
+# thing that exercises them, so if it reached past `active_sanction/testing`
+# and loaded the files directly, the published entry point could break without
+# anything here noticing -- which is the failure this issue was about in the
+# first place, one level up.
+require "active_sanction/testing"
+
+# Everything else the suite shares: fake adapters, a corpus builder, a
+# workbook builder. Internal to this repository, unlike the two groups above.
 Dir[File.expand_path("support/**/*.rb", __dir__)].each { |file| require file }
 
 # Compile every signature now, in this thread, rather than leaving each one to

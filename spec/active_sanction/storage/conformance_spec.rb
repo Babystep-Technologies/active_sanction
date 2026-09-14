@@ -2,7 +2,7 @@
 
 require "rspec/core/sandbox"
 
-# The spec for the shared example group in spec/support/shared_examples.
+# The spec for the shared example group in lib/active_sanction/testing.
 #
 # A conformance suite that passes everything is worse than none at all: it
 # reads like a guarantee and stays one only until somebody relies on it. So
@@ -27,7 +27,7 @@ RSpec.describe "the storage adapter contract" do
   def conformance_examples(store, &customization)
     examples = nil
     RSpec::Core::Sandbox.sandboxed do
-      load File.expand_path("../../support/shared_examples/storage_adapter.rb", __dir__)
+      load File.expand_path("../../../lib/active_sanction/testing/storage_adapter.rb", __dir__)
       group = RSpec.describe(store) { it_behaves_like("a storage adapter", &customization) }
       group.run(RSpec::Core::NullReporter)
       examples = descendants(group)

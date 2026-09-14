@@ -288,7 +288,7 @@ A source registered from outside this gem is a first-class source: a bank's inte
 
 There is no scaffold generator, deliberately. Roughly eight adapters at maturity do not repay one that has to be kept in step with `Sources::Base`, the conformance spec and the parser toolkits, and that goes stale silently when it is not; the document plus the closest existing adapter to copy does the same job with none of the upkeep.
 
-Every source adapter is held to one shared example group, `"a sanction source"` (`spec/support/shared_examples/sanction_source.rb`), which checks what everything downstream of an adapter assumes and cannot check for itself — a declared key, jurisdiction, authority and URL; `Entity` objects with unique, deterministic ids; dates as `PartialDate`; a round trip through `#to_h`; the publisher's own text kept in `remarks`. It is the floor and not the ceiling, so every adapter still writes its own spec on top.
+Every source adapter is held to one shared example group, `"a sanction source"` — shipped, so an adapter written outside this repository is held to it too: `require "active_sanction/testing"`. It checks what everything downstream of an adapter assumes and cannot check for itself — a declared key, jurisdiction, authority and URL; `Entity` objects with unique, deterministic ids; dates as `PartialDate`; a round trip through `#to_h`; the publisher's own text kept in `remarks`. It is the floor and not the ceiling, so every adapter still writes its own spec on top.
 
 ## How it works
 

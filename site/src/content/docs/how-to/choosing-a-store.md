@@ -162,6 +162,6 @@ looks like a sanctions list while reporting a customer clean who is not. It
 deliberately says nothing about durability, concurrency or performance,
 which differ by adapter and belong in that adapter's own spec.
 
-`spec/support/shared_examples/storage_adapter.rb` is the group;
+`"a storage adapter"` is the group, shipped as part of the gem — `require "active_sanction/testing"`;
 `spec/active_sanction/storage/conformance_spec.rb` holds it to being able to
 fail, one rule at a time, against a deliberately broken adapter.

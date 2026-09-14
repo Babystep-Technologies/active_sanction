@@ -691,7 +691,7 @@ There is one option: `remarks: false`, for a list that publishes no free text of
 its own anywhere — Canada is the only launch source that qualifies. It has to be
 asked for, so that dropping a remark by accident stays a failure.
 
-The group lives in `spec/support/shared_examples/sanction_source.rb` and checks
+The group lives in `lib/active_sanction/testing/sanction_source.rb`, reaches a suite through `require "active_sanction/testing"`, and checks
 what everything downstream assumes and cannot check for itself: that the adapter
 declares a key, a jurisdiction, an authority and a URL and registers itself; that
 `#parse` returns Entities with unique, deterministic ids, a canonical type and at
