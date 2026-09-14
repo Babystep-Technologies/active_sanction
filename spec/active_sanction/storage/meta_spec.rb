@@ -60,6 +60,36 @@ RSpec.describe ActiveSanction::Storage::Meta do
     it "reports how long ago the list was fetched" do
       expect(meta.age(fetched_at + 3600)).to eq(3600)
     end
+
+    # The granularity, pinned, because a spec once asserted it away and failed
+    # on roughly one CI job in six for it.
+    #
+    # `fetched_at` is stored to the second -- Snapshot#time! truncates it so a
+    # stored snapshot reloads equal to the one that was written -- so the
+    # instant of the fetch is known only to within the second it names, and an
+    # age is only ever accurate to a second. Which way it rounds is the part
+    # that matters, and it is not arbitrary: the answer is the largest age
+    # consistent with what was recorded, so a list is never reported fresher
+    # than it is.
+    context "when the fetch landed just before a second boundary" do
+      let(:fetched_at) { Time.utc(2026, 8, 28, 9, 30, 0, 999_000) }
+
+      it "reports a second old a fraction of a second later, rather than none" do
+        expect(meta.age(fetched_at + 0.150)).to eq(1)
+      end
+
+      # So nothing asserts on the exact age of a fresh sync. Both numbers a
+      # just-fetched list can report say the same thing to a reader, which is
+      # what a summary table shows and what spec/site_tutorial_spec.rb asserts.
+      it "still reads as just fetched" do
+        result = ActiveSanction::Sync::Result.new(
+          source: :ofac_sdn, status: :updated, duration: 0.15, record_count: meta.record_count,
+          checksum: meta.checksum, fetched_at: meta.fetched_at, age: meta.age(fetched_at + 0.150)
+        )
+
+        expect(result.age_in_words).to eq("just fetched")
+      end
+    end
   end
 
   describe "#same_content?" do
