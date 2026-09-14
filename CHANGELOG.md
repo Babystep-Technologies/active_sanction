@@ -44,6 +44,22 @@ screening decision would come out as today.
   group names and the options they take are public API from here, and a group gaining an
   example is a minor with a note here naming it.
 
+- **Preparing a release is a button** (#146). `Prepare release` in the Actions tab takes a
+  version, bumps `VERSION`, moves the accrued `Unreleased` section under a dated heading,
+  fixes the changelog's link definitions, regenerates the site data that carries the
+  version, and opens a pull request. `release.yml` verifies all of that and writes none of
+  it, so until now it was a hand-edit somebody had to remember — and hand-edits to this
+  particular shape have already gone wrong silently once, when two open pull requests
+  merged cleanly in sequence and filed a feature under a patch release that did not contain
+  it.
+
+  The edits are [`bin/prepare_release`](bin/prepare_release), with a spec over them, so the
+  workflow is reviewable as Ruby and `bin/prepare_release 1.2.3` does the same thing on a
+  laptop. It refuses a version that does not come after the current one, and refuses to
+  prepare a release out of an empty `Unreleased` — which `release.yml` also refuses, but
+  only after the gem is published. Nothing is tagged or pushed to `main`: the output is a
+  pull request, and the version number stays a judgment a person makes.
+
 - **`Client#supports?`** (#144), so a caller can ask what an implementation does rather than
   find out by rescuing `NoMethodError`. This client supports all of
   `Client::CAPABILITIES`; the method is for the implementations that are not this class —

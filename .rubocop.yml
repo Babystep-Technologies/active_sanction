@@ -78,6 +78,7 @@ RSpec/DescribeClass:
     - "spec/active_sanction/storage/conformance_spec.rb"
     - "spec/instrumentation_pipeline_spec.rb"
     - "spec/testing_ships_spec.rb"
+    - "spec/prepare_release_spec.rb"
 
 # The canonical model is value objects: one keyword argument and one hash key
 # per field. Splitting `initialize` or `to_h` to satisfy a count would make
