@@ -15,6 +15,14 @@ screening decision would come out as today.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.0.1] - 2026-09-14
+
+A packaging and release-tooling release. **Nothing about screening changes**: no behaviour
+in `lib/` moved, `MATCHER_VERSION` is unchanged at `1`, and a name scores today exactly what
+it scored under 1.0.0.
+
 ### Added
 
 - **Releases publish themselves from a tag**, through
@@ -45,6 +53,15 @@ screening decision would come out as today.
   last tagged -- and a version written into the repository would be stale the moment the next
   one published. Same argument as #104, applied to the one fact about this gem that lives
   somewhere else entirely.
+
+- **A release can be cut from the Actions tab**, without tagging by hand (#139). The
+  workflow's "Run workflow" button takes a tag and a checkbox: ticked, it runs every gate
+  against `main` and writes the tag only once they have all passed. That is the safer order
+  than `git tag && git push`, which makes a tag public before anything has checked the tree
+  under it — and this workflow will not move a tag somebody may already have fetched, so the
+  repair for that is a new version number. A tag it writes is annotated but unsigned; push
+  the tag yourself when you want your own signature on it. See
+  [`CONTRIBUTING.md`](CONTRIBUTING.md#releasing).
 
 ### Fixed
 
@@ -583,5 +600,6 @@ summarized here because they are what a reader of a first release most needs:
 - Recall at the default threshold is 0.939 overall on the labeled set, and every record this
   version misses is named in the committed accuracy report.
 
-[Unreleased]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.0...main
+[Unreleased]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.1...main
+[1.0.1]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Babystep-Technologies/active_sanction/releases/tag/v1.0.0
