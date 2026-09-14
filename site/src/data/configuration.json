@@ -17,6 +17,11 @@
       "default": "0.1"
     },
     {
+      "name": "instrumenter",
+      "type": "T.untyped",
+      "default": "nil"
+    },
+    {
       "name": "logger",
       "type": "T.untyped",
       "default": "nil"

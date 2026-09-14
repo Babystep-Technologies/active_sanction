@@ -38,6 +38,7 @@ export const effect = {
   screening_limit: "Results a screening call returns, highest score first. Overridden per query with `limit:`.",
   normalizer_dictionary: "The token lists the normalizer strips per entity type. See how matching works.",
   scorer_weights: "What each signal the scorer reads is worth. See how matching works.",
+  instrumenter: "Where the six structured events go. Anything answering `#call(event)`; `nil` means nothing is listening, and costs nothing. See instrumentation.",
   logger: "Anything Logger-shaped, or `nil`.",
 };
 

@@ -1,6 +1,6 @@
 ---
 title: Reference
-description: Sources, configuration, errors, measured accuracy, performance, the bundle format, and the adapter contract.
+description: Sources, configuration, errors, measured accuracy, performance, the bundle format, the adapter contract, and the instrumentation events.
 sidebar:
   order: 1
   # The group heading in the sidebar is already this page's title, so listing
@@ -36,6 +36,9 @@ Nothing here explains why, and nothing instructs — see
 - [Adapter contract](/active_sanction/reference/adapter-contract/) —
   `Sources::Base`, the `Definition` DSL, and the registry: every declaration
   and hook, its signature and required return.
+- [Instrumentation events](/active_sanction/reference/instrumentation/) — the
+  six events this library emits, every payload key on each, and what a
+  subscriber is.
 
 ## What ships with the code instead of living only here
 

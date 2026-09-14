@@ -6,6 +6,7 @@ require "sorbet-runtime"
 require "time"
 require "active_sanction/error"
 require "active_sanction/index"
+require "active_sanction/instrumentation"
 require "active_sanction/match_result"
 require "active_sanction/query"
 require "active_sanction/scorer"
@@ -131,6 +132,14 @@ module ActiveSanction
     sig { returns(Symbol) }
     attr_reader :backend
 
+    # Where the `:screen` event goes, or nil for nothing listening. Read once
+    # at construction and frozen with everything else here, which is the rule
+    # the class comment states for the whole query path: a subscriber swapped
+    # halfway through a batch cannot make half of it instrumented. See
+    # Instrumentation.
+    sig { returns(T.untyped) }
+    attr_reader :instrumenter
+
     class << self
       extend T::Sig
 
@@ -152,14 +161,29 @@ module ActiveSanction
       # covers all three, and both report the name clear.
       sig do
         params(store: T.untyped, sources: T.untyped, weights: T.untyped, candidate_limit: T.untyped,
-               backend: T.untyped).returns(Matcher)
+               backend: T.untyped, instrumenter: T.untyped).returns(Matcher)
       end
       def build(store = nil, sources: nil, weights: nil, candidate_limit: nil,
-                backend: MatchResult::DEFAULT_BACKEND)
+                backend: MatchResult::DEFAULT_BACKEND, instrumenter: nil)
         store ||= ActiveSanction.config.storage
+        listening = instrumenter.nil? ? ActiveSanction.config.instrumenter : instrumenter
+        built = Instrumentation.instrument(listening, :"index.build", { store: store.class.name }) do |event|
+          index_over(store, sources, event)
+        end
+        new(index: built.fetch(:index), snapshots: built.fetch(:checksums), verified: built.fetch(:attested),
+            weights: weights, candidate_limit: candidate_limit, backend: backend, instrumenter: listening)
+      end
+
+      private
+
+      # Every list this matcher will hold, read one at a time and released
+      # before the next is opened, and what it cost.
+      sig { params(store: T.untyped, sources: T.untyped, event: T.untyped).returns(T::Hash[Symbol, T.untyped]) }
+      def index_over(store, sources, event)
         builder = Index::Builder.new
         checksums = T.let({}, T::Hash[Symbol, String])
         attested = T.let([], T::Array[Symbol])
+        entities = 0
         requested(store, sources).each do |key|
           snapshot = store.fetch_snapshot(key)
           checksums[key] = snapshot.checksum
@@ -168,12 +192,27 @@ module ActiveSanction
           # different list.
           attested << key if snapshot.trusted?
           snapshot.entities.each { |entity| builder.add(entity) }
+          entities += snapshot.record_count
         end
-        new(index: builder.build, snapshots: checksums, verified: attested, weights: weights,
-            candidate_limit: candidate_limit, backend: backend)
+        index = builder.build
+        measure(event, index, checksums, entities)
+        { index: index, checksums: checksums, attested: attested }
       end
 
-      private
+      # What a host watches at boot and after every sync: how long an index
+      # took to build, how much of it there is, and roughly what it weighs.
+      # `bytes` is an estimate and says so -- see Index#profile, which is
+      # where the assumptions behind the number are written down, and where
+      # the entity count deliberately does not come from.
+      sig do
+        params(event: T.untyped, index: Index, checksums: T::Hash[Symbol, String], entities: Integer).void
+      end
+      def measure(event, index, checksums, entities)
+        event[:sources] = checksums.keys
+        event[:snapshots] = checksums
+        event[:entities] = entities
+        index.profile.each { |name, value| event[name] = value }
+      end
 
       # The lists to index, in a deterministic order, or the exception that
       # says why there are none.
@@ -204,10 +243,10 @@ module ActiveSanction
     # one name against several list versions, or a spec.
     sig do
       params(index: Index, snapshots: T.untyped, weights: T.untyped, candidate_limit: T.untyped,
-             backend: T.untyped, verified: T.untyped).void
+             backend: T.untyped, verified: T.untyped, instrumenter: T.untyped).void
     end
     def initialize(index:, snapshots:, weights: nil, candidate_limit: nil, backend: MatchResult::DEFAULT_BACKEND,
-                   verified: nil)
+                   verified: nil, instrumenter: nil)
       @index = index
       @snapshots = T.let(snapshots!(snapshots), T::Hash[Symbol, String])
       @verified = T.let(verified!(verified), T::Array[Symbol])
@@ -216,6 +255,7 @@ module ActiveSanction
       @weights = T.let(Scorer::Weights.build(weights), Scorer::Weights)
       @candidate_limit = T.let(candidate_limit!(candidate_limit), Integer)
       @backend = T.let(backend.to_s.to_sym, Symbol)
+      @instrumenter = T.let(instrumenter.nil? ? ActiveSanction.config.instrumenter : instrumenter, T.untyped)
       freeze
     end
 
@@ -303,13 +343,31 @@ module ActiveSanction
       # weights, one instant, one backend. Only the snapshot checksum varies,
       # and only because a run may cover several lists.
       stamp = { query: query, weights: weights, backend: backend, screened_at: screened_at }
-      scored(query)
-        .sort_by { |result| [-result.score, result.source.to_s, result.entity.id] }
-        .first(query.limit)
-        .map do |result|
-          MatchResult.from_scorer(result, snapshot_id: snapshots.fetch(result.source),
-                                          verified: verified.include?(result.source), **stamp)
-        end
+      Instrumentation.instrument(instrumenter, :screen) do |event|
+        results = scored(query, event)
+                  .sort_by { |result| [-result.score, result.source.to_s, result.entity.id] }
+                  .first(query.limit)
+                  .map do |result|
+                    MatchResult.from_scorer(result, snapshot_id: snapshots.fetch(result.source),
+                                                    verified: verified.include?(result.source), **stamp)
+                  end
+        describe(event, query, results)
+        results
+      end
+    end
+
+    # What one query cost and what it consulted. `snapshots` is the whole
+    # checksum map rather than a count, because the question an audit asks of
+    # a screening event is which list *versions* answered it -- the same
+    # question every MatchResult is stamped with, and the only one a result
+    # set of zero cannot answer for itself.
+    sig { params(event: T.untyped, query: Query, results: T::Array[MatchResult]).void }
+    def describe(event, query, results)
+      event[:results] = results.size
+      event[:threshold] = query.threshold
+      event[:limit] = query.limit
+      event[:sources] = query.sources || sources
+      event[:snapshots] = snapshots
     end
 
     # Every entity the index retrieved, scored once.
@@ -321,10 +379,11 @@ module ActiveSanction
     # retrieves the same record under several spellings, and rescoring one
     # that has already failed the threshold is the most expensive way to
     # arrive at the same no.
-    sig { params(query: Query).returns(T::Array[Scorer::Result]) }
-    def scored(query)
+    sig { params(query: Query, event: T.untyped).returns(T::Array[Scorer::Result]) }
+    def scored(query, event)
       seen = T.let({}, T::Hash[[Symbol, String], T.nilable(Scorer::Result)])
-      index.candidates(query.form, limit: candidate_limit, sources: query.sources).each do |candidate|
+      retrieved = index.candidates(query.form, limit: candidate_limit, sources: query.sources)
+      retrieved.each do |candidate|
         # Keyed by list as well as id, because the same person really is two
         # records when two governments list them, and both belong in a report.
         key = [candidate.source, candidate.entity.id]
@@ -332,6 +391,12 @@ module ActiveSanction
 
         seen[key] = Scorer.call(query.subject, candidate, weights: weights, threshold: query.threshold)
       end
+      # Names retrieved, and the entities they came down to. The two differ by
+      # however many aliases of one record the query looked like, and a
+      # candidate cap is a cap on the first rather than the second -- which is
+      # the number to watch when tuning it.
+      event[:candidates] = retrieved.size
+      event[:scored] = seen.size
       seen.values.compact
     end
 

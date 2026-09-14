@@ -144,6 +144,28 @@ module ActiveSanction
     # numbers again on another machine.
     POSTINGS_BUDGET = T.let(5_000, Integer)
 
+    # One posting: an Integer in an Array slot, which on a 64-bit CRuby is a
+    # tagged immediate and costs the slot and nothing else. See #profile,
+    # which is where these three are used and where their crudeness is
+    # admitted.
+    #
+    # @api private
+    POSTING_BYTES = T.let(8, Integer)
+
+    # One distinct feature: a short String -- a token, a trigram, a metaphone
+    # key -- plus its slot in a posting Hash and the empty Array header the
+    # slot points at. Measured as an order of magnitude rather than counted.
+    #
+    # @api private
+    FEATURE_BYTES = T.let(120, Integer)
+
+    # One indexed name: an Entry and the Normalizer::Form it holds, both small
+    # objects of references. The Entity and Name they point at belong to the
+    # snapshot and are not counted here.
+    #
+    # @api private
+    ENTRY_BYTES = T.let(200, Integer)
+
     # Entries, in the order they were indexed. The posting lists hold
     # positions in this array.
     sig { returns(T::Array[Entry]).checked(:tests) }
@@ -245,6 +267,45 @@ module ActiveSanction
         phonetics: @phonetics.size,
         postings: [@tokens, @trigrams, @phonetics].sum { |space| space.sum { |_, ids| ids.size } }
       }
+    end
+
+    # How big this index is, as the `index.build` event reports it: names,
+    # distinct features, postings, and an estimate of what it all weighs.
+    #
+    # Deliberately not #stats, and the difference is the one number #stats
+    # carries that this does not. Counting distinct entities means walking
+    # every entry and uniquing 47,000 ids, which is a fine thing to do in a
+    # benchmark and not a thing to do at the end of every index build -- it
+    # allocates at exactly the moment the heap is already at its peak, with
+    # the snapshot, the builder and the finished index all still alive. The
+    # event reports entity count from the snapshots it read instead, where it
+    # is already known.
+    #
+    # **`bytes` is an estimate, and deliberately a crude one.** Ruby offers no
+    # way to ask what an object graph weighs that does not either walk every
+    # object in the heap or lie, and an index is tens of millions of small
+    # objects. What it counts is the three things that dominate: a posting is
+    # an Integer in an Array slot, a distinct feature is a String plus its
+    # slot in a Hash, and an entry is a small object holding references. What
+    # it deliberately does not count is the Entities and Names themselves --
+    # those are the snapshot's, shared with it rather than owned here, and
+    # counting them would report the same megabytes twice to a host watching
+    # both.
+    #
+    # Good to within a factor a dashboard cares about, which is what "is the
+    # index growing?" and "will another list fit?" actually need. Anything
+    # finer wants a real heap profiler.
+    sig { returns(T::Hash[Symbol, Integer]).checked(:tests) }
+    def profile
+      keys = @tokens.size + @trigrams.size + @phonetics.size
+      # `each_value` rather than a two-parameter block over the Hash: iterating
+      # a Hash as pairs allocates a two-element Array per distinct feature,
+      # which is twenty thousand short-lived objects at the exact moment the
+      # heap is at its peak -- the snapshot, the builder and the finished
+      # index all still alive. #stats can afford that and a build cannot.
+      postings = [@tokens, @trigrams, @phonetics].sum { |space| space.each_value.sum(&:size) }
+      { names: entries.size, keys: keys, postings: postings,
+        bytes: (postings * POSTING_BYTES) + (keys * FEATURE_BYTES) + (entries.size * ENTRY_BYTES) }
     end
 
     sig { returns(String) }

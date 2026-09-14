@@ -4,7 +4,7 @@ What this gem promises not to break, and what it reserves the right to change
 in any release.
 
 **The public surface is enumerated below, not inferred.** A constant being
-reachable does not make it public; nearly 500 of them are reachable and 137 are
+reachable does not make it public; over 500 of them are reachable and 142 are
 promised. Everything else is marked `@api private` in the source, is hidden
 from the rendered documentation, and may be renamed, moved or deleted in a
 patch release without a note anywhere. If you need something that is not on
@@ -107,7 +107,7 @@ on working.
 
 ## Contracts that are not constants
 
-Four promises here are about behaviour rather than about a name, and none of
+Five promises here are about behaviour rather than about a name, and none of
 them is enforceable by the surface spec.
 
 **The error hierarchy.** Within a major version an error does not move to a
@@ -128,6 +128,35 @@ anyone may produce or consume one, in any language.
 store written against one schema version keeps being readable; the file layout
 underneath a shipped store is not public and may change.
 
+**The instrumentation events.** `ActiveSanction::Instrumentation::EVENTS`
+names the six, and each one's payload keys are promised the same way a method
+signature is: within a major version a key is not removed, renamed, or made to
+mean something else, and a dashboard written against one keeps working. Keys
+may be **added** to an event — that is how a new measurement ships without a
+major version — so a subscriber reads the keys it knows and ignores the rest,
+and must not assume the set is closed.
+
+Every event carries `name`, `started_at` and `duration`, plus the keys below.
+`error` is present only when the stage raised, in which case the keys it had
+not reached yet are **absent rather than zero**.
+
+| Event | Payload keys |
+|---|---|
+| `:fetch` | `source`, `key`, `url`, `forced`, `conditional`, `status`, `not_modified`, `bytes` |
+| `:parse` | `source`, `bytes`, `records`, `warnings` |
+| `:store` | `source`, `snapshot_id`, `entities`, `store`, `imported` (on an import only) |
+| `:"index.build"` | `store`, `sources`, `snapshots`, `entities`, `names`, `keys`, `postings`, `bytes` |
+| `:screen` | `candidates`, `scored`, `results`, `threshold`, `limit`, `sources`, `snapshots` |
+| `:sync` | `sources`, `forced`, `concurrency`, `outcomes`, `updated`, `unchanged`, `failed`, `records` |
+
+Two things about them are contracts rather than incidental. **A `:fetch` event
+is one HTTP round trip** — a file served out of the payload cache after a 304
+costs no request and emits nothing, and a source re-fetching one because its
+cache was empty emits a second event rather than amending the first. And
+**`bytes` on `:"index.build"` is an estimate**, documented as one on
+`Index#profile`; it is good to within a factor a dashboard cares about and is
+not a heap measurement.
+
 **A `MatchResult` is reproducible.** The snapshot checksum, matcher version,
 weights and query it stamps are what let a screening decision be re-derived
 years later. Fields may be added to that stamp; the meaning of an existing one
@@ -138,6 +167,12 @@ does not change under it.
 Named here because their absence from the list is a decision rather than an
 oversight:
 
+- **The instrumenter contract's other half.** A subscriber is anything
+  answering `#call(event)`, and that is public. `Instrumentation.instrument`
+  and `.emit`, which the library's own stages call, are not: where an event is
+  emitted from is an implementation detail of the stage, and a host that
+  wanted to emit one of these names itself would be publishing a measurement
+  of something this library did not do.
 - **The matching internals** — `Index`, `Similarity`, `Phonetics`, and the
   scorer's `Adjustments` and `NameScore`. These are where accuracy work
   happens, and accuracy work that had to preserve a signature would stop.
@@ -191,6 +226,16 @@ ActiveSanction::Configuration::DEFAULT_STORAGE_DIRNAME
 ActiveSanction::Configuration::DEFAULT_SYNC_CONCURRENCY
 ActiveSanction::Configuration::DEFAULT_USER_AGENT
 ActiveSanction::Configuration::DEFAULT_XML_BACKEND
+```
+
+### Instrumentation
+
+```
+ActiveSanction::Instrumentation
+ActiveSanction::Instrumentation::EVENTS
+ActiveSanction::Instrumentation::Event
+ActiveSanction::Instrumentation::Notifications
+ActiveSanction::Instrumentation::Notifications::NAMESPACE
 ```
 
 ### The canonical record

@@ -5,6 +5,7 @@ require "sorbet-runtime"
 
 require "active_sanction/error"
 require "active_sanction/http_client"
+require "active_sanction/instrumentation"
 require "active_sanction/validators"
 require "active_sanction/validator_store"
 require "active_sanction/fetcher/result"
@@ -64,20 +65,28 @@ module ActiveSanction
     sig { returns(T.untyped) }
     attr_reader :logger
 
+    # Where the `:fetch` event goes, or nil for nothing listening. See
+    # Instrumentation.
+    sig { returns(T.untyped) }
+    attr_reader :instrumenter
+
     # The store defaults to disk, so the second run of a cron job benefits and
     # not merely the second call in one process. A caller that would rather
     # keep nothing between runs passes ValidatorStore::Memory.new.
     sig do
-      params(client: HttpClient, store: T.untyped, stale_after: T.nilable(Numeric), logger: T.untyped).void
+      params(client: HttpClient, store: T.untyped, stale_after: T.nilable(Numeric), logger: T.untyped,
+             instrumenter: T.untyped).void
     end
     def initialize(client: HttpClient.new,
                    store: ValidatorStore::FileSystem.new,
                    stale_after: ActiveSanction.config.stale_after,
-                   logger: ActiveSanction.config.logger)
+                   logger: ActiveSanction.config.logger,
+                   instrumenter: ActiveSanction.config.instrumenter)
       @client = T.let(client, HttpClient)
       @store = T.let(store, T.untyped)
       @stale_after = T.let(stale_after, T.nilable(Numeric))
       @logger = T.let(logger, T.untyped)
+      @instrumenter = T.let(instrumenter, T.untyped)
     end
 
     # Fetches conditionally and buffers the body, like HttpClient#get.
@@ -91,12 +100,17 @@ module ActiveSanction
     # `force: true` sends no validators, so the publisher has no way to answer
     # 304. For the operator who suspects the cached copy is wrong and wants the
     # bytes regardless of what the ETag says.
+    # `source:` is which list this file belongs to, and is only ever read by
+    # instrumentation: a multi-file source files its validators under
+    # `:"ofac_sdn-sdn"` and the rest, and a dashboard asking which *list* is
+    # degrading wants `:ofac_sdn`. Defaults to the fetch key, which is right
+    # for every single-file source and for a caller fetching a bare URL.
     sig do
-      params(url: T.untyped, key: T.untyped, force: T::Boolean, headers: T::Hash[T.untyped, T.untyped])
-        .returns(Result)
+      params(url: T.untyped, key: T.untyped, force: T::Boolean, headers: T::Hash[T.untyped, T.untyped],
+             source: T.untyped).returns(Result)
     end
-    def fetch(url, key: url, force: false, headers: {})
-      conditional(url, key, force, headers) { |request| client.get(url, headers: request) }
+    def fetch(url, key: url, force: false, headers: {}, source: nil)
+      conditional(url, key, force, headers, source) { |request| client.get(url, headers: request) }
     end
 
     # Streams conditionally to disk, like HttpClient#download. A 304 writes
@@ -104,10 +118,10 @@ module ActiveSanction
     # is left exactly as the last download left it.
     sig do
       params(url: T.untyped, to: T.untyped, key: T.untyped, force: T::Boolean,
-             headers: T::Hash[T.untyped, T.untyped]).returns(Result)
+             headers: T::Hash[T.untyped, T.untyped], source: T.untyped).returns(Result)
     end
-    def download(url, to:, key: url, force: false, headers: {})
-      conditional(url, key, force, headers) { |request| client.download(url, to: to, headers: request) }
+    def download(url, to:, key: url, force: false, headers: {}, source: nil)
+      conditional(url, key, force, headers, source) { |request| client.download(url, to: to, headers: request) }
     end
 
     # Whether a sync is due, answered locally and without a request.
@@ -149,14 +163,26 @@ module ActiveSanction
 
     sig do
       params(url: T.untyped, key: T.untyped, force: T::Boolean, headers: T::Hash[T.untyped, T.untyped],
+             source: T.untyped,
              block: T.proc.params(request: T::Hash[T.untyped, T.untyped]).returns(HttpClient::Response))
         .returns(Result)
     end
-    def conditional(url, key, force, headers, &block)
+    def conditional(url, key, force, headers, source, &block)
       stored = force ? nil : usable(key, url)
       log_request(key, url, stored, force)
-      response = block.call(merge(headers, stored))
-      record(key, url, stored, response)
+      # One event per HTTP round trip, which is why `forced` is on it: a file
+      # served out of the payload cache after a 304 costs no request and emits
+      # nothing, and a source re-fetching one because its cache was empty
+      # emits a second event rather than amending the first.
+      fields = { source: source || key, key: key, url: url.to_s, forced: force }
+      Instrumentation.instrument(instrumenter, :fetch, fields) do |event|
+        response = block.call(merge(headers, stored))
+        event[:status] = response.status
+        event[:not_modified] = response.not_modified?
+        event[:bytes] = response.body.to_s.bytesize
+        event[:conditional] = !stored.nil?
+        record(key, url, stored, response)
+      end
     end
 
     # Validators stored against a different URL are not merely useless, they

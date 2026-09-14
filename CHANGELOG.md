@@ -25,6 +25,50 @@ it scored under 1.0.0.
 
 ### Added
 
+- **Instrumentation: six structured events, so a host can measure this library without
+  monkeypatching it** (#59). `ActiveSanction.configure { |c| c.instrumenter = ... }` takes
+  anything answering `#call(event)` and is handed a finished
+  `ActiveSanction::Instrumentation::Event` for each of `:fetch`, `:parse`, `:store`,
+  `:"index.build"`, `:screen` and `:sync` — every one carrying a duration and the ids
+  needed to correlate it, with no anonymous timings. The event names and every payload key
+  are public API, enumerated in [`docs/api_stability.md`](docs/api_stability.md) and on the
+  site's [instrumentation reference](https://babystep.tech/active_sanction/reference/instrumentation/),
+  and covered by the deprecation path from here.
+
+  **It is a measurement of the work and never part of it.** A subscriber that raises has its
+  exception caught, reported once through the configured logger, and dropped; the sync it
+  was watching finishes and returns the report it was going to return. The converse holds
+  too: a stage that raises emits its event with `error:` set and then the exception
+  continues exactly as if nothing were listening.
+
+  **Nothing is listening by default, and that costs nothing.** `nil` is a branch taken
+  before anything is allocated rather than a no-op object that gets called, so an
+  uninstrumented screening call builds no event and allocates no payload — which is the
+  only way a per-query event could be affordable at all. Measured rather than asserted:
+  building a matcher over 47,051 names allocates 262 more objects than before, out of
+  5.79 million, and `rake benchmark:latency` reports the same p50 either side of the change
+  (12.1–12.8 ms against a run-to-run spread that was already that wide).
+
+  Rails hosts get `ActiveSanction::Instrumentation::Notifications`, which republishes every
+  event into `ActiveSupport::Notifications` under `<event>.active_sanction`. It is an
+  adapter and not a dependency: **nothing in this gem requires ActiveSupport**, and building
+  one in a process that has not loaded it raises `ConfigurationError` rather than quietly
+  instrumenting nothing.
+
+  The issue asked for `ActiveSanction.instrumenter = ...`, and this is a configuration
+  setting instead. #55 ended process-global configuration deliberately, and a module-level
+  writer would have rebuilt the default client — dropping the matcher it had indexed every
+  stored list into — as a side effect of naming a subscriber. A `Matcher` takes its
+  instrumenter at build and freezes it with its weights, so a subscriber swapped halfway
+  through a batch cannot make half of it instrumented; that is the rule every other setting
+  on the query path already follows.
+
+- **`Sources::Base#warnings`**, defaulting to none. Every shipped adapter already exposed
+  it and the adapter rules already required it of a new one, but the base class never said
+  so — and the `:parse` event counts warnings for every source, which a count that is
+  sometimes a `NoMethodError` cannot do. An optional hook with a default implementation, so
+  no adapter outside this repository has to change.
+
 - **Releases publish themselves from a tag**, through
   [`.github/workflows/release.yml`](.github/workflows/release.yml). Pushing `v1.2.3` re-runs
   the three gates against the tagged tree, checks that the tag and `VERSION` agree, that the

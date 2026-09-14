@@ -5,6 +5,7 @@ require "sorbet-runtime"
 
 require "active_sanction/configuration"
 require "active_sanction/error"
+require "active_sanction/instrumentation"
 require "active_sanction/match_result"
 
 module ActiveSanction
@@ -157,7 +158,8 @@ module ActiveSanction
       @lock.synchronize do
         @matcher ||= with_configuration do
           Matcher.build(storage, sources: configuration.sources, weights: configuration.scorer_weights,
-                                 candidate_limit: configuration.candidate_limit, backend: backend)
+                                 candidate_limit: configuration.candidate_limit, backend: backend,
+                                 instrumenter: configuration.instrumenter)
         end
       end
     end
@@ -286,7 +288,14 @@ module ActiveSanction
     sig { params(path: T.untyped, verify_with: T.untyped).returns(Snapshot) }
     def import(path, verify_with: nil)
       snapshot = ::File.open(path.to_s, "rb") { |io| Snapshot::Bundle.read(io, verify_with: verify_with) }
-      with_configuration { storage.write_snapshot(snapshot) }
+      # The same `:store` event a sync emits, because it is the same fact: a
+      # list version was written to this store, and a host watching data
+      # freshness should not have to know which of the two ways it arrived.
+      fields = { source: snapshot.source, snapshot_id: snapshot.checksum, entities: snapshot.record_count,
+                 store: storage.class.name, imported: true }
+      Instrumentation.instrument(configuration.instrumenter, :store, fields) do
+        with_configuration { storage.write_snapshot(snapshot) }
+      end
       reload!
       snapshot
     end

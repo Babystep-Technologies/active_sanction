@@ -4,6 +4,7 @@
 require "sorbet-runtime"
 
 require "active_sanction/error"
+require "active_sanction/instrumentation"
 require "active_sanction/normalizer"
 require "active_sanction/scorer/weights"
 require "active_sanction/version"
@@ -245,6 +246,11 @@ module ActiveSanction
     sig { returns(T.untyped) }
     attr_reader :logger
 
+    # Anything answering `#call(event)`, or nil for the default, which is that
+    # nothing is listening. See #instrumenter= and Instrumentation.
+    sig { returns(T.untyped) }
+    attr_reader :instrumenter
+
     sig { void }
     def initialize
       @user_agent = T.let(DEFAULT_USER_AGENT, String)
@@ -267,6 +273,7 @@ module ActiveSanction
       @normalizer_dictionary = T.let(Normalizer::Dictionary.default, Normalizer::Dictionary)
       @scorer_weights = T.let(Scorer::Weights.default, Scorer::Weights)
       @logger = T.let(nil, T.untyped)
+      @instrumenter = T.let(nil, T.untyped)
       @storage = T.let(nil, T.nilable(Storage::Base))
       @default_storage = T.let(nil, T.nilable(Storage::Base))
     end
@@ -567,6 +574,38 @@ module ActiveSanction
       end
 
       @logger = value
+    end
+
+    # Where this library's structured events go: a lambda, a Method, or any
+    # object answering `#call(event)`.
+    #
+    #   c.instrumenter = ->(event) { StatsD.timing("sanctions.#{event.name}", event.duration_ms) }
+    #   c.instrumenter = ActiveSanction::Instrumentation::Notifications.new   # a Rails host
+    #
+    # Six events -- `:fetch`, `:parse`, `:store`, `:"index.build"`, `:screen`
+    # and `:sync` -- each carrying a duration and the ids needed to correlate
+    # it. Their payload keys are public API; see Instrumentation, which is
+    # where all of it is documented, and docs/api_stability.md, which
+    # enumerates the keys.
+    #
+    # The default is nil, and nil is a branch rather than a no-op object: an
+    # installation that instruments nothing pays nothing, which is the only
+    # way a per-query event could be affordable at all.
+    #
+    # This is read where a stage is *built* rather than where it runs -- a
+    # Matcher takes its instrumenter at `build` and freezes it, the way it
+    # freezes its weights -- so changing it here affects the next matcher,
+    # sync or fetcher and never one already running. That is the same rule
+    # every other setting on the query path follows, and it is what keeps a
+    # batch from being half one set of numbers and half another.
+    sig { params(value: T.untyped).void }
+    def instrumenter=(value)
+      unless value.nil? || value.respond_to?(:call)
+        raise ConfigurationError,
+              "instrumenter must respond to #call(event), got #{value.class}. See ActiveSanction::Instrumentation."
+      end
+
+      @instrumenter = value
     end
 
     sig { returns(String) }

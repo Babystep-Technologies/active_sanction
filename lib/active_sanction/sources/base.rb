@@ -8,6 +8,7 @@ require "active_sanction/error"
 require "active_sanction/entity"
 require "active_sanction/snapshot"
 require "active_sanction/fetcher"
+require "active_sanction/instrumentation"
 require "active_sanction/parsers"
 require "active_sanction/payload_cache"
 require "active_sanction/sources"
@@ -82,17 +83,25 @@ module ActiveSanction
       sig { returns(T.untyped) }
       attr_reader :logger
 
+      # Where this adapter's `:parse` event goes, or nil for nothing
+      # listening. See Instrumentation.
+      sig { returns(T.untyped) }
+      attr_reader :instrumenter
+
       # `cache: nil` turns off payload caching, which costs one thing worth
       # knowing: a multi-file source can no longer answer a sync where some of
       # its files changed and others came back 304, so the unchanged ones are
       # downloaded again in full.
       sig do
-        params(fetcher: Fetcher, cache: T.nilable(PayloadCache), logger: T.untyped).void
+        params(fetcher: Fetcher, cache: T.nilable(PayloadCache), logger: T.untyped,
+               instrumenter: T.untyped).void
       end
-      def initialize(fetcher: Fetcher.new, cache: PayloadCache.new, logger: ActiveSanction.config.logger)
+      def initialize(fetcher: Fetcher.new, cache: PayloadCache.new, logger: ActiveSanction.config.logger,
+                     instrumenter: ActiveSanction.config.instrumenter)
         @fetcher = T.let(fetcher, Fetcher)
         @cache = T.let(cache, T.nilable(PayloadCache))
         @logger = T.let(logger, T.untyped)
+        @instrumenter = T.let(instrumenter, T.untyped)
         @results = T.let({}, T::Hash[Symbol, Fetcher::Result])
       end
 
@@ -137,6 +146,20 @@ module ActiveSanction
               "#{self.class} must implement #parse(raw) and return an Array of ActiveSanction::Entity"
       end
 
+      # What the last #parse could not read: a Parsers::Warning per row that
+      # was skipped or could not be mapped, kept rather than raised. Every
+      # shipped adapter overrides this with the parser's own warnings plus
+      # whatever it noticed itself, which is what the adapter rules require of
+      # a new one.
+      #
+      # Empty here rather than abstract, because an adapter that genuinely
+      # cannot fail to read a row should not have to say so, and because the
+      # `:parse` event counts these for every source and a count that is
+      # sometimes a NoMethodError is not a metric. See Doctor, which reads the
+      # warnings themselves rather than the count.
+      sig { returns(T::Array[Parsers::Warning]) }
+      def warnings = []
+
       # Fetches, parses, and checksums -- or returns nil when the publisher
       # says nothing has changed, which is the outcome to expect on most runs
       # and the reason conditional GET exists.
@@ -157,8 +180,15 @@ module ActiveSanction
       # or, for a source that declares a single file, as the bytes themselves.
       sig { params(payloads: T.untyped, files: T.untyped).returns(Snapshot) }
       def snapshot(payloads = nil, **files)
-        Snapshot.new(source: key, entities: parse(parse_argument(payloads || files)),
-                     fetched_at: Time.now.utc, source_version: source_version)
+        raw = parse_argument(payloads || files)
+        entities = Instrumentation.instrument(instrumenter, :parse,
+                                              { source: declared_key, bytes: byte_count(raw) }) do |event|
+          parsed = parse(raw)
+          event[:records] = parsed.size
+          event[:warnings] = warnings.size
+          parsed
+        end
+        Snapshot.new(source: key, entities: entities, fetched_at: Time.now.utc, source_version: source_version)
       rescue ActiveSanction::Error => e
         raise e.in_source(declared_key)
       end
@@ -250,7 +280,19 @@ module ActiveSanction
 
       sig { params(name: Symbol, address: String, force: T::Boolean).returns(Fetcher::Result) }
       def fetch_file(name, address, force)
-        fetcher.fetch(address, key: file_key(name), force: force).success!
+        fetcher.fetch(address, key: file_key(name), force: force, source: declared_key).success!
+      end
+
+      # How many bytes #parse was handed, across every file of a multi-file
+      # source. Taken before the parse rather than after, so the `:parse`
+      # event still says how large the document was when the parse is what
+      # raised.
+      sig { params(raw: T.untyped).returns(Integer) }
+      def byte_count(raw)
+        return raw.bytesize if raw.is_a?(String)
+        return raw.to_h.each_value.sum { |payload| payload.to_s.bytesize } if raw.respond_to?(:to_h)
+
+        raw.to_s.bytesize
       end
 
       sig { params(name: Symbol).returns(T.untyped) }
@@ -283,7 +325,7 @@ module ActiveSanction
       sig { params(name: Symbol).returns(Fetcher::Result) }
       def refetch(name)
         logger&.info("[active_sanction] #{key} #{name} unchanged but not cached; fetching in full")
-        result = fetcher.fetch(url(name), key: file_key(name), force: true).success!
+        result = fetcher.fetch(url(name), key: file_key(name), force: true, source: declared_key).success!
         return result if result.changed?
 
         raise MissingPayload,
