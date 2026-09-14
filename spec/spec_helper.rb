@@ -24,6 +24,37 @@ WebMock.disable_net_connect!(allow_localhost: true)
 # adapter's spec has only to name the contract, not to find it.
 Dir[File.expand_path("support/**/*.rb", __dir__)].each { |file| require file }
 
+# Compile every signature now, in this thread, rather than leaving each one to
+# be built by whichever example happens to call its method first.
+#
+# sorbet-runtime installs a `sig` lazily: the first call to a signed method
+# unwraps the declaration block and replaces the method with a validating
+# wrapper. That is a one-time mutation of the method object, and when the first
+# call comes from several threads at once it can be attempted twice --
+#
+#     RuntimeError: DeclarationBlock for #<Class:ActiveSanction> at
+#     should have already been unwrapped
+#
+# -- which is what CI run 34878874395 hit on one Ruby of six, from the example
+# that screens the same matcher from eight threads. Whether that example is the
+# first caller of `ActiveSanction.screen` depends on RSpec's random order, so
+# the failure moved with the seed and looked like a concurrency bug in the
+# matcher. It is not one: nothing in the failure is this library's code.
+#
+# The condition is specific to running under a suite. `enable_checking_in_tests`
+# above turns `.checked(:tests)` signatures from cheap no-ops into full
+# validators, so building one does materially more work here than in a host
+# process, and the window is correspondingly wider -- it could not be
+# reproduced outside test mode. Forty milliseconds once, for two thousand
+# signatures, and no example can be the unlucky first caller of one of them.
+#
+# It covers what is loaded by the line above it, which is the whole library and
+# every support file. A file required later declares its own signatures later
+# and they stay lazy -- `Storage::ActiveRecord::Row#discard!` is the one such
+# method in the tree today, reached only from the ActiveRecord storage spec and
+# never from several threads at once.
+T::Utils.run_all_sig_blocks
+
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
