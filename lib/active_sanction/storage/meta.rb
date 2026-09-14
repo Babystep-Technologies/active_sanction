@@ -110,6 +110,24 @@ module ActiveSanction
       # per source: a list that failed to refresh keeps its previous snapshot,
       # which is the right call and only safe if the age of what is being
       # screened against is visible.
+      #
+      # **Accurate to a second, and never fewer than the seconds that have
+      # passed.** `fetched_at` is stored to the second -- Snapshot#time!
+      # truncates it, so that a stored snapshot reloads equal to the one that
+      # was written -- so the instant of the fetch is known only to lie
+      # somewhere inside the second this names. What comes back is therefore
+      # the largest age consistent with what was recorded, which is the
+      # direction a staleness measure has to err in: an answer that is at most
+      # a second pessimistic is a report that nobody acts on, and one that is
+      # optimistic is a list being screened against that is older than it
+      # claims.
+      #
+      # The practical consequence, and the reason it is written down: a list
+      # fetched microseconds ago reports 0 or 1, according to whether the run
+      # crossed a second boundary on its way here. Both mean "just fetched" --
+      # see Sync::Result#age_in_words, which is what a summary table shows --
+      # and nothing should assert on the exact number of a fresh sync, because
+      # that is a fact about the clock rather than about this library.
       sig { params(now: Time).returns(Integer) }
       def age(now = Time.now) = now.to_i - fetched_at.to_i
 

@@ -46,10 +46,23 @@ RSpec.describe "the tutorial (#105)" do
         .to_return(status: 200, body: raw, headers: { "ETag" => '"tutorial"' })
     end
 
+    # `age_in_words` rather than `age: 0`, and not as a weakening. A snapshot's
+    # `fetched_at` is stored to the second -- Snapshot#time! truncates it, so
+    # that a stored snapshot reloads equal to the one that was written -- so
+    # the age of a list fetched a moment ago is 0 or 1 according to nothing but
+    # whether the run crossed a second boundary between downloading the file
+    # and reporting on it. Asserting 0 asserts that it did not, which is a fact
+    # about the clock rather than about this library, and it failed on roughly
+    # one CI job in six.
+    #
+    # "just fetched" is also the string the tutorial page actually shows in its
+    # summary table, which makes this the output a reader is promised rather
+    # than a number underneath it. See Storage::Meta#age.
     it "syncs one list and says what it did" do
       report, = run_tutorial
 
-      expect(report[:un_consolidated]).to have_attributes(status: :updated, record_count: 7, age: 0)
+      expect(report[:un_consolidated])
+        .to have_attributes(status: :updated, record_count: 7, age_in_words: "just fetched")
     end
 
     it "screens the pinned subject over the default threshold, on his name alone" do
