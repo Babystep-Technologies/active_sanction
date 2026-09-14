@@ -116,7 +116,9 @@ because two copies of a procedure means one of them is wrong within a release.
 22. **The conformance group is not optional.**
     `it_behaves_like "a sanction source", fixture: "<key>/<file>"` in the
     adapter's spec, from
-    [`spec/support/shared_examples/sanction_source.rb`](../../spec/support/shared_examples/sanction_source.rb).
+    [`lib/active_sanction/testing/sanction_source.rb`](../../lib/active_sanction/testing/sanction_source.rb),
+    which reaches the suite through `require "active_sanction/testing"` and
+    ships, so an adapter outside this repository runs the same group.
     It is the floor and not the ceiling: it does not know which of your
     fixture's records is a vessel, so write a spec that knows what is in the
     fixture too.

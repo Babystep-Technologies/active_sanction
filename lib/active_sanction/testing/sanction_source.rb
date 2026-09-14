@@ -1,6 +1,10 @@
+# typed: ignore
 # frozen_string_literal: true
 
 # The contract every source adapter must satisfy, written once.
+#
+# Loaded by `require "active_sanction/testing"` -- see ActiveSanction::Testing,
+# which is where the entry point and the fixture root are documented.
 #
 #   RSpec.describe ActiveSanction::Sources::CanadaSema do
 #     it_behaves_like "a sanction source", fixture: "canada_sema/sema.xml"
@@ -12,10 +16,12 @@
 #   it_behaves_like "a sanction source",
 #                   fixture: { sdn: "ofac_sdn/SDN.CSV", alt: "ofac_sdn/ALT.CSV", add: "ofac_sdn/ADD.CSV" }
 #
-# Paths are relative to `spec/fixtures`, and the bytes reach #parse exactly as
-# they were committed -- undecoded, so an adapter reading the Windows-1252
-# OFAC serves is held to doing its own decoding rather than to being handed a
-# String somebody already fixed up.
+# Paths are relative to `spec/fixtures` -- or to whatever
+# `ActiveSanction::Testing.fixture_root` names, and an absolute path is taken
+# as it stands. The bytes reach #parse exactly as they were committed --
+# undecoded, so an adapter reading the Windows-1252 OFAC serves is held to
+# doing its own decoding rather than to being handed a String somebody already
+# fixed up.
 #
 # ### What this is for
 #
@@ -37,7 +43,7 @@
 #
 # ### Options
 #
-#   fixture:  required. A path under `spec/fixtures`, or a Hash of one path
+#   fixture:  required. A path under the fixture root, or a Hash of one path
 #             per declared URL. Real published records, not invented ones --
 #             a conformance run against a fixture somebody wrote to pass it
 #             proves nothing about the list.
@@ -83,7 +89,10 @@ RSpec.shared_examples "a sanction source" do |options = {}|
     files
   end
 
-  def fixture_path(path) = File.expand_path("../../fixtures/#{path}", __dir__)
+  # Resolved through Testing rather than relative to this file, which is what
+  # lets the group work for a project whose fixtures are its own. See
+  # ActiveSanction::Testing.fixture_root.
+  def fixture_path(path) = ActiveSanction::Testing.fixture_path(path)
 
   # Every date any entity carries, wherever the model puts them.
   def entity_dates(entities)

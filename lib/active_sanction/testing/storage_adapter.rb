@@ -1,6 +1,10 @@
+# typed: ignore
 # frozen_string_literal: true
 
 # The contract every storage adapter must satisfy, written once.
+#
+# Loaded by `require "active_sanction/testing"` -- see ActiveSanction::Testing,
+# which is where the entry point and the fixture root are documented.
 #
 #   RSpec.describe ActiveSanction::Storage::Memory do
 #     it_behaves_like "a storage adapter"
@@ -42,7 +46,7 @@
 # store is safe to screen from on many threads. Those are properties of one
 # implementation and each adapter's own spec has to make them.
 RSpec.shared_examples "a storage adapter" do
-  include StorageAdapterDefaults
+  include ActiveSanction::Testing::StorageAdapterDefaults
 
   let(:store) { build_store }
   let(:ofac) { snapshot(:ofac_sdn, %w[2674 1234]) }

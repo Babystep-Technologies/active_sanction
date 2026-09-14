@@ -363,6 +363,35 @@ RSpec.describe ActiveSanction::Client do
     end
   end
 
+  describe "#supports?" do
+    let(:client) { described_class.new(storage: both) }
+
+    it "does everything a client can be asked to do" do
+      expect(described_class::CAPABILITIES.map { |name| client.supports?(name) }.uniq).to eq([true])
+    end
+
+    it "takes a String as readily as a Symbol, since this is often config" do
+      expect(client.supports?("sync")).to be(true)
+    end
+
+    # The whole point of asking rather than assuming: the caller is usually
+    # written against a newer version than the one answering, so a name this
+    # version has never heard of is `false` and a fallback path, not an
+    # exception. Deliberately unlike Configuration, where an unknown setting
+    # raises.
+    it "is false for a capability it has never heard of, rather than raising" do
+      expect(client.supports?(:teleport)).to be(false)
+    end
+
+    it "names only methods it actually has" do
+      missing = described_class::CAPABILITIES.reject do |name|
+        client.respond_to?(name) || client.respond_to?(:"#{name}!")
+      end
+
+      expect(missing).to be_empty
+    end
+  end
+
   describe "#loaded?" do
     it "is false until something has been screened" do
       expect(described_class.new(storage: both).loaded?).to be(false)

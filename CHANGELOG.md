@@ -15,7 +15,42 @@ screening decision would come out as today.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **The conformance groups ship** (#144). `require "active_sanction/testing"` loads the two
+  shared example groups that define what a source adapter and a storage adapter must do, so
+  an adapter written in your own application is held to the same contract the built-in ones
+  are:
+
+  ```ruby
+  # spec/spec_helper.rb
+  require "active_sanction/testing"
+
+  # spec/internal_watchlist_spec.rb
+  RSpec.describe MyCompany::InternalWatchlist do
+    it_behaves_like "a sanction source", fixture: "internal_watchlist/list.csv"
+  end
+  ```
+
+  They were always the stated contract — `docs/api_stability.md` calls them "the executable
+  statement of what [the extension points] require" — and they lived under `spec/`, which is
+  excluded from the packaged gem. The audience for the promise was the one group of people
+  who could not run it. Fixture paths resolve under `spec/fixtures` unless
+  `ActiveSanction::Testing.fixture_root` says otherwise, and an absolute path is taken as it
+  stands.
+
+  **`require "active_sanction"` does not load any of it**, so nothing reaches a production
+  process; requiring it without RSpec says so rather than failing somewhere stranger. The
+  group names and the options they take are public API from here, and a group gaining an
+  example is a minor with a note here naming it.
+
+- **`Client#supports?`** (#144), so a caller can ask what an implementation does rather than
+  find out by rescuing `NoMethodError`. This client supports all of
+  `Client::CAPABILITIES`; the method is for the implementations that are not this class —
+  one answering screening questions against data somebody else keeps fresh has no `sync!`
+  to offer. An unrecognised capability is `false` rather than an error, deliberately unlike
+  `Configuration`: the caller asking is usually written against a newer version than the one
+  answering, and wants a fallback path rather than an exception.
 
 ## [1.1.0] - 2026-09-14
 

@@ -220,16 +220,37 @@ were not asked to, and why the document element's attributes matter for XML:
 
 ## The conformance group your adapter must pass
 
-<!-- sample: illustrative -- needs the real spec suite's shared example group loaded -->
+**It ships with the gem, so this works for an adapter in your own
+application** — you do not need a checkout of this repository.
+
+<!-- sample: illustrative -- belongs in a host application's spec_helper, where RSpec is loaded -->
 
 ```ruby
-RSpec.describe ActiveSanction::Sources::MySource do
-  it_behaves_like "a sanction source", fixture: "my_source/list.csv"
+# spec/spec_helper.rb
+require "active_sanction/testing"
+```
+
+<!-- sample: illustrative -- needs the shared example group loaded, above -->
+
+```ruby
+RSpec.describe MyCompany::InternalWatchlist do
+  it_behaves_like "a sanction source", fixture: "internal_watchlist/list.csv"
 end
 ```
 
-`spec/active_sanction/sources/conformance_spec.rb` is what every adapter is
-held to: a key, a jurisdiction, an authority and a URL declared and
+Fixture paths resolve under `spec/fixtures`. If yours live somewhere else,
+say so once:
+
+<!-- sample: illustrative -- a host application's own layout -->
+
+```ruby
+ActiveSanction::Testing.fixture_root = "test/data/sanctions"
+```
+
+`require "active_sanction"` alone does not load any of this, so nothing
+reaches a production process.
+
+`"a sanction source"` is what every adapter is held to: a key, a jurisdiction, an authority and a URL declared and
 registered; `#parse` returning `Entity` objects with unique, deterministic
 ids, a canonical type, and at least one name; every date a `PartialDate`;
 every record surviving a round trip through `#to_h`; the publisher's own text
@@ -310,7 +331,7 @@ no such obligation — nothing in the public API requires signatures.
 - [ ] The publisher's free text is kept verbatim; extra fields are appended with `Remarks.build`.
 - [ ] Unreadable rows become warnings; a payload that is not the list raises.
 - [ ] A trimmed fixture of real bytes, one record per quirk.
-- [ ] `it_behaves_like "a sanction source"` passes, plus a spec that knows what is in the fixture.
+- [ ] `it_behaves_like "a sanction source"` passes — after `require "active_sanction/testing"` — plus a spec that knows what is in the fixture.
 - [ ] `Sources.register` at the bottom of the file, and a `require` in `lib/active_sanction.rb`.
 - [ ] A canary baseline committed under `.github/baselines/<key>.json`.
 - [ ] A class comment naming the list, its record counts, and its quirks.
