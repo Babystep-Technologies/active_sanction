@@ -17,11 +17,11 @@ screening decision would come out as today.
 
 Nothing yet.
 
-## [1.0.1] - 2026-09-14
+## [1.1.0] - 2026-09-14
 
-A packaging and release-tooling release. **Nothing about screening changes**: no behaviour
-in `lib/` moved, `MATCHER_VERSION` is unchanged at `1`, and a name scores today exactly what
-it scored under 1.0.0.
+**A minor, because it adds.** Nothing that existed changed: no behaviour under `lib/`
+moved, `MATCHER_VERSION` stays at `1`, and a name scores today exactly what it scored
+under 1.0.0. Instrumentation is additive and off unless a host asks for it.
 
 ### Added
 
@@ -68,6 +68,14 @@ it scored under 1.0.0.
   so — and the `:parse` event counts warnings for every source, which a count that is
   sometimes a `NoMethodError` cannot do. An optional hook with a default implementation, so
   no adapter outside this repository has to change.
+
+## [1.0.1] - 2026-09-14
+
+A packaging and release-tooling release. **Nothing about screening changes**: no behaviour
+in `lib/` moved, `MATCHER_VERSION` is unchanged at `1`, and a name scores today exactly what
+it scored under 1.0.0.
+
+### Added
 
 - **Releases publish themselves from a tag**, through
   [`.github/workflows/release.yml`](.github/workflows/release.yml). Pushing `v1.2.3` re-runs
@@ -644,6 +652,7 @@ summarized here because they are what a reader of a first release most needs:
 - Recall at the default threshold is 0.939 overall on the labeled set, and every record this
   version misses is named in the committed accuracy report.
 
-[Unreleased]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.1...main
+[Unreleased]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.1.0...main
+[1.1.0]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Babystep-Technologies/active_sanction/releases/tag/v1.0.0

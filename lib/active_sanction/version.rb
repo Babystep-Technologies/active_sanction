@@ -6,7 +6,7 @@ module ActiveSanction
   # new source adapter, a storage fix or a documentation release -- none of
   # which change what a name scores. MATCHER_VERSION, below, is the one that
   # answers that question.
-  VERSION = "1.0.1"
+  VERSION = "1.1.0"
 
   # Which matching pipeline scored a decision, stamped onto every MatchResult
   # and bumped whenever a change to the normalizer, the index, the similarity
