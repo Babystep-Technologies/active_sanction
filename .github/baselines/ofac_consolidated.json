@@ -1,6 +1,6 @@
 {
   "source": "ofac_consolidated",
-  "captured_at": "2026-09-08T15:31:26Z",
+  "captured_at": "2026-09-15T01:35:07Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
@@ -8,7 +8,7 @@
   "profile": {
     "source": "ofac_consolidated",
     "record_count": 481,
-    "checksum": "sha256:bb2931630370ca0ec65c091be97b565e35c907948239e3b8d869903faf98a3fc",
+    "checksum": "sha256:1598444fd3c77019a9626b2c7270eb477b9cc9c243a9eaed65cc7c36f2df5a8c",
     "cohorts": {
       "individual": 118,
       "organization": 363,
