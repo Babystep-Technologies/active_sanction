@@ -15,6 +15,10 @@ screening decision would come out as today.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.1.1] - 2026-09-14
+
 ### Added
 
 - **The conformance groups ship** (#144). `require "active_sanction/testing"` loads the two
@@ -703,7 +707,8 @@ summarized here because they are what a reader of a first release most needs:
 - Recall at the default threshold is 0.939 overall on the labeled set, and every record this
   version misses is named in the committed accuracy report.
 
-[Unreleased]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.1.0...main
+[Unreleased]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.1.1...main
+[1.1.1]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Babystep-Technologies/active_sanction/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Babystep-Technologies/active_sanction/releases/tag/v1.0.0
