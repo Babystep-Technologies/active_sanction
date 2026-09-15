@@ -44,11 +44,11 @@
       ],
       "licence_notice": "Reproducible for non-commercial purposes without charge or further permission, with the source identified. Commercial redistribution requires prior written permission from Global Affairs Canada. Verified 2026-09-11.",
       "licence_url": "https://www.international.gc.ca/gac-amc/notices-avis.aspx?lang=eng",
-      "record_count": 5690,
+      "record_count": 5698,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 3514
+          "count": 3522
         },
         {
           "kind": "organization",
@@ -59,7 +59,7 @@
           "count": 731
         }
       ],
-      "measured_at": "2026-09-08T15:31:26Z"
+      "measured_at": "2026-09-15T01:35:07Z"
     },
     {
       "key": "eu_fsf",
@@ -119,7 +119,7 @@
           "count": 363
         }
       ],
-      "measured_at": "2026-09-08T15:31:26Z"
+      "measured_at": "2026-09-15T01:35:07Z"
     },
     {
       "key": "ofac_sdn",
@@ -142,15 +142,15 @@
       ],
       "licence_notice": "A work of the U.S. government and not subject to domestic copyright (17 U.S.C. 105). Treasury's seals and marks are restricted separately, and nothing here may imply endorsement. Verified 2026-09-11.",
       "licence_url": "https://home.treasury.gov/subfooter/site-policies-and-notices",
-      "record_count": 19365,
+      "record_count": 19388,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 7519
+          "count": 7533
         },
         {
           "kind": "organization",
-          "count": 9964
+          "count": 9973
         },
         {
           "kind": "vessel",
@@ -161,7 +161,7 @@
           "count": 342
         }
       ],
-      "measured_at": "2026-09-08T15:31:26Z"
+      "measured_at": "2026-09-15T01:35:07Z"
     },
     {
       "key": "uk_sanctions_list",
@@ -191,7 +191,7 @@
           "count": 664
         }
       ],
-      "measured_at": "2026-09-08T15:31:26Z"
+      "measured_at": "2026-09-15T01:35:07Z"
     },
     {
       "key": "un_consolidated",
