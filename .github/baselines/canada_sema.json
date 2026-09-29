@@ -1,26 +1,26 @@
 {
   "source": "canada_sema",
-  "captured_at": "2026-09-15T01:35:07Z",
+  "captured_at": "2026-09-29T02:38:18Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "canada_sema",
-    "record_count": 5698,
-    "checksum": "sha256:530356ad2b38dd8a780880f9f1d21db327eb526aab5c69824eba12114ffc2e1d",
+    "record_count": 5708,
+    "checksum": "sha256:c291b97c3a37a6325b8775f3654a8754f0cb841bcb6714269c983f2a85bcb2f4",
     "cohorts": {
       "individual": 3522,
-      "organization": 1445,
-      "vessel": 731,
+      "organization": 1450,
+      "vessel": 736,
       "aircraft": 0,
-      "all": 5698
+      "all": 5708
     },
     "fill": {
       "names": 1.0,
-      "aliases": 0.562,
+      "aliases": 0.561,
       "addresses": 0.0,
-      "identifiers": 0.1283,
+      "identifiers": 0.1289,
       "programs": 1.0,
       "remarks": 1.0,
       "dates_of_birth": 0.5318,

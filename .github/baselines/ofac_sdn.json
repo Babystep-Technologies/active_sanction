@@ -1,26 +1,26 @@
 {
   "source": "ofac_sdn",
-  "captured_at": "2026-09-15T01:35:07Z",
+  "captured_at": "2026-09-29T02:38:18Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "ofac_sdn",
-    "record_count": 19388,
-    "checksum": "sha256:9f99aa377f65e79587e289f08db027134cd99dbc64f308d77d069ff0b8a761df",
+    "record_count": 19391,
+    "checksum": "sha256:29fcd6366c955fbac120ade1e8ec4401e2c469a05f2923127a0cfbf65ab7b5f0",
     "cohorts": {
-      "individual": 7533,
-      "organization": 9973,
+      "individual": 7534,
+      "organization": 9975,
       "vessel": 1540,
       "aircraft": 342,
-      "all": 19388
+      "all": 19391
     },
     "fill": {
       "names": 1.0,
       "aliases": 0.5137,
-      "addresses": 0.8344,
-      "identifiers": 0.7255,
+      "addresses": 0.8345,
+      "identifiers": 0.7258,
       "programs": 1.0,
       "remarks": 0.9843,
       "dates_of_birth": 0.9867,
@@ -43,8 +43,8 @@
       {
         "column": "ent_num",
         "description": "numeric",
-        "checked": 19388,
-        "matched": 19388,
+        "checked": 19391,
+        "matched": 19391,
         "blank": 0,
         "ratio": 1.0,
         "at_least": 0.99,
@@ -53,9 +53,9 @@
       {
         "column": "sdn_type",
         "description": "a published SDN_Type",
-        "checked": 9415,
-        "matched": 9415,
-        "blank": 9973,
+        "checked": 9416,
+        "matched": 9416,
+        "blank": 9975,
         "ratio": 1.0,
         "at_least": 0.75,
         "sample": []
