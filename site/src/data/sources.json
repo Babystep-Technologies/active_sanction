@@ -14,22 +14,22 @@
       ],
       "licence_notice": "Creative Commons Attribution 4.0 International, attributed to the Department of Foreign Affairs and Trade. The Commonwealth Coat of Arms is excluded. Verified 2026-09-11.",
       "licence_url": "https://www.dfat.gov.au/about-us/about-this-website/copyright",
-      "record_count": 3906,
+      "record_count": 4010,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 2543
+          "count": 2575
         },
         {
           "kind": "organization",
-          "count": 1041
+          "count": 1076
         },
         {
           "kind": "vessel",
-          "count": 322
+          "count": 359
         }
       ],
-      "measured_at": "2026-09-08T15:31:26Z"
+      "measured_at": "2026-09-29T02:38:18Z"
     },
     {
       "key": "canada_sema",
@@ -44,7 +44,7 @@
       ],
       "licence_notice": "Reproducible for non-commercial purposes without charge or further permission, with the source identified. Commercial redistribution requires prior written permission from Global Affairs Canada. Verified 2026-09-11.",
       "licence_url": "https://www.international.gc.ca/gac-amc/notices-avis.aspx?lang=eng",
-      "record_count": 5698,
+      "record_count": 5708,
       "cohorts": [
         {
           "kind": "individual",
@@ -52,14 +52,14 @@
         },
         {
           "kind": "organization",
-          "count": 1445
+          "count": 1450
         },
         {
           "kind": "vessel",
-          "count": 731
+          "count": 736
         }
       ],
-      "measured_at": "2026-09-15T01:35:07Z"
+      "measured_at": "2026-09-29T02:38:18Z"
     },
     {
       "key": "eu_fsf",
@@ -74,18 +74,18 @@
       ],
       "licence_notice": "Reusable under Commission Decision 2011/833/EU provided the source is acknowledged and no Commission endorsement is implied. Verified 2026-09-11.",
       "licence_url": "https://eur-lex.europa.eu/eli/dec/2011/833/oj/eng",
-      "record_count": 6234,
+      "record_count": 6241,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 4462
+          "count": 4465
         },
         {
           "kind": "organization",
-          "count": 1772
+          "count": 1776
         }
       ],
-      "measured_at": "2026-09-08T15:31:26Z"
+      "measured_at": "2026-09-29T02:38:18Z"
     },
     {
       "key": "ofac_consolidated",
@@ -142,15 +142,15 @@
       ],
       "licence_notice": "A work of the U.S. government and not subject to domestic copyright (17 U.S.C. 105). Treasury's seals and marks are restricted separately, and nothing here may imply endorsement. Verified 2026-09-11.",
       "licence_url": "https://home.treasury.gov/subfooter/site-policies-and-notices",
-      "record_count": 19388,
+      "record_count": 19391,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 7533
+          "count": 7534
         },
         {
           "kind": "organization",
-          "count": 9973
+          "count": 9975
         },
         {
           "kind": "vessel",
@@ -161,7 +161,7 @@
           "count": 342
         }
       ],
-      "measured_at": "2026-09-15T01:35:07Z"
+      "measured_at": "2026-09-29T02:38:18Z"
     },
     {
       "key": "uk_sanctions_list",
@@ -176,7 +176,7 @@
       ],
       "licence_notice": "Crown copyright, reusable under the Open Government Licence v3.0 with attribution. Verified 2026-09-11.",
       "licence_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
-      "record_count": 6340,
+      "record_count": 6339,
       "cohorts": [
         {
           "kind": "individual",
@@ -188,10 +188,10 @@
         },
         {
           "kind": "vessel",
-          "count": 664
+          "count": 663
         }
       ],
-      "measured_at": "2026-09-15T01:35:07Z"
+      "measured_at": "2026-09-29T02:38:18Z"
     },
     {
       "key": "un_consolidated",
@@ -217,7 +217,7 @@
           "count": 275
         }
       ],
-      "measured_at": "2026-09-08T15:31:26Z"
+      "measured_at": "2026-09-29T02:38:18Z"
     }
   ]
 }

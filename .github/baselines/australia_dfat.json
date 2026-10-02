@@ -1,30 +1,30 @@
 {
   "source": "australia_dfat",
-  "captured_at": "2026-09-08T15:31:26Z",
+  "captured_at": "2026-09-29T02:38:18Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "australia_dfat",
-    "record_count": 3906,
-    "checksum": "sha256:539882eb573659cd61d290e0504fabe53c8e56d58e5998cfdd95197a150c90bc",
+    "record_count": 4010,
+    "checksum": "sha256:a7df063c0dd823f92e2433a3c8825c08450cf3b922530fc52d9be2405d2fc3ca",
     "cohorts": {
-      "individual": 2543,
-      "organization": 1041,
-      "vessel": 322,
+      "individual": 2575,
+      "organization": 1076,
+      "vessel": 359,
       "aircraft": 0,
-      "all": 3906
+      "all": 4010
     },
     "fill": {
       "names": 1.0,
-      "aliases": 0.5904,
-      "addresses": 0.3513,
-      "identifiers": 0.0819,
+      "aliases": 0.592,
+      "addresses": 0.3541,
+      "identifiers": 0.089,
       "programs": 1.0,
       "remarks": 1.0,
-      "dates_of_birth": 0.9508,
-      "nationalities": 0.8392
+      "dates_of_birth": 0.9515,
+      "nationalities": 0.8404
     },
     "warnings": {},
     "orphans": null,
