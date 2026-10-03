@@ -1,37 +1,37 @@
 {
   "source": "ofac_sdn",
-  "captured_at": "2026-09-29T02:38:18Z",
+  "captured_at": "2026-10-03T02:05:43Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "ofac_sdn",
-    "record_count": 19391,
-    "checksum": "sha256:29fcd6366c955fbac120ade1e8ec4401e2c469a05f2923127a0cfbf65ab7b5f0",
+    "record_count": 19488,
+    "checksum": "sha256:dce24c857bfabdd51f4f311fa2680e2e92feb631303c9cef4cb295d6cb8c8a36",
     "cohorts": {
-      "individual": 7534,
-      "organization": 9975,
-      "vessel": 1540,
+      "individual": 7570,
+      "organization": 10037,
+      "vessel": 1539,
       "aircraft": 342,
-      "all": 19391
+      "all": 19488
     },
     "fill": {
       "names": 1.0,
-      "aliases": 0.5137,
-      "addresses": 0.8345,
-      "identifiers": 0.7258,
+      "aliases": 0.5129,
+      "addresses": 0.8353,
+      "identifiers": 0.727,
       "programs": 1.0,
-      "remarks": 0.9843,
-      "dates_of_birth": 0.9867,
-      "nationalities": 0.803
+      "remarks": 0.9844,
+      "dates_of_birth": 0.9868,
+      "nationalities": 0.804
     },
     "warnings": {},
     "orphans": {
       "aliases": 0,
       "addresses": 0
     },
-    "remarks_coverage": 0.9731,
+    "remarks_coverage": 0.9733,
     "unrecognized": {
       "Member of the": 615,
       "ICTY indictee.": 45,
@@ -43,8 +43,8 @@
       {
         "column": "ent_num",
         "description": "numeric",
-        "checked": 19391,
-        "matched": 19391,
+        "checked": 19488,
+        "matched": 19488,
         "blank": 0,
         "ratio": 1.0,
         "at_least": 0.99,
@@ -53,9 +53,9 @@
       {
         "column": "sdn_type",
         "description": "a published SDN_Type",
-        "checked": 9416,
-        "matched": 9416,
-        "blank": 9975,
+        "checked": 9451,
+        "matched": 9451,
+        "blank": 10037,
         "ratio": 1.0,
         "at_least": 0.75,
         "sample": []
