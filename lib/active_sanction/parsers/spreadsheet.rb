@@ -17,7 +17,7 @@ module ActiveSanction
     # A table is a description of the file, built once and reused for every
     # sync; a Reader is one pass over one payload.
     #
-    #   LIST = ActiveSanction::Parsers::Spreadsheet.new(sheet: "Consolidated List")
+    #   LIST = ActiveSanction::Parsers::Spreadsheet.new(sheet: /\AConsolidated List\b/)
     #
     #   LIST.read(bytes).each { |row| row[:name_of_individual_or_entity] }
     #
@@ -50,6 +50,20 @@ module ActiveSanction
     # a sanctions list. Only `.xlsx` is read, not the older binary `.xls` --
     # they share a file extension in conversation and nothing at all in format.
     #
+    # ### Naming the sheet, when the publisher will not name it the same twice
+    #
+    # `sheet:` takes a name, a zero-based index, or nil for the first sheet --
+    # and a Regexp, which exists because a tab name is presentation and gets
+    # treated as such. DFAT stamps the date of the export into its own: the tab
+    # that read `Consolidated List` in September 2026 read `Consolidated
+    # List - 7_10_2026` in October, and an exact name would break on every
+    # update DFAT publishes. A pattern matches the part the publisher means and
+    # ignores the part it decorates.
+    #
+    # It must match exactly one sheet. Matching the first of several would read
+    # whichever tab a workbook happens to declare first, which is the failure
+    # naming the sheet was there to prevent.
+    #
     # ### Columns, and why declaring them is optional here
     #
     # A published spreadsheet has a header row, unlike OFAC's CSVs, so the first
@@ -75,7 +89,8 @@ module ActiveSanction
       sig { returns(T.nilable(T::Array[Symbol])) }
       attr_reader :columns
 
-      # The sheet to read: a name, a zero-based index, or nil for the first one.
+      # The sheet to read: a name, a Regexp matching exactly one name, a
+      # zero-based index, or nil for the first one.
       sig { returns(T.untyped) }
       attr_reader :sheet
 
@@ -115,14 +130,19 @@ module ActiveSanction
       sig { returns(T::Boolean) }
       def headers? = columns.nil?
 
-      # What to call the sheet being read, for a message: the name or index the
-      # caller asked for, or what "the first one" means when they asked for
-      # nothing.
+      # What to call the sheet being read, for a message: the name, pattern or
+      # index the caller asked for, or what "the first one" means when they
+      # asked for nothing. A Regexp prints as itself, because a pattern put
+      # through `to_s` prints as `(?-mix:...)` and tells a reader of the message
+      # less than the pattern they wrote.
       sig { returns(String) }
       def sheet_name
-        return "the first sheet" if sheet.nil?
-
-        sheet.is_a?(Integer) ? "sheet #{sheet}" : sheet.to_s.inspect
+        case sheet
+        when nil then "the first sheet"
+        when Integer then "sheet #{sheet}"
+        when Regexp then "the sheet matching #{sheet.inspect}"
+        else sheet.to_s.inspect
+        end
       end
 
       # Zips a row's cells against the column names by position. A column the
