@@ -278,7 +278,7 @@ decision (`config.xml_backend`), not a list's.
 ### `Parsers::Spreadsheet` — an `.xlsx` workbook
 
 ```ruby
-LIST = ActiveSanction::Parsers::Spreadsheet.new(sheet: "Consolidated List")
+LIST = ActiveSanction::Parsers::Spreadsheet.new(sheet: /\AConsolidated List\b/)
 
 reader = LIST.read(raw)
 reader.each do |row|
@@ -286,7 +286,7 @@ reader.each do |row|
   row[:date_of_birth]                  # => "1962-08-24"
   row.number                           # => 2, the sheet's own row number
 end
-reader.sheet_names                     # => ["Consolidated List"]
+reader.sheet_names                     # => ["Consolidated List - 7_10_2026"]
 reader.modified                        # the publisher's own save time
 ```
 
@@ -299,9 +299,22 @@ missing was a ZIP header unpacker.
   cells name the columns by default, lowercased and snake_cased the way
   `DelimitedTable` normalizes a CSV header. Passing `columns:` renames them by
   position instead; the header is still consumed, because it is still a header.
-- **`sheet:`** takes a name, a zero-based index, or nil for the first sheet. Name
-  it: a publisher adding a tab should be an error rather than a silent change of
-  which sheet is read.
+- **`sheet:`** takes a name, a `Regexp` matching exactly one name, a zero-based
+  index, or nil for the first sheet. Say which: a publisher adding a tab should
+  be an error rather than a silent change of which sheet is read.
+
+  Reach for the pattern when the publisher decorates the label rather than
+  naming the sheet. DFAT stamps the date of the export into its own, so the tab
+  that read `Consolidated List` in September 2026 read `Consolidated
+  List - 7_10_2026` in October, and an exact name would be edited on every
+  update — strict in form and stale in practice. A pattern must match exactly
+  one sheet; matching the first of several would read whichever tab the workbook
+  declares first, which is the failure naming the sheet was there to prevent.
+
+  Either way, the tab name is not what proves the sheet is the right one. The
+  header is, and an adapter should check it on every parse the way
+  `Sources::AustraliaDfat#verify_columns!` does — a relabelled tab still has to
+  name every column the adapter reads, and a cover sheet cannot.
 - **A cell arrives as a String, or nil.** Shared strings are resolved, inline
   strings are read, a boolean reads `TRUE`/`FALSE`, and Excel's `_x000D_` escapes
   are undone.

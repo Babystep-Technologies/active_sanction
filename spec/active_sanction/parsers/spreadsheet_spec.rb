@@ -98,6 +98,44 @@ RSpec.describe ActiveSanction::Parsers::Spreadsheet do
         .to raise_error(ActiveSanction::Parsers::ParseError, /there is no sheet 3/)
     end
 
+    # A tab name is presentation, and a publisher is free to decorate it: DFAT
+    # stamps the date of the export into its own, so the sheet that read
+    # `Consolidated List` in September 2026 read `Consolidated List - 7_10_2026`
+    # in October. A pattern matches the part the publisher means.
+    it "reads the sheet a caller matches by pattern" do
+      expect(rows_of(workbook(sheet: "Consolidated List - 7_10_2026").zip, sheet: /\AConsolidated List\b/))
+        .not_to be_empty
+    end
+
+    it "refuses a pattern no sheet answers to, and says what the workbook has" do
+      expect { rows_of(workbook(sheet: "Sheet1").zip, sheet: /\AConsolidated List\b/) }
+        .to raise_error(ActiveSanction::Parsers::ParseError, /0 sheet\(s\) whose name matches.*It has: Sheet1/m)
+    end
+
+    # Reading the first of several would be reading whichever tab the workbook
+    # happens to declare first, which is the failure naming the sheet prevents.
+    it "refuses a pattern that cannot tell two of the workbook's tabs apart" do
+      expect { rows_of(two_sheets_named("Consolidated List", "Consolidated List - 7_10_2026"), sheet: /Consolidated/) }
+        .to raise_error(ActiveSanction::Parsers::ParseError, /2 sheet\(s\).*ambiguous/)
+    end
+
+    it "says which pattern it reads, for a message, rather than printing it through to_s" do
+      expect(described_class.new(sheet: /\AConsolidated List\b/).inspect).to include("/\\AConsolidated List\\b/")
+    end
+
+    def two_sheets_named(first, second)
+      workbook.part("xl/workbook.xml", <<~XML).zip
+        <?xml version="1.0"?>
+        <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+        <sheets>
+        <sheet name="#{first}" sheetId="1" r:id="rId1"/>
+        <sheet name="#{second}" sheetId="2" r:id="rId1"/>
+        </sheets>
+        </workbook>
+      XML
+    end
+
     # A workbook is free to store its first sheet in any part it likes, and the
     # relationship is the only thing that says which.
     it "follows the relationship rather than assuming a part name" do

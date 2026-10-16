@@ -99,9 +99,9 @@ module ActiveSanction
         sig { returns(T::Array[String]) }
         def sheet_names = sheets.map(&:first)
 
-        # The bytes of the sheet a caller asked for by name, by zero-based
-        # index, or -- passing nil -- of the first one, which is the whole
-        # workbook for every list that publishes as a spreadsheet.
+        # The bytes of the sheet a caller asked for by name, by pattern, by
+        # zero-based index, or -- passing nil -- of the first one, which is the
+        # whole workbook for every list that publishes as a spreadsheet.
         sig { params(wanted: T.untyped).returns(String) }
         def sheet(wanted = nil)
           archive.fetch(sheet_part(wanted))
@@ -172,6 +172,7 @@ module ActiveSanction
         sig { params(wanted: T.untyped).returns(String) }
         def sheet_part(wanted)
           return by_index(Integer(wanted)) if wanted.is_a?(Integer)
+          return by_pattern(wanted) if wanted.is_a?(Regexp)
           return by_name(wanted.to_s) unless wanted.nil?
 
           by_index(0)
@@ -192,6 +193,27 @@ module ActiveSanction
           return found.last if found
 
           raise ParseError, "this workbook has no sheet named #{name.inspect}. It has: #{sheet_names.join(", ")}"
+        end
+
+        # The one sheet whose name the pattern matches, for a publisher who
+        # writes part of the tab name rather than all of it -- DFAT stamps the
+        # export date into its own, so `Consolidated List` was `Consolidated
+        # List - 7_10_2026` on the 7th of October 2026 and will be something
+        # else next week.
+        #
+        # Exactly one match, never the first of several. A pattern that matches
+        # two tabs does not say which of them holds the list, and reading the
+        # one the workbook happens to declare first is how a reader starts
+        # screening against a cover sheet.
+        sig { params(pattern: Regexp).returns(String) }
+        def by_pattern(pattern)
+          found = sheets.select { |sheet_name, _part| pattern.match?(sheet_name) }
+          return T.must(found.first).last if found.one?
+
+          ambiguous = found.any? ? ", so which one holds the list is ambiguous" : ""
+          raise ParseError,
+                "this workbook has #{found.size} sheet(s) whose name matches " \
+                "#{pattern.inspect}#{ambiguous}. It has: #{sheet_names.join(", ")}"
         end
 
         sig { returns(T::Array[[String, String]]) }

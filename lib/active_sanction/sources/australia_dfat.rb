@@ -19,7 +19,12 @@ module ActiveSanction
     #
     #   https://www.dfat.gov.au/sites/default/files/Australian_Sanctions_Consolidated_List.xlsx
     #
-    #     "Consolidated List"   11,163 rows, 19 columns, 1.3 MB
+    #     "Consolidated List …"   11,163 rows, 19 columns, 1.3 MB
+    #
+    # Every count in this comment is that survey, of the export of the 4th of
+    # September 2026. They are here to be checkable against the file rather
+    # than to be current: DFAT designates and delists continuously, so the
+    # absolute numbers move with every update and the proportions do not.
     #
     # One `.xlsx` file, one sheet. There is no CSV, no XML and no JSON: DFAT's
     # Consolidated List page offers exactly one download, and this is it. So
@@ -31,6 +36,26 @@ module ActiveSanction
     # XML toolkit the other five adapters already use -- an `.xlsx` being a ZIP
     # of XML parts -- so this adapter costs a host nothing to install. See that
     # class for what it does and does not read.
+    #
+    # ### The tab name carries the export date
+    #
+    # That sheet was called `Consolidated List` until some time between the 3rd
+    # and the 7th of October 2026, when DFAT began appending the date it
+    # exported the workbook: `Consolidated List - 7_10_2026`, day first, the
+    # way the rest of the file writes dates. The sheet behind the label is
+    # unchanged: that export reads as the same 19 columns, under the same
+    # headers, in the same order, and its 11,414 rows join into 4,009 records
+    # with no warning on any of them.
+    #
+    # So the tab name is a caption on the export and not the name of the sheet,
+    # and SHEET matches it as one. An exact name would have to be edited on
+    # every update DFAT publishes, which means it would be stale rather than
+    # strict.
+    #
+    # What makes that safe is that the tab name was never what proved this is
+    # the right sheet: #verify_columns! does, against the header, on every
+    # parse. A tab DFAT relabelled still has to name all fourteen columns this
+    # reads, and a cover sheet or a notes tab cannot.
     #
     # ### The URL moved, and the old one still answers
     #
@@ -111,8 +136,14 @@ module ActiveSanction
 
       url :main, "https://www.dfat.gov.au/sites/default/files/Australian_Sanctions_Consolidated_List.xlsx"
 
+      # The one sheet, matched on the part of its name DFAT means rather than
+      # the whole label -- see "The tab name carries the export date" above. The
+      # `\b` is what keeps this from being a prefix match on anything: it
+      # accepts `Consolidated List` and `Consolidated List - 7_10_2026` and
+      # refuses `Consolidated Listing`.
+      #
       # @api private
-      SHEET = T.let("Consolidated List", String)
+      SHEET = T.let(/\AConsolidated List\b/, Regexp)
 
       # @api private
       LIST = T.let(Parsers::Spreadsheet.new(sheet: SHEET), Parsers::Spreadsheet)
@@ -248,13 +279,13 @@ module ActiveSanction
       # column carried. There is nothing to salvage, so nothing is.
       sig { params(row: T.nilable(Parsers::Spreadsheet::Row)).void }
       def verify_columns!(row)
-        raise Parsers::ParseError, "the #{SHEET.inspect} sheet has a header and no rows" if row.nil?
+        raise Parsers::ParseError, "#{LIST.sheet_name} has a header and no rows" if row.nil?
 
         missing = REQUIRED_COLUMNS - row.columns
         return if missing.empty?
 
         raise Parsers::ParseError,
-              "the #{SHEET.inspect} sheet does not name the column(s) #{missing.join(", ")}. It names: " \
+              "#{LIST.sheet_name} does not name the column(s) #{missing.join(", ")}. It names: " \
               "#{row.columns.join(", ")}"
       end
 

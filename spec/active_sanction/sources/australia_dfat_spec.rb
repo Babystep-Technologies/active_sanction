@@ -14,6 +14,13 @@ RSpec.describe ActiveSanction::Sources::AustraliaDfat do
 
   def extras_of(ref) = entity(ref).remarks.to_s.split(ActiveSanction::Sources::Remarks::MARKER).last.to_s
 
+  # The fixture's own tab, relabelled and nothing else touched -- real published
+  # rows, real shared strings, real styles, under the name DFAT writes today.
+  def sheet_renamed(to)
+    book = ActiveSanction::Parsers::Spreadsheet::Archive.new(raw).fetch("xl/workbook.xml")
+    WorkbookBuilder.from(raw).part("xl/workbook.xml", book.sub('name="Consolidated List"', %(name="#{to}"))).zip
+  end
+
   it_behaves_like "a sanction source", fixture: "australia_dfat/consolidated-list.xlsx"
 
   # The fixture is seventeen real listings lifted verbatim from the published
@@ -273,11 +280,61 @@ RSpec.describe ActiveSanction::Sources::AustraliaDfat do
     # The sheet is named, so that a publisher adding a tab does not silently
     # change which one is read.
     it "refuses a workbook whose sheet is no longer the one it names" do
-      book = ActiveSanction::Parsers::Spreadsheet::Archive.new(raw).fetch("xl/workbook.xml")
+      expect { adapter.parse(sheet_renamed("Sheet1")) }
+        .to raise_error(ActiveSanction::Parsers::ParseError, %r{0 sheet\(s\) whose name matches /.*Consolidated List})
+    end
+
+    # A tab named for a list this is not reading is not a near miss. DFAT
+    # decorates the label it writes; it does not write a different list under
+    # one that starts the same way.
+    it "refuses a sheet whose name only begins like the one it reads" do
+      expect { adapter.parse(sheet_renamed("Consolidated Listing Notes")) }
+        .to raise_error(ActiveSanction::Parsers::ParseError, /0 sheet\(s\) whose name matches/)
+    end
+  end
+
+  # Between the 3rd and the 7th of October 2026 DFAT began stamping the date it
+  # exported the workbook into the tab name, which stopped the whole list
+  # parsing: #154. The records behind the label did not move, so what is
+  # asserted here is that the label is read as a caption and the list behind it
+  # comes through whole.
+  describe "the export date DFAT now writes into the tab name" do
+    let(:dated) { described_class.new }
+    let(:renamed) { dated.parse(sheet_renamed("Consolidated List - 7_10_2026")) }
+
+    it "reads the list out of a tab named for the day it was exported" do
+      expect(renamed.map(&:source_ref)).to eq(entities.map(&:source_ref))
+    end
+
+    it "reads it without a complaint, and not as a salvage" do
+      renamed
+      expect(dated.warnings).to be_empty
+    end
+
+    # The tab name was never the proof: the header is, on every parse. A sheet
+    # DFAT relabelled still has to name every column this adapter reads.
+    it "still refuses a relabelled tab whose header lost a column" do
+      strings = ActiveSanction::Parsers::Spreadsheet::Archive.new(raw).fetch("xl/sharedStrings.xml")
       expect do
-        adapter.parse(WorkbookBuilder.from(raw).part("xl/workbook.xml", book.sub("Consolidated List", "Sheet1")).zip)
+        dated.parse(
+          WorkbookBuilder.from(sheet_renamed("Consolidated List - 7_10_2026"))
+                         .part("xl/sharedStrings.xml", strings.sub("<t>Citizenship</t>", "<t>Nationality</t>"))
+                         .zip
+        )
       end
-        .to raise_error(ActiveSanction::Parsers::ParseError, /has no sheet named "Consolidated List"/)
+        .to raise_error(ActiveSanction::Parsers::ParseError, /does not name the column\(s\) citizenship/)
+    end
+
+    # Two tabs both answering to the pattern do not say which holds the list,
+    # and reading the first would be reading whichever one DFAT declared first.
+    it "refuses a workbook that offers two tabs answering to the same name" do
+      book = ActiveSanction::Parsers::Spreadsheet::Archive.new(raw).fetch("xl/workbook.xml")
+      twice = book.sub(
+        %r{(<sheet name="Consolidated List"[^/]*/>)},
+        '\1<sheet name="Consolidated List - 7_10_2026" sheetId="2" r:id="rId1"/>'
+      )
+      expect { dated.parse(WorkbookBuilder.from(raw).part("xl/workbook.xml", twice).zip) }
+        .to raise_error(ActiveSanction::Parsers::ParseError, /2 sheet\(s\).*ambiguous/)
     end
   end
 

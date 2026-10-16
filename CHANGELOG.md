@@ -15,7 +15,26 @@ screening decision would come out as today.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **`australia_dfat` reads the list again** (#154). DFAT began stamping the date it exported
+  the workbook into the tab name — `Consolidated List` became `Consolidated List - 7_10_2026`
+  — and the adapter named that sheet exactly, so the whole Australian list stopped parsing
+  with `ParseError: this workbook has no sheet named "Consolidated List"`. A tab name is a
+  caption on the export rather than the name of the sheet, so it is now matched as one. The
+  sheet behind the label did not change, no field means anything different, and no id moved.
+
+  What proves the right sheet is being read is the header, which `#verify_columns!` has always
+  checked on every parse: a relabelled tab still has to name all fourteen columns the adapter
+  reads, and a cover sheet or a notes tab cannot.
+
+### Added
+
+- **`Parsers::Spreadsheet` accepts a `Regexp` for `sheet:`** (#154), for a publisher who
+  decorates a tab name rather than naming the sheet. It must match exactly one sheet —
+  matching the first of several would read whichever tab the workbook happens to declare
+  first, which is the failure naming the sheet was there to prevent. A name, a zero-based
+  index and `nil` behave as before.
 
 ## [1.1.1] - 2026-09-14
 

@@ -14,7 +14,7 @@
       ],
       "licence_notice": "Creative Commons Attribution 4.0 International, attributed to the Department of Foreign Affairs and Trade. The Commonwealth Coat of Arms is excluded. Verified 2026-09-11.",
       "licence_url": "https://www.dfat.gov.au/about-us/about-this-website/copyright",
-      "record_count": 4010,
+      "record_count": 4009,
       "cohorts": [
         {
           "kind": "individual",
@@ -22,14 +22,14 @@
         },
         {
           "kind": "organization",
-          "count": 1076
+          "count": 1075
         },
         {
           "kind": "vessel",
           "count": 359
         }
       ],
-      "measured_at": "2026-10-03T02:05:43Z"
+      "measured_at": "2026-10-13T21:25:31Z"
     },
     {
       "key": "canada_sema",
