@@ -29,7 +29,7 @@
           "count": 359
         }
       ],
-      "measured_at": "2026-10-13T21:25:31Z"
+      "measured_at": "2026-10-17T01:23:11Z"
     },
     {
       "key": "canada_sema",
@@ -44,11 +44,11 @@
       ],
       "licence_notice": "Reproducible for non-commercial purposes without charge or further permission, with the source identified. Commercial redistribution requires prior written permission from Global Affairs Canada. Verified 2026-09-11.",
       "licence_url": "https://www.international.gc.ca/gac-amc/notices-avis.aspx?lang=eng",
-      "record_count": 5707,
+      "record_count": 5708,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 3521
+          "count": 3522
         },
         {
           "kind": "organization",
@@ -59,7 +59,7 @@
           "count": 736
         }
       ],
-      "measured_at": "2026-10-03T02:05:43Z"
+      "measured_at": "2026-10-17T01:23:11Z"
     },
     {
       "key": "eu_fsf",
@@ -74,18 +74,18 @@
       ],
       "licence_notice": "Reusable under Commission Decision 2011/833/EU provided the source is acknowledged and no Commission endorsement is implied. Verified 2026-09-11.",
       "licence_url": "https://eur-lex.europa.eu/eli/dec/2011/833/oj/eng",
-      "record_count": 6241,
+      "record_count": 6234,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 4465
+          "count": 4459
         },
         {
           "kind": "organization",
-          "count": 1776
+          "count": 1775
         }
       ],
-      "measured_at": "2026-09-29T02:38:18Z"
+      "measured_at": "2026-10-17T01:23:11Z"
     },
     {
       "key": "ofac_consolidated",
@@ -142,26 +142,26 @@
       ],
       "licence_notice": "A work of the U.S. government and not subject to domestic copyright (17 U.S.C. 105). Treasury's seals and marks are restricted separately, and nothing here may imply endorsement. Verified 2026-09-11.",
       "licence_url": "https://home.treasury.gov/subfooter/site-policies-and-notices",
-      "record_count": 19488,
+      "record_count": 19457,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 7570
+          "count": 7516
         },
         {
           "kind": "organization",
-          "count": 10037
+          "count": 10040
         },
         {
           "kind": "vessel",
-          "count": 1539
+          "count": 1559
         },
         {
           "kind": "aircraft",
           "count": 342
         }
       ],
-      "measured_at": "2026-10-03T02:05:43Z"
+      "measured_at": "2026-10-17T01:23:11Z"
     },
     {
       "key": "uk_sanctions_list",
@@ -176,22 +176,22 @@
       ],
       "licence_notice": "Crown copyright, reusable under the Open Government Licence v3.0 with attribution. Verified 2026-09-11.",
       "licence_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
-      "record_count": 6370,
+      "record_count": 6408,
       "cohorts": [
         {
           "kind": "individual",
-          "count": 4054
+          "count": 4058
         },
         {
           "kind": "organization",
-          "count": 1645
+          "count": 1667
         },
         {
           "kind": "vessel",
-          "count": 671
+          "count": 683
         }
       ],
-      "measured_at": "2026-10-03T02:05:43Z"
+      "measured_at": "2026-10-17T01:23:11Z"
     },
     {
       "key": "un_consolidated",
@@ -206,7 +206,7 @@
       ],
       "licence_notice": "Copyright reserved by the United Nations. Published for implementation of Security Council measures; no open reuse licence is stated. Verified 2026-09-11.",
       "licence_url": "https://www.un.org/en/about-us/copyright",
-      "record_count": 1011,
+      "record_count": 1010,
       "cohorts": [
         {
           "kind": "individual",
@@ -214,10 +214,10 @@
         },
         {
           "kind": "organization",
-          "count": 275
+          "count": 274
         }
       ],
-      "measured_at": "2026-10-03T02:05:43Z"
+      "measured_at": "2026-10-17T01:23:11Z"
     }
   ]
 }

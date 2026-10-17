@@ -1,6 +1,6 @@
 {
   "source": "australia_dfat",
-  "captured_at": "2026-10-13T21:25:31Z",
+  "captured_at": "2026-10-17T01:23:11Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
@@ -8,7 +8,7 @@
   "profile": {
     "source": "australia_dfat",
     "record_count": 4009,
-    "checksum": "sha256:89d988414d90ca73b391647e3ccab4ec830e6060615a0c27d9a0e14d12e11c43",
+    "checksum": "sha256:c9287c4a93d12f3f918e610268e053c8c99c78dccee690da9bad408bedfbd713",
     "cohorts": {
       "individual": 2575,
       "organization": 1075,

@@ -1,30 +1,30 @@
 {
   "source": "eu_fsf",
-  "captured_at": "2026-09-29T02:38:18Z",
+  "captured_at": "2026-10-17T01:23:11Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "eu_fsf",
-    "record_count": 6241,
-    "checksum": "sha256:3f1a292f7b17b62159b569be5d0f8c936bc7721bdf27a6eadca022e5624bf068",
+    "record_count": 6234,
+    "checksum": "sha256:833c41972bbe3582cabf86366be408ec98541f5f0c3a64ba654955390bbe935f",
     "cohorts": {
-      "individual": 4465,
-      "organization": 1776,
+      "individual": 4459,
+      "organization": 1775,
       "vessel": 0,
       "aircraft": 0,
-      "all": 6241
+      "all": 6234
     },
     "fill": {
       "names": 1.0,
       "aliases": 0.8813,
-      "addresses": 0.3299,
-      "identifiers": 0.3192,
+      "addresses": 0.3301,
+      "identifiers": 0.3191,
       "programs": 1.0,
       "remarks": 1.0,
-      "dates_of_birth": 0.8482,
-      "nationalities": 0.5984
+      "dates_of_birth": 0.8479,
+      "nationalities": 0.5986
     },
     "warnings": {},
     "orphans": null,
