@@ -1,26 +1,26 @@
 {
   "source": "un_consolidated",
-  "captured_at": "2026-10-03T02:05:43Z",
+  "captured_at": "2026-10-24T01:41:41Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "un_consolidated",
-    "record_count": 1011,
-    "checksum": "sha256:5907452d2e77b2ea8f527bc23170183b63e4df45ac3e2b443bd0ee8af0f6d801",
+    "record_count": 1010,
+    "checksum": "sha256:e2bbf728e3332ed48ef69bde83c3fec800ca721653698527c8175e54e9db9d0e",
     "cohorts": {
       "individual": 736,
-      "organization": 275,
+      "organization": 274,
       "vessel": 0,
       "aircraft": 0,
-      "all": 1011
+      "all": 1010
     },
     "fill": {
       "names": 1.0,
-      "aliases": 0.7923,
-      "addresses": 0.549,
-      "identifiers": 0.2948,
+      "aliases": 0.7921,
+      "addresses": 0.5485,
+      "identifiers": 0.295,
       "programs": 1.0,
       "remarks": 1.0,
       "dates_of_birth": 0.928,
