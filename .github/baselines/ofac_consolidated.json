@@ -1,37 +1,39 @@
 {
   "source": "ofac_consolidated",
-  "captured_at": "2026-09-15T01:35:07Z",
+  "captured_at": "2026-10-31T02:30:28Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "ofac_consolidated",
-    "record_count": 481,
-    "checksum": "sha256:1598444fd3c77019a9626b2c7270eb477b9cc9c243a9eaed65cc7c36f2df5a8c",
+    "record_count": 486,
+    "checksum": "sha256:2738e724b11959d814071cfa516a332a3e376e1faaa00ab4b26ab20a4f792d0c",
     "cohorts": {
       "individual": 118,
-      "organization": 363,
+      "organization": 368,
       "vessel": 0,
       "aircraft": 0,
-      "all": 481
+      "all": 486
     },
     "fill": {
       "names": 1.0,
-      "aliases": 0.8753,
-      "addresses": 0.8919,
-      "identifiers": 0.7277,
+      "aliases": 0.8724,
+      "addresses": 0.893,
+      "identifiers": 0.7202,
       "programs": 1.0,
       "remarks": 1.0,
       "dates_of_birth": 0.9576,
       "nationalities": 0.3305
     },
-    "warnings": {},
+    "warnings": {
+      "row \"#####\" carries no program naming a consolidated sub-list (PAIPA); it is on none this adapter kn...": 5
+    },
     "orphans": {
       "aliases": 0,
       "addresses": 0
     },
-    "remarks_coverage": 0.8034,
+    "remarks_coverage": 0.7992,
     "unrecognized": {
       "Effective Date (CMIC)": 68,
       "Listing Date (CMIC)": 68,
@@ -43,8 +45,8 @@
       {
         "column": "ent_num",
         "description": "numeric",
-        "checked": 481,
-        "matched": 481,
+        "checked": 486,
+        "matched": 486,
         "blank": 0,
         "ratio": 1.0,
         "at_least": 0.99,
@@ -55,7 +57,7 @@
         "description": "a published SDN_Type",
         "checked": 118,
         "matched": 118,
-        "blank": 363,
+        "blank": 368,
         "ratio": 1.0,
         "at_least": 0.75,
         "sample": []
