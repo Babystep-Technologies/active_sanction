@@ -1,30 +1,30 @@
 {
   "source": "uk_sanctions_list",
-  "captured_at": "2026-10-03T02:05:43Z",
+  "captured_at": "2026-11-21T04:03:09Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "uk_sanctions_list",
-    "record_count": 6370,
-    "checksum": "sha256:d37dd7e5a20b6d9ed1958a002127418a7fed5ec798af90b1e8bc5c60d8cf07a1",
+    "record_count": 6448,
+    "checksum": "sha256:68986366054f9e23394acd552e75a241f50152a048af6efae298a077bd59fe4c",
     "cohorts": {
-      "individual": 4054,
-      "organization": 1645,
-      "vessel": 671,
+      "individual": 4070,
+      "organization": 1685,
+      "vessel": 693,
       "aircraft": 0,
-      "all": 6370
+      "all": 6448
     },
     "fill": {
       "names": 1.0,
-      "aliases": 0.7325,
-      "addresses": 0.5253,
-      "identifiers": 0.3301,
+      "aliases": 0.7331,
+      "addresses": 0.527,
+      "identifiers": 0.3358,
       "programs": 1.0,
       "remarks": 1.0,
-      "dates_of_birth": 0.8293,
-      "nationalities": 0.7237
+      "dates_of_birth": 0.826,
+      "nationalities": 0.7236
     },
     "warnings": {},
     "orphans": null,
