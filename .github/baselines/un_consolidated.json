@@ -1,30 +1,30 @@
 {
   "source": "un_consolidated",
-  "captured_at": "2026-10-03T02:05:43Z",
+  "captured_at": "2026-11-21T04:03:09Z",
   "tolerances": {
     "record_count": 0.05,
     "remarks_coverage": 0.02
   },
   "profile": {
     "source": "un_consolidated",
-    "record_count": 1011,
-    "checksum": "sha256:5907452d2e77b2ea8f527bc23170183b63e4df45ac3e2b443bd0ee8af0f6d801",
+    "record_count": 1007,
+    "checksum": "sha256:240b043e3a75ac8f7cad83f5921502b3670a1ff8b6c2d7bba3c953da9a499388",
     "cohorts": {
-      "individual": 736,
-      "organization": 275,
+      "individual": 733,
+      "organization": 274,
       "vessel": 0,
       "aircraft": 0,
-      "all": 1011
+      "all": 1007
     },
     "fill": {
       "names": 1.0,
-      "aliases": 0.7923,
-      "addresses": 0.549,
-      "identifiers": 0.2948,
+      "aliases": 0.7934,
+      "addresses": 0.5472,
+      "identifiers": 0.2939,
       "programs": 1.0,
       "remarks": 1.0,
-      "dates_of_birth": 0.928,
-      "nationalities": 0.8614
+      "dates_of_birth": 0.9277,
+      "nationalities": 0.8608
     },
     "warnings": {},
     "orphans": null,
